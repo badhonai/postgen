@@ -1,0 +1,12 @@
+-- ============================================================
+-- PostGen — seed.sql
+-- Runs ONLY on Supabase preview branches and local `supabase db reset`.
+-- "Deploy to production" IGNORES seed files — this never touches production.
+-- ============================================================
+-- Keep samples tiny and obviously fake. Rows must satisfy FKs
+-- (e.g. projects.user_id must exist in auth.users), so real seed rows
+-- are best inserted from the app on a preview branch.
+
+-- Example (uncomment only on a preview branch where this user exists):
+-- insert into public.projects (user_id, name, slug, description)
+-- values ('00000000-0000-0000-0000-000000000000', 'Demo Project', 'demo-project', 'Sample data for previews');
