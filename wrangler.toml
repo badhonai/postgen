@@ -1,0 +1,19 @@
+# Cloudflare Pages config for PostGen (all free tier)
+# Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
+
+name = "postgen"
+# 2026-05-01 = newest features supported by wrangler 4.86's runtime
+# (wrangler is pinned to 4.86 for Node 20 support — see README).
+# With Node 22+, you may upgrade wrangler and raise this date freely.
+compatibility_date = "2026-05-01"
+pages_build_output_dir = "dist"
+
+# R2 media bucket (free tier: 10 GB storage, $0 egress always).
+# Used by Pages Functions in /functions/api/media/* (M3).
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "postgen-media"
+
+# Non-secret vars can go here. Secrets (SUPABASE_SERVICE_ROLE_KEY,
+# SUPABASE_JWT_SECRET, ...) must be set via the Cloudflare dashboard
+# or `wrangler pages secret put <NAME>` — never committed.
