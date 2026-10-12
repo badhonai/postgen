@@ -1,7 +1,8 @@
 # PostGen — Twitter/X Post Studio for Web3 Projects
 
-> Plan v1.4 — 2026-10-13
+> Plan v1.5 — 2026-10-13
 > Status: **M0 built & verified** ✅ — see §13 for next steps
+> v1.5 change: **JWT strategy locked** — Supabase **signing keys (ES256)** + JWKS verification; agent JWTs minted via an imported signing key; legacy HS256 secret is fallback only (§6, §12.12).
 > v1.4 change: migrations deploy via **Supabase GitHub integration** ("Deploy to production" ON). Automatic branching (PR preview DBs) is Pro-only → OFF per the $0 rule; repo structured per docs so enabling it later is one click.
 > v1.3 change: **No repeat posts** — exact + near-duplicate detection on every write (web + agent API), see §5 M2 & §6.
 
@@ -68,6 +69,7 @@ A private workspace to **store and organize Twitter/X posts** for multiple web3 
 | Forms | react-hook-form + zod | MIT, free |
 | Auth/DB | `@supabase/supabase-js` v2 | Apache-2.0, free (free tier) |
 | Agent API | REST + **MCP TypeScript SDK** (Streamable HTTP) + OpenAPI 3.1 | Apache-2.0/MIT, free |
+| JWT | `jose` — JWKS verification + ES256/HS256 signing | MIT, free |
 | Cloudflare | `wrangler` (R2 binding) | Apache-2.0, free (free tier) |
 | Keep-alive | GitHub Actions cron (see §7) | free tier |
 | Code quality | ESLint + Prettier | MIT, free |
@@ -186,6 +188,7 @@ Any free AI tool becomes "the agent". PostGen is the system of record.
 - **Settings → AI connections**. Name it, secret shown **once**, stored as SHA-256 hash, visible prefix `pgk_live_a1b2…`
 - Revoke / rotate, `last_used_at`, optional expiry
 - Request → key → `user_id` → **mint a short-lived Supabase JWT as that user** → normal **RLS** applies
+- **JWTs — signing keys (not the legacy secret):** new Supabase projects sign tokens with asymmetric **JWT signing keys (ES256)**. PostGen verifies user tokens against the project JWKS (`jose`), and mints agent JWTs with an **imported signing key** (generate: `supabase gen signing-key`; import: Dashboard → Authentication → JWT Keys; private JWK stored as the Pages secret `SUPABASE_JWT_SIGNING_KEY`). If a project still exposes the legacy HS256 `SUPABASE_JWT_SECRET`, it works as a fallback.
 
 ### REST endpoints
 
@@ -404,6 +407,7 @@ We build milestone by milestone, testing each before moving on.
 9. **No repeat posts** is enforced server-side: exact match on normalized `content_hash`, near-duplicate via pg_trgm similarity ≥ 0.65; `allow_similar: true` is the explicit override for intentional variants.
 10. **Migrations deploy via the Supabase GitHub integration** ("Deploy to production" ON, recommended in Supabase's production checklist for all plans). "Automatic branching" preview DBs are Pro-only and stay OFF under the $0 rule.
 11. **Git workflow: `main` only** — no feature/preview branches. Every commit pushed to `main` is live (Cloudflare Pages + Supabase migrations). Rollback = revert to an older commit and push.
+12. **JWTs use Supabase's newer signing keys (ES256)** — JWKS verification + externally minted agent JWTs via an imported signing key; the legacy HS256 JWT secret is fallback only. New projects' API keys are the publishable/secret pair (legacy anon/service_role still accepted).
 
 ---
 

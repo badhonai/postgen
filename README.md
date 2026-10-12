@@ -101,8 +101,10 @@ watches this repo and applies `supabase/migrations/*` automatically.
    (no-repeat engine) — schema changes from then on ship by merging to `main`.
 7. Authentication → Providers → Email: enabled (default). Turn off "Confirm email"
    for frictionless local testing (optional).
-8. Project Settings → API: copy the **Project URL**, **anon key**,
-   **service_role key**, and **JWT secret** (for step 2 & later Pages secrets).
+8. Project Settings → API: copy the **Project URL** and **publishable key**
+   (`sb_publishable_…` → `VITE_SUPABASE_ANON_KEY`) and **secret key**
+   (`sb_secret_…` → `SUPABASE_SERVICE_ROLE_KEY`). Dashboard → Authentication →
+   **JWT Keys** is where you'll import a signing key later (M4, agent JWT minting).
 
 > **If you already ran the SQL by hand**, prefer a fresh project (or reset it) so
 > the migration history (`supabase_migrations.schema_migrations`) starts clean.
@@ -121,8 +123,14 @@ Server-side secrets (Pages Functions) — set in Cloudflare dashboard
 (Pages → Settings → Environment variables) or via `wrangler pages secret put`:
 
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_JWT_SECRET`
+- `SUPABASE_SERVICE_ROLE_KEY` — the project **secret key** (`sb_secret_…` on new
+  projects; legacy `service_role` JWT also works)
+- `SUPABASE_JWT_SIGNING_KEY` *(needed from M4)* — private JWK JSON of an
+  **imported JWT signing key** (generate: `supabase gen signing-key`, import:
+  Dashboard → Authentication → JWT Keys). Used to mint agent JWTs (ES256).
+- `SUPABASE_JWT_SECRET` *(optional fallback)* — only if your project still
+  exposes the legacy HS256 secret. New projects use **signing keys (ES256)**;
+  verification goes through the project JWKS (`jose`). See PLAN.md §6.
 
 ### 3. R2 media bucket (free tier)
 
