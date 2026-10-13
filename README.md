@@ -79,6 +79,10 @@ npm run deploy         # wrangler pages deploy (after first-time setup below)
 
 ### 1. Supabase (free tier) — GitHub integration
 
+> **Access model: whitelist-only.** Email confirmation is OFF and there is **no
+> sign-up** — you create each user yourself in Dashboard → Authentication →
+> Users → *Add user* (the web app's login page is sign-in only).
+
 Migrations deploy **the Supabase way**: the
 [GitHub integration](https://supabase.com/docs/guides/deployment/branching/github-integration)
 watches this repo and applies `supabase/migrations/*` automatically.

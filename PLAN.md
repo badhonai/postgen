@@ -409,6 +409,7 @@ We build milestone by milestone, testing each before moving on.
 10. **Migrations deploy via the Supabase GitHub integration** ("Deploy to production" ON, recommended in Supabase's production checklist for all plans). "Automatic branching" preview DBs are Pro-only and stay OFF under the $0 rule.
 11. **Git workflow: `main` only** — no feature/preview branches. Every commit pushed to `main` is live (Cloudflare Pages + Supabase migrations). Rollback = revert to an older commit and push.
 12. **JWTs use Supabase's newer signing keys (ES256)** — JWKS verification + externally minted agent JWTs via an imported signing key; the legacy HS256 JWT secret is fallback only. New projects' API keys are the publishable/secret pair (legacy anon/service_role still accepted).
+13. **Auth is whitelist-only** — no public sign-up, email confirmation off; the admin creates users in the Supabase dashboard. The login page is sign-in only.
 
 ---
 
