@@ -23,7 +23,7 @@ export default function BrandVoiceEditor({
 
   return (
     <div className="space-y-4">
-      <Field label="Tone & voice" hint="e.g. “confident, technical, no fluff, explains like to a friend”">
+      <Field label="Tone & voice">
         <Textarea
           rows={2}
           value={value.tone ?? ''}
@@ -32,10 +32,7 @@ export default function BrandVoiceEditor({
         />
       </Field>
 
-      <Field
-        label="Blacklist words / symbols"
-        hint="Comma-separated. Agents get a hard block (403) on these; the web editor warns you. Words match at word boundaries, symbols match anywhere."
-      >
+      <Field label="Blacklist words / symbols">
         <Input
           value={listToCsv(value.blacklist ?? value.tabooWords)}
           onChange={(e) => set({ blacklist: csvToList(e.target.value), tabooWords: undefined })}

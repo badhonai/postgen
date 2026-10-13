@@ -7,6 +7,8 @@ import { EMPTY_PROJECT_INPUT, projectInputOf } from './api'
 
 type QueuedFile = { file: File; url: string }
 
+const STEPS = ['Identity', 'About', 'Content'] as const
+
 function csvToList(value: string): string[] {
   return value
     .split(',')
@@ -18,9 +20,11 @@ function listToCsv(list: string[] | undefined): string {
   return (list ?? []).join(', ')
 }
 
-function SectionTitle({ children }: { children: string }) {
+function StepLabel({ children }: { children: string }) {
   return (
-    <h3 className="mb-4 text-xs font-extrabold tracking-[0.14em] text-ink uppercase">{children}</h3>
+    <p className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">
+      {children}
+    </p>
   )
 }
 
@@ -42,7 +46,7 @@ function LogoAssetsField({
     logoIndex ?? queued.findIndex((q) => q.file.type.startsWith('image/'))
 
   return (
-    <div className="space-y-3">
+    <div>
       <input
         ref={inputRef}
         type="file"
@@ -57,56 +61,60 @@ function LogoAssetsField({
           if (inputRef.current) inputRef.current.value = ''
         }}
       />
-      <Button type="button" variant="ghost" onClick={() => inputRef.current?.click()}>
-        + Add logo & assets
-      </Button>
-      <p className="text-xs font-semibold text-ink-soft">
-        Logo first, then extra logos, mascot images, product shots… Click a thumbnail to choose
-        which one becomes the project logo (default: first image).
-      </p>
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          aria-label="Add logo & assets"
+          className="flex h-[88px] w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded-full border-2 border-dashed border-white/80 bg-white/40 text-ink transition hover:bg-white/60 active:scale-95"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          <span className="text-[10px] font-extrabold text-ink-soft">Logo</span>
+        </button>
 
-      {queued.length > 0 ? (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-          {queued.map((q, i) => (
-            <div
-              key={q.url}
-              className={`group relative overflow-hidden rounded-xl border bg-white/70 ${
-                effectiveLogo === i
-                  ? 'border-butter-deep ring-2 ring-butter-deep'
-                  : 'border-white/80'
-              }`}
-            >
-              <button
-                type="button"
-                className="block h-24 w-full"
-                onClick={() => onLogoIndex(effectiveLogo === i ? null : i)}
-                title="Set as project logo"
+        {queued.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {queued.map((q, i) => (
+              <div
+                key={q.url}
+                className={`group relative h-[88px] w-[88px] overflow-hidden rounded-[18px] border bg-white/70 ${
+                  effectiveLogo === i
+                    ? 'border-butter-deep ring-2 ring-butter-deep'
+                    : 'border-white/80'
+                }`}
               >
-                {q.file.type.startsWith('image/') ? (
-                  <img src={q.url} alt={q.file.name} className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-3xl">🎬</span>
-                )}
-              </button>
-              {effectiveLogo === i ? (
-                <span className="absolute top-1.5 left-1.5 rounded-full bg-butter px-2 py-0.5 text-xs font-bold text-ink">
-                  Logo
-                </span>
-              ) : null}
-              <button
-                type="button"
-                className="absolute top-1.5 right-1.5 rounded-md bg-ink/75 px-1.5 py-0.5 text-xs text-white"
-                onClick={() => onRemove(i)}
-              >
-                ✕
-              </button>
-              <p className="truncate px-2 py-1 text-xs font-semibold text-ink-soft" title={q.file.name}>
-                {q.file.name}
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : null}
+                <button
+                  type="button"
+                  className="block h-full w-full"
+                  onClick={() => onLogoIndex(effectiveLogo === i ? null : i)}
+                  title="Set as project logo"
+                >
+                  {q.file.type.startsWith('image/') ? (
+                    <img src={q.url} alt={q.file.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full items-center justify-center text-3xl">🎬</span>
+                  )}
+                </button>
+                {effectiveLogo === i ? (
+                  <span className="absolute top-1 left-1 rounded-full bg-butter px-1.5 py-0.5 text-[9px] font-bold text-ink">
+                    Logo
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  aria-label="Remove"
+                  className="absolute top-1 right-1 rounded-full bg-ink/75 px-1.5 text-[10px] leading-4 text-white"
+                  onClick={() => onRemove(i)}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -124,6 +132,7 @@ export default function ProjectForm({
   onSubmit: (input: ProjectInput) => void
   onCancel: () => void
 }) {
+  const [step, setStep] = useState(0)
   const [draft, setDraft] = useState<ProjectInput>(initial ? projectInputOf(initial) : EMPTY_PROJECT_INPUT)
   const set = (patch: Partial<ProjectInput>) => setDraft((d) => ({ ...d, ...patch }))
   const setVoice = (brandVoice: BrandVoice) => set({ brandVoice })
@@ -149,7 +158,14 @@ export default function ProjectForm({
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (!draft.name.trim()) return
+    if (step < STEPS.length - 1) {
+      setStep(step + 1)
+      return
+    }
+    if (!draft.name.trim()) {
+      setStep(0)
+      return
+    }
     onSubmit({
       ...draft,
       officialLinks: links,
@@ -159,87 +175,106 @@ export default function ProjectForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-8">
+    <form onSubmit={submit} className="space-y-6">
+      {/* progress */}
+      <div>
+        <div className="flex gap-1.5">
+          {STEPS.map((label, i) => (
+            <button
+              key={label}
+              type="button"
+              aria-label={label}
+              onClick={() => setStep(i)}
+              className={`h-2 flex-1 rounded-full transition ${
+                i <= step
+                  ? 'bg-butter shadow-[0_4px_12px_rgba(242,193,78,0.5)]'
+                  : 'bg-white/55'
+              }`}
+            />
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">
+          Step {step + 1} · {STEPS[step]}
+        </p>
+      </div>
+
       {error ? <ErrorBox message={error} /> : null}
 
-      <div className="space-y-4">
-        <SectionTitle>Logo & assets</SectionTitle>
-        <LogoAssetsField
-          queued={queued}
-          logoIndex={logoIndex}
-          onAdd={addQueued}
-          onRemove={removeQueued}
-          onLogoIndex={setLogoIndex}
-        />
-        {initial ? (
-          <p className="text-xs font-semibold text-ink-soft">
-            Already-uploaded assets (and “Set as logo”) are in the Media & brand assets gallery
-            below — new picks upload when you save.
-          </p>
-        ) : null}
-      </div>
-
-      <div className="border-t border-white/70 pt-6">
-        <SectionTitle>Identity</SectionTitle>
-        <Field
-          label="Project name"
-          hint={initial ? `Slug: ${initial.slug}` : 'A URL slug is generated automatically.'}
-        >
-          <Input
-            required
-            value={draft.name}
-            onChange={(e) => set({ name: e.target.value })}
-            placeholder="e.g. My DeFi Protocol"
-          />
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="X username" hint="Without the @.">
+      {/* ── Step 1 · Identity ── */}
+      {step === 0 ? (
+        <div key="s0" className="space-y-5">
+          <div>
+            <StepLabel>Logo & assets</StepLabel>
+            <div className="mt-2.5">
+              <LogoAssetsField
+                queued={queued}
+                logoIndex={logoIndex}
+                onAdd={addQueued}
+                onRemove={removeQueued}
+                onLogoIndex={setLogoIndex}
+              />
+            </div>
+          </div>
+          <Field label="Project name">
             <Input
-              value={draft.xUsername}
-              onChange={(e) => set({ xUsername: e.target.value })}
-              placeholder="myprotocol"
+              required
+              value={draft.name}
+              onChange={(e) => set({ name: e.target.value })}
+              placeholder="My DeFi Protocol"
             />
           </Field>
-          <Field label="Website">
-            <Input
-              type="url"
-              value={draft.websiteUrl}
-              onChange={(e) => set({ websiteUrl: e.target.value })}
-              placeholder="https://myprotocol.xyz"
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="X username">
+              <Input
+                value={draft.xUsername}
+                onChange={(e) => set({ xUsername: e.target.value })}
+                placeholder="myprotocol"
+              />
+            </Field>
+            <Field label="Website">
+              <Input
+                type="url"
+                value={draft.websiteUrl}
+                onChange={(e) => set({ websiteUrl: e.target.value })}
+                placeholder="https://…"
+              />
+            </Field>
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className="border-t border-white/70 pt-6">
-        <SectionTitle>Description / Context</SectionTitle>
-        <Field label="What the project does" hint="Context for posts and AI agents — audience, phase, differentiators.">
-          <Textarea
-            rows={4}
-            value={draft.description}
-            onChange={(e) => set({ description: e.target.value })}
-            placeholder="A short summary of the project, its audience, and its current phase."
-          />
-        </Field>
-      </div>
+      {/* ── Step 2 · About ── */}
+      {step === 1 ? (
+        <div key="s1" className="space-y-5">
+          <Field label="What the project does">
+            <Textarea
+              rows={5}
+              value={draft.description}
+              onChange={(e) => set({ description: e.target.value })}
+              placeholder="One short summary — audience, phase, what makes it different."
+            />
+          </Field>
+          <div>
+            <StepLabel>Voice</StepLabel>
+            <div className="mt-2.5">
+              <BrandVoiceEditor value={draft.brandVoice} onChange={setVoice} />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-      <div className="border-t border-white/70 pt-6">
-        <SectionTitle>Brand voice</SectionTitle>
-        <BrandVoiceEditor value={draft.brandVoice} onChange={setVoice} />
-      </div>
-
-      <div className="border-t border-white/70 pt-6">
-        <SectionTitle>Content</SectionTitle>
-        <div className="space-y-4">
-          <Field label="Content pillars" hint="Recurring topics you post about — comma-separated.">
+      {/* ── Step 3 · Content ── */}
+      {step === 2 ? (
+        <div key="s2" className="space-y-5">
+          <Field label="Content pillars">
             <Input
               value={listToCsv(draft.contentPillars)}
               onChange={(e) => set({ contentPillars: csvToList(e.target.value) })}
-              placeholder="product updates, memes, ecosystem news, AMAs"
+              placeholder="product updates, memes, AMAs"
             />
           </Field>
 
-          <Field label="Sample posts you love" hint="Example tweets the AI should learn the style from — 2–3 is plenty.">
+          <Field label="Sample posts">
             <div className="space-y-2">
               {draft.samplePosts.map((sample, i) => (
                 <div key={i} className="flex items-start gap-2">
@@ -272,69 +307,83 @@ export default function ProjectForm({
             </div>
           </Field>
 
-          <Field label="Custom instructions" hint="Anything else the AI must know when drafting.">
+          <Field label="Custom instructions">
             <Textarea
               rows={3}
               value={draft.customInstructions}
               onChange={(e) => set({ customInstructions: e.target.value })}
-              placeholder="e.g. Always mention we're audited. Never comment on token price."
+              placeholder="e.g. Always mention audits. Never comment on price."
             />
           </Field>
+
+          <Field label="Official links">
+            <div className="space-y-2">
+              {links.map((link, i) => (
+                <div key={i} className="flex gap-2">
+                  <Input
+                    className="w-32 shrink-0"
+                    value={link.label}
+                    onChange={(e) => {
+                      const next = [...links]
+                      next[i] = { ...next[i], label: e.target.value }
+                      setLinks(next)
+                    }}
+                    placeholder="Discord"
+                  />
+                  <Input
+                    type="url"
+                    value={link.url}
+                    onChange={(e) => {
+                      const next = [...links]
+                      next[i] = { ...next[i], url: e.target.value }
+                      setLinks(next)
+                    }}
+                    placeholder="https://…"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setLinks(links.filter((_, j) => j !== i))}
+                  >
+                    ✕
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setLinks([...links, { label: '', url: '' }])}
+              >
+                + Add link
+              </Button>
+            </div>
+          </Field>
         </div>
-      </div>
+      ) : null}
 
-      <div className="border-t border-white/70 pt-6">
-        <SectionTitle>Official links</SectionTitle>
-        <Field label="Official links" hint="Website, Discord, Telegram, GitHub — agents cite these and never invent links.">
-          <div className="space-y-2">
-            {links.map((link, i) => (
-              <div key={i} className="flex gap-2">
-                <Input
-                  className="w-36"
-                  value={link.label}
-                  onChange={(e) => {
-                    const next = [...links]
-                    next[i] = { ...next[i], label: e.target.value }
-                    setLinks(next)
-                  }}
-                  placeholder="Discord"
-                />
-                <Input
-                  type="url"
-                  value={link.url}
-                  onChange={(e) => {
-                    const next = [...links]
-                    next[i] = { ...next[i], url: e.target.value }
-                    setLinks(next)
-                  }}
-                  placeholder="https://discord.gg/…"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setLinks(links.filter((_, j) => j !== i))}
-                >
-                  ✕
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setLinks([...links, { label: '', url: '' }])}
-            >
-              + Add link
-            </Button>
-          </div>
-        </Field>
-      </div>
-
-      <div className="flex gap-3 border-t border-white/70 pt-6">
-        <Button type="submit" disabled={busy || !draft.name.trim()}>
-          {busy ? 'Saving…' : initial ? 'Save changes' : 'Create project'}
-        </Button>
-        <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
-          Cancel
+      {/* footer */}
+      <div className="sticky bottom-0 -mx-6 -mb-2 flex gap-3 border-t border-white/70 bg-[#f4f2fb] px-6 pt-4 pb-2">
+        {step > 0 ? (
+          <Button type="button" variant="ghost" onClick={() => setStep(step - 1)} disabled={busy}>
+            Back
+          </Button>
+        ) : (
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
+        )}
+        <Button
+          type="submit"
+          disabled={busy || (step === STEPS.length - 1 && !draft.name.trim())}
+          className="flex-1"
+        >
+          {busy
+            ? 'Saving…'
+            : step < STEPS.length - 1
+              ? 'Next →'
+              : initial
+                ? 'Save changes'
+                : 'Create project'}
         </Button>
       </div>
     </form>
