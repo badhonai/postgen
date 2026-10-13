@@ -65,8 +65,8 @@ const api = (path, opts = {}) =>
   })
 
 async function main() {
-  const email = `e2e-${Date.now()}@example.com`
-  const password = `E2e-${randomBytes(9).toString('base64url')}`
+  const email = process.env.E2E_EMAIL ?? `e2e-${Date.now()}@example.com`
+  const password = process.env.E2E_PASSWORD ?? `E2e-${randomBytes(9).toString('base64url')}`
   const supa = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     // Node < 22 has no native WebSocket (only needed by realtime, unused here)
     realtime: { transport: ws },
@@ -76,24 +76,36 @@ async function main() {
 
   // ── 1. AUTH ──────────────────────────────────────────────
   console.log('\n▸ Auth')
-  const { data: signUp, error: signUpErr } = await supa.auth.signUp({ email, password })
-  if (signUpErr) check('sign up', false, signUpErr.message)
-  let session = signUp.session
-  if (!session) {
+  let session = null
+  if (process.env.E2E_EMAIL && process.env.E2E_PASSWORD) {
     const { data: signIn, error: signInErr } = await supa.auth.signInWithPassword({
       email,
       password,
     })
     session = signIn.session
-    if (signInErr) {
-      check('sign up / sign in (email confirm?)', false, signInErr.message)
-      console.log('\n  ⛔ Cannot continue without a session. If "Email not confirmed",')
-      console.log('     disable "Confirm email" in Supabase → Authentication → Providers → Email.')
-      console.log(`\nRESULT: ${passed} passed, ${failed} failed\n`)
-      process.exit(1)
+    if (signInErr) check('sign in (whitelisted account)', false, signInErr.message)
+  } else {
+    const { data: signUp, error: signUpErr } = await supa.auth.signUp({ email, password })
+    if (signUpErr) check('sign up', false, signUpErr.message)
+    session = signUp.session
+    if (!session) {
+      const { data: signIn, error: signInErr } = await supa.auth.signInWithPassword({
+        email,
+        password,
+      })
+      session = signIn.session
+      if (signInErr) {
+        check('sign up / sign in', false, signInErr.message)
+        console.log('\n  ⛔ Cannot continue without a session.')
+        console.log('     Whitelist-only setup? Create a user in Supabase → Authentication →')
+        console.log('     Users → Add user (Auto Confirm ON), then run with:')
+        console.log('       E2E_EMAIL=… E2E_PASSWORD=… node scripts/e2e.mjs')
+        console.log(`\nRESULT: ${passed} passed, ${failed} failed\n`)
+        process.exit(1)
+      }
     }
   }
-  check('sign up + session JWT', !!session, email)
+  if (session) check('session JWT', true, email)
   const authHeader = { Authorization: `Bearer ${session.access_token}` }
 
   // ── 2. WEB PATH: project + save RPC + SQL no-repeat ──────
