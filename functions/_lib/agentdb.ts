@@ -314,6 +314,7 @@ export async function createDraft(
     p_tag_names: input.tagNames ?? [],
     p_media: [],
     p_created_via: via,
+    p_user_id: auth.userId,
   })
   if (error) fail(error)
 
@@ -350,6 +351,7 @@ export async function updateDraft(
     p_tag_names: patch.tagNames ?? [],
     p_media: [],
     p_created_via: via,
+    p_user_id: auth.userId,
   })
   if (error) fail(error)
 
