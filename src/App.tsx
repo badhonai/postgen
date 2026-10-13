@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import ProjectDetailPage from './pages/ProjectDetailPage'
 import PostEditorPage from './pages/PostEditorPage'
+import SettingsPage from './pages/SettingsPage'
 
 export default function App() {
   return (
@@ -40,6 +41,14 @@ export default function App() {
         element={
           <RequireAuth>
             <PostEditorPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RequireAuth>
+            <SettingsPage />
           </RequireAuth>
         }
       />

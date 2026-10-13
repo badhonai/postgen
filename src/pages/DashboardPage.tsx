@@ -38,6 +38,9 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden text-sm text-zinc-500 sm:block">{user?.email}</span>
+          <Link to="/settings">
+            <Button variant="ghost">Settings</Button>
+          </Link>
           <Button variant="ghost" onClick={() => void signOut()}>
             Sign out
           </Button>
