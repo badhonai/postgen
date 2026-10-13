@@ -26,7 +26,28 @@ const spec = {
                 properties: {
                   name: { type: 'string' },
                   description: { type: 'string' },
-                  brand_voice: { type: 'object' },
+                  brand_voice: {
+                    type: 'object',
+                    description: 'tone, emojiPolicy, blacklist[], hashtags[], ctaStyle',
+                  },
+                  x_username: { type: 'string' },
+                  website_url: { type: 'string' },
+                  chains: { type: 'array', items: { type: 'string' } },
+                  token_ticker: { type: 'string' },
+                  content_pillars: { type: 'array', items: { type: 'string' } },
+                  sample_posts: { type: 'array', items: { type: 'string' } },
+                  custom_instructions: { type: 'string' },
+                  official_links: {
+                    type: 'array',
+                    items: { type: 'object', properties: { label: { type: 'string' }, url: { type: 'string' } } },
+                  },
+                  contract_addresses: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: { chain: { type: 'string' }, address: { type: 'string' }, label: { type: 'string' } },
+                    },
+                  },
                 },
               },
             },
@@ -42,7 +63,7 @@ const spec = {
         responses: { '200': { description: 'Project' }, '404': { description: 'Not found' } },
       },
       patch: {
-        summary: 'Update name / description / brand_voice',
+        summary: 'Update name / description / brand_voice / profile fields',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Updated' } },
       },
@@ -82,7 +103,7 @@ const spec = {
         },
         responses: {
           '201': { description: 'Draft created' },
-          '403': { description: 'agents_drafts_only' },
+          '403': { description: 'agents_drafts_only, or blacklisted terms in the post' },
           '409': { description: 'duplicate / similar (no-repeat guard)' },
         },
       },

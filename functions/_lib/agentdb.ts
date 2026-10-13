@@ -1,6 +1,7 @@
 import { serviceClient } from './auth'
 import type { Env } from './env'
 import { sha256Hex, threadToContentText } from '../../src/lib/text'
+import { blacklistHits } from '../../src/lib/blacklist'
 
 export class AgentError extends Error {
   status: number
@@ -36,6 +37,19 @@ function slugify(name: string): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, 48) || 'project'
   )
+}
+
+/** Hard block on the project's blacklist (words/symbols) — agent writes only. */
+function assertBlacklist(brandVoice: unknown, text: string): void {
+  const bv = (brandVoice ?? {}) as { blacklist?: string[]; tabooWords?: string[] }
+  const hits = blacklistHits(text, bv.blacklist ?? bv.tabooWords ?? [])
+  if (hits.length > 0) {
+    throw new AgentError(403, {
+      error: 'blacklisted',
+      message: `Post contains blacklisted terms: ${hits.join(', ')}`,
+      hits,
+    })
+  }
 }
 
 // ────────────────────────────── activity ──────────────────────────────
@@ -91,10 +105,39 @@ export async function getProject(env: Env, userId: string, id: string) {
   return { ...project, knowledge: knowledge ?? [] }
 }
 
+export type ProjectWrite = {
+  name?: string
+  description?: string
+  brand_voice?: unknown
+  x_username?: string
+  website_url?: string
+  chains?: string[]
+  token_ticker?: string
+  content_pillars?: string[]
+  sample_posts?: string[]
+  custom_instructions?: string
+  official_links?: unknown
+  contract_addresses?: unknown
+}
+
+function projectProfileFields(input: ProjectWrite): Record<string, unknown> {
+  const fields: Record<string, unknown> = {}
+  if (input.x_username !== undefined) fields.x_username = input.x_username.trim().replace(/^@/, '') || null
+  if (input.website_url !== undefined) fields.website_url = input.website_url.trim() || null
+  if (input.chains !== undefined) fields.chains = input.chains.map((c) => c.trim()).filter(Boolean)
+  if (input.token_ticker !== undefined) fields.token_ticker = input.token_ticker.trim().replace(/^\$/, '') || null
+  if (input.content_pillars !== undefined) fields.content_pillars = input.content_pillars.map((c) => c.trim()).filter(Boolean)
+  if (input.sample_posts !== undefined) fields.sample_posts = input.sample_posts.map((c) => c.trim()).filter(Boolean)
+  if (input.custom_instructions !== undefined) fields.custom_instructions = input.custom_instructions.trim() || null
+  if (input.official_links !== undefined) fields.official_links = input.official_links ?? []
+  if (input.contract_addresses !== undefined) fields.contract_addresses = input.contract_addresses ?? []
+  return fields
+}
+
 export async function createProject(
   env: Env,
   userId: string,
-  input: { name?: string; description?: string; brand_voice?: unknown },
+  input: ProjectWrite,
 ) {
   const name = (input.name ?? '').trim()
   if (!name) throw new AgentError(400, { error: 'name is required' })
@@ -109,6 +152,7 @@ export async function createProject(
         slug,
         description: input.description?.trim() || null,
         brand_voice: input.brand_voice ?? {},
+        ...projectProfileFields(input),
       })
       .select()
       .single()
@@ -125,12 +169,13 @@ export async function updateProject(
   env: Env,
   userId: string,
   id: string,
-  patch: { name?: string; description?: string; brand_voice?: unknown },
+  patch: ProjectWrite,
 ) {
   const updates: Record<string, unknown> = {}
   if (patch.name !== undefined) updates.name = patch.name.trim()
   if (patch.description !== undefined) updates.description = patch.description.trim() || null
   if (patch.brand_voice !== undefined) updates.brand_voice = patch.brand_voice
+  Object.assign(updates, projectProfileFields(patch))
 
   const { data, error } = await db(env)
     .from('projects')
@@ -292,12 +337,13 @@ export async function createDraft(
   const client = db(env)
   const { data: project } = await client
     .from('projects')
-    .select('id')
+    .select('id, brand_voice')
     .eq('id', input.projectId)
     .eq('user_id', auth.userId)
     .maybeSingle()
   if (!project) throw new AgentError(404, { error: 'project not found' })
 
+  assertBlacklist(project.brand_voice, [input.title ?? '', ...tweets].join('\n'))
   await assertDailyCap(env, auth.userId)
   const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {
     projectId: input.projectId,
@@ -334,6 +380,13 @@ export async function updateDraft(
   const existing = await getPost(env, auth.userId, id)
   const status = assertDraftsOnly(patch.status)
   const tweets = patch.tweets ? assertTweets(patch.tweets) : (existing.tweets as string[])
+
+  const { data: projectRow } = await db(env)
+    .from('projects')
+    .select('brand_voice')
+    .eq('id', existing.project_id)
+    .maybeSingle()
+  assertBlacklist(projectRow?.brand_voice, [patch.title ?? existing.title, ...tweets].join('\n'))
 
   const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {
     excludePostId: id,
