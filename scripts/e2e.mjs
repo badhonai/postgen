@@ -108,6 +108,24 @@ async function main() {
   if (session) check('session JWT', true, email)
   const authHeader = { Authorization: `Bearer ${session.access_token}` }
 
+  // clean leftovers from previously crashed runs (only rows this script created)
+  const { data: leftovers } = await supa
+    .from('projects')
+    .select('id')
+    .eq('name', 'E2E Project')
+    .like('slug', 'e2e-%')
+  for (const l of leftovers ?? []) {
+    const { data: oldAssets } = await supa.from('assets').select('r2_key').eq('project_id', l.id)
+    for (const a of oldAssets ?? []) {
+      await api('/api/media/delete', {
+        method: 'POST',
+        headers: authHeader,
+        body: JSON.stringify({ key: a.r2_key }),
+      }).catch(() => undefined)
+    }
+    await supa.from('projects').delete().eq('id', l.id)
+  }
+
   // ── 2. WEB PATH: project + save RPC + SQL no-repeat ──────
   console.log('\n▸ Web path (supabase-js + RLS)')
   const { data: project, error: projErr } = await supa
@@ -162,18 +180,20 @@ async function main() {
     p_content_text: normalize('first unique tweet one\nsecond unique tweet two'),
     p_content_hash: sha256hex(normalize('first unique tweet one\nsecond unique tweet two')),
     p_tweets: ['First unique tweet one', 'Second unique tweet two'],
-    p_tag_names: [],
+    p_tag_names: ['thread', 'e2e'],
     p_media: [],
     p_created_via: 'web',
   })
-  const { data: loaded } = await supa
+  const { data: loaded, error: loadErr } = await supa
     .from('posts')
     .select('*, post_tweets(position, content), post_tags(tags(name))')
     .eq('id', threadPost)
     .maybeSingle()
   check(
     'thread saved with positions + tags',
-    loaded?.post_tweets?.length === 2 && loaded.post_tags.length === 2,
+    loaded?.post_tweets?.length === 2 && loaded?.post_tags?.length === 2,
+    loadErr?.message ??
+      `tweets=${loaded?.post_tweets?.length ?? '?'} tags=${loaded?.post_tags?.length ?? '?'}`,
   )
 
   // ── 3. MEDIA ─────────────────────────────────────────────
@@ -200,17 +220,19 @@ async function main() {
     const signRes = await api(`/api/media/sign?key=${encodeURIComponent(upBody.asset.r2_key)}`, {
       headers: authHeader,
     })
-    const signBody = await signRes.json()
+    const signBody = await signRes.json().catch(() => ({}))
     signedUrl = signBody.url
-    check('sign (5-min URL)', signRes.status === 200 && !!signedUrl)
+    check('sign (5-min URL)', signRes.status === 200 && !!signedUrl, `HTTP ${signRes.status} ${signBody.error ?? ''}`)
 
-    const getRes = await fetch(`${BASE_URL}${signedUrl}`)
-    const bytes = await getRes.arrayBuffer()
-    check(
-      'serve signed URL (bytes match)',
-      getRes.status === 200 && bytes.byteLength === png.length,
-      `${getRes.status}, ${bytes.byteLength}B`,
-    )
+    if (signedUrl) {
+      const getRes = await fetch(`${BASE_URL}${signedUrl}`)
+      const bytes = await getRes.arrayBuffer()
+      check(
+        'serve signed URL (bytes match)',
+        getRes.status === 200 && bytes.byteLength === png.length,
+        `${getRes.status}, ${bytes.byteLength}B`,
+      )
+    }
 
     const forged = await fetch(`${BASE_URL}/api/media/${upBody.asset.r2_key}?exp=9999999999&sig=deadbeef`)
     check('forged signature rejected', forged.status === 403, `HTTP ${forged.status}`)

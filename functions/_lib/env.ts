@@ -32,9 +32,12 @@ export function jsonError(message: string, status = 400): Response {
   return Response.json({ error: message }, { status })
 }
 
-/** HMAC secret for media URLs: dedicated var, falling back to the JWT secret. */
+/**
+ * HMAC secret for media URLs: dedicated var first, then the legacy JWT secret,
+ * then the service key (all server-side only; works with zero extra config).
+ */
 export function mediaUrlSecret(env: Env): string {
-  const secret = env.MEDIA_URL_SECRET || env.SUPABASE_JWT_SECRET
+  const secret = env.MEDIA_URL_SECRET || env.SUPABASE_JWT_SECRET || env.SUPABASE_SERVICE_ROLE_KEY
   if (!secret) {
     throw new Error('Set MEDIA_URL_SECRET (or SUPABASE_JWT_SECRET) in Pages secrets')
   }
