@@ -109,3 +109,23 @@ export function ConfigNotice() {
     </main>
   )
 }
+
+/** PostGen's starburst mark on a glass circle. */
+export function SparkleLogo({ size = 48 }: { size?: number }) {
+  return (
+    <div
+      className="pg-glass flex items-center justify-center rounded-full text-ink"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        width={size * 0.58}
+        height={size * 0.58}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M12 1.6c.7 3.9 1.9 6.4 3.6 8.1 1.7 1.7 4.2 2.9 8.1 3.6-3.9.7-6.4 1.9-8.1 3.6-1.7 1.7-2.9 4.2-3.6 8.1-.7-3.9-1.9-6.4-3.6-8.1-1.7-1.7-4.2-2.9-8.1-3.6 3.9-.7 6.4-1.9 8.1-3.6 1.7-1.7 2.9-4.2 3.6-8.1z" />
+      </svg>
+    </div>
+  )
+}

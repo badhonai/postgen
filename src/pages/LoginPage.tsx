@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { isSupabaseConfigured } from '../lib/env'
 import { useAuth } from '../features/auth/context'
-import { Button, Card, ConfigNotice, ErrorBox, Field, Input } from '../components/ui'
+import { Button, ConfigNotice, ErrorBox, Field, Input, SparkleLogo } from '../components/ui'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -38,53 +38,51 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6 py-12">
-      <header>
-        <Link to="/" className="text-sm text-zinc-500 hover:text-zinc-300">
-          ← PostGen
+    <main className="pg-shell">
+      <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col items-center justify-center px-6 py-12">
+        <Link to="/" className="flex flex-col items-center gap-3">
+          <SparkleLogo size={64} />
+          <span className="pg-title text-3xl text-ink">PostGen</span>
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">Sign in</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Your projects and posts — private to you.
+        <p className="mt-1 text-sm font-bold text-ink-soft">Your private X post studio</p>
+
+        <div className="pg-glass mt-8 w-full rounded-[28px] p-6">
+          <form onSubmit={submit} className="space-y-4">
+            {error ? <ErrorBox message={error} /> : null}
+
+            <Field label="Email">
+              <Input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </Field>
+            <Field label="Password">
+              <Input
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </Field>
+
+            <Button type="submit" disabled={busy} className="w-full">
+              {busy ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </form>
+        </div>
+
+        <p className="mt-5 text-center text-xs font-semibold text-ink-soft">
+          Invite only — ask the admin for access.
+          <br />
+          No public sign-up.
         </p>
-      </header>
-
-      <Card>
-        <form onSubmit={submit} className="space-y-4">
-          {error ? <ErrorBox message={error} /> : null}
-
-          <Field label="Email">
-            <Input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-          </Field>
-          <Field label="Password">
-            <Input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </Field>
-
-          <Button type="submit" disabled={busy} className="w-full">
-            {busy ? 'Signing in…' : 'Sign in'}
-          </Button>
-        </form>
-      </Card>
-
-      <p className="text-center text-xs text-zinc-500">
-        Access is invite-only — accounts are created by the admin.
-        <br />
-        No public sign-up.
-      </p>
+      </div>
     </main>
   )
 }
