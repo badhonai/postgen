@@ -17,7 +17,21 @@ export type ExportBundle = {
   app: 'postgen'
   version: 1
   exported_at: string
-  project: { name: string; slug: string; description: string | null }
+  project: {
+    name: string
+    slug: string
+    description: string | null
+    brand_voice?: unknown
+    x_username?: string | null
+    website_url?: string | null
+    chains?: string[]
+    token_ticker?: string | null
+    content_pillars?: string[]
+    sample_posts?: string[]
+    custom_instructions?: string | null
+    official_links?: Array<{ label: string; url: string }>
+    contract_addresses?: Array<{ chain: string; address: string; label?: string }>
+  }
   posts: ExportPost[]
 }
 
@@ -25,7 +39,9 @@ async function fetchProjectBundle(projectId: string): Promise<ExportBundle> {
   const supa = supabase!
   const { data: project, error: pErr } = await supa
     .from('projects')
-    .select('name, slug, description')
+    .select(
+      'name, slug, description, brand_voice, x_username, website_url, chains, token_ticker, content_pillars, sample_posts, custom_instructions, official_links, contract_addresses',
+    )
     .eq('id', projectId)
     .single()
   if (pErr) throw pErr
@@ -64,7 +80,21 @@ async function fetchProjectBundle(projectId: string): Promise<ExportBundle> {
     app: 'postgen',
     version: 1,
     exported_at: new Date().toISOString(),
-    project: { name: project.name, slug: project.slug, description: project.description },
+    project: {
+      name: project.name,
+      slug: project.slug,
+      description: project.description,
+      brand_voice: project.brand_voice,
+      x_username: project.x_username,
+      website_url: project.website_url,
+      chains: project.chains,
+      token_ticker: project.token_ticker,
+      content_pillars: project.content_pillars,
+      sample_posts: project.sample_posts,
+      custom_instructions: project.custom_instructions,
+      official_links: project.official_links,
+      contract_addresses: project.contract_addresses,
+    },
     posts,
   }
 }
@@ -76,6 +106,20 @@ export function bundleToMarkdown(bundle: ExportBundle): string {
     `Exported ${bundle.exported_at} · ${bundle.posts.length} posts`,
     '',
   ]
+  const p = bundle.project
+  const profileLines = [
+    p.x_username ? `- X: @${p.x_username}` : null,
+    p.website_url ? `- Website: ${p.website_url}` : null,
+    (p.chains ?? []).length ? `- Chains: ${(p.chains ?? []).join(', ')}` : null,
+    p.token_ticker ? `- Token: $${p.token_ticker}` : null,
+    (p.content_pillars ?? []).length ? `- Pillars: ${(p.content_pillars ?? []).join(', ')}` : null,
+  ].filter((l): l is string => !!l)
+  if (p.description) {
+    lines.push('## About', '', p.description, '')
+  }
+  if (profileLines.length) {
+    lines.push(...profileLines, '')
+  }
   for (const post of bundle.posts) {
     lines.push(`## ${post.title || 'Untitled post'}`)
     lines.push('')
