@@ -66,11 +66,21 @@ kbd {
   font-family: ui-monospace, monospace;
 }
 
+html {
+  /* Paints the overscroll/canvas area so no dark browser canvas shows
+     behind the page on mobile scroll (old rule left body near-black). */
+  background-color: #d8dff2;
+}
+
 body {
-  @apply bg-zinc-950 text-zinc-100 antialiased;
+  background: transparent;
+  color: var(--color-ink);
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -117,11 +127,11 @@ body {
 }
 
 .pg-glass-strong {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 18px 44px rgba(70, 60, 130, 0.16);
+  /* Solid surface (not translucent) — sheets, dialogs and the tab bar
+     must stay readable over whatever scrolls beneath them. */
+  background: #f4f2fb;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 44px rgba(70, 60, 130, 0.18);
 }
 
 .pg-title {

@@ -9,7 +9,7 @@ import type {
 import { cn } from '../lib/cn'
 
 const inputClass =
-  'w-full rounded-2xl border border-white/70 bg-white/55 px-3.5 py-2.5 text-sm text-ink ' +
+  'w-full rounded-2xl border border-white/70 bg-white/85 px-3.5 py-2.5 text-sm text-ink ' +
   'placeholder:text-ink-soft/70 shadow-[0_6px_18px_rgba(70,60,130,0.08)] ' +
   'focus:border-white focus:outline-none focus:ring-2 focus:ring-ink/15'
 

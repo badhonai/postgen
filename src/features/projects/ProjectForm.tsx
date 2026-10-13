@@ -20,7 +20,7 @@ function listToCsv(list: string[] | undefined): string {
 
 function SectionTitle({ children }: { children: string }) {
   return (
-    <h3 className="mb-4 text-sm font-semibold tracking-wide text-zinc-300 uppercase">{children}</h3>
+    <h3 className="mb-4 text-xs font-extrabold tracking-[0.14em] text-ink uppercase">{children}</h3>
   )
 }
 
@@ -60,7 +60,7 @@ function LogoAssetsField({
       <Button type="button" variant="ghost" onClick={() => inputRef.current?.click()}>
         + Add logo & assets
       </Button>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs font-semibold text-ink-soft">
         Logo first, then extra logos, mascot images, product shots… Click a thumbnail to choose
         which one becomes the project logo (default: first image).
       </p>
@@ -70,8 +70,10 @@ function LogoAssetsField({
           {queued.map((q, i) => (
             <div
               key={q.url}
-              className={`group relative overflow-hidden rounded-xl border bg-zinc-900/50 ${
-                effectiveLogo === i ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-zinc-800'
+              className={`group relative overflow-hidden rounded-xl border bg-white/70 ${
+                effectiveLogo === i
+                  ? 'border-butter-deep ring-2 ring-butter-deep'
+                  : 'border-white/80'
               }`}
             >
               <button
@@ -87,18 +89,18 @@ function LogoAssetsField({
                 )}
               </button>
               {effectiveLogo === i ? (
-                <span className="absolute top-1.5 left-1.5 rounded-full bg-emerald-500/90 px-2 py-0.5 text-xs font-medium text-zinc-950">
+                <span className="absolute top-1.5 left-1.5 rounded-full bg-butter px-2 py-0.5 text-xs font-bold text-ink">
                   Logo
                 </span>
               ) : null}
               <button
                 type="button"
-                className="absolute top-1.5 right-1.5 rounded-md bg-zinc-950/80 px-1.5 py-0.5 text-xs text-zinc-300 opacity-0 group-hover:opacity-100"
+                className="absolute top-1.5 right-1.5 rounded-md bg-ink/75 px-1.5 py-0.5 text-xs text-white"
                 onClick={() => onRemove(i)}
               >
                 ✕
               </button>
-              <p className="truncate px-2 py-1 text-xs text-zinc-500" title={q.file.name}>
+              <p className="truncate px-2 py-1 text-xs font-semibold text-ink-soft" title={q.file.name}>
                 {q.file.name}
               </p>
             </div>
@@ -170,14 +172,14 @@ export default function ProjectForm({
           onLogoIndex={setLogoIndex}
         />
         {initial ? (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs font-semibold text-ink-soft">
             Already-uploaded assets (and “Set as logo”) are in the Media & brand assets gallery
             below — new picks upload when you save.
           </p>
         ) : null}
       </div>
 
-      <div className="border-t border-zinc-800 pt-6">
+      <div className="border-t border-white/70 pt-6">
         <SectionTitle>Identity</SectionTitle>
         <Field
           label="Project name"
@@ -209,7 +211,7 @@ export default function ProjectForm({
         </div>
       </div>
 
-      <div className="border-t border-zinc-800 pt-6">
+      <div className="border-t border-white/70 pt-6">
         <SectionTitle>Description / Context</SectionTitle>
         <Field label="What the project does" hint="Context for posts and AI agents — audience, phase, differentiators.">
           <Textarea
@@ -221,12 +223,12 @@ export default function ProjectForm({
         </Field>
       </div>
 
-      <div className="border-t border-zinc-800 pt-6">
+      <div className="border-t border-white/70 pt-6">
         <SectionTitle>Brand voice</SectionTitle>
         <BrandVoiceEditor value={draft.brandVoice} onChange={setVoice} />
       </div>
 
-      <div className="border-t border-zinc-800 pt-6">
+      <div className="border-t border-white/70 pt-6">
         <SectionTitle>Content</SectionTitle>
         <div className="space-y-4">
           <Field label="Content pillars" hint="Recurring topics you post about — comma-separated.">
@@ -281,7 +283,7 @@ export default function ProjectForm({
         </div>
       </div>
 
-      <div className="border-t border-zinc-800 pt-6">
+      <div className="border-t border-white/70 pt-6">
         <SectionTitle>Official links</SectionTitle>
         <Field label="Official links" hint="Website, Discord, Telegram, GitHub — agents cite these and never invent links.">
           <div className="space-y-2">
@@ -327,7 +329,7 @@ export default function ProjectForm({
         </Field>
       </div>
 
-      <div className="flex gap-3 border-t border-zinc-800 pt-6">
+      <div className="flex gap-3 border-t border-white/70 pt-6">
         <Button type="submit" disabled={busy || !draft.name.trim()}>
           {busy ? 'Saving…' : initial ? 'Save changes' : 'Create project'}
         </Button>
