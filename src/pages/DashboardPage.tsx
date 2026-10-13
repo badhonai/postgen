@@ -13,7 +13,7 @@ import { HeroTile, SmallTile, type PostSummary } from '../features/projects/Bent
 import { TILE_COLORS } from '../lib/types'
 import ProjectForm from '../features/projects/ProjectForm'
 import TabBar from '../components/TabBar'
-import { Button, ErrorBox, Skeleton } from '../components/ui'
+import { Button, ErrorBox, Skeleton, SparkleLogo } from '../components/ui'
 
 type Filter = 'all' | 'draft' | 'approved' | 'published'
 
@@ -85,14 +85,13 @@ export default function DashboardPage() {
     <div className="pg-shell">
       <div className="mx-auto max-w-[440px] px-5 pt-8 pb-36">
         {/* ── header ── */}
-        <header className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-extrabold tracking-[0.18em] text-ink-soft uppercase">PostGen</p>
-            <h1 className="pg-title mt-1 text-[2.55rem] text-ink">
-              Your
-              <br />
-              Projects
-            </h1>
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <SparkleLogo size={46} />
+            <div>
+              <p className="pg-title text-lg leading-none text-ink">PostGen</p>
+              <p className="mt-1 text-[11px] font-bold text-ink-soft">X Post Studio</p>
+            </div>
           </div>
           <div className="relative">
             <button
@@ -137,13 +136,21 @@ export default function DashboardPage() {
           </div>
         </header>
 
+        <h1 className="pg-title mt-5 text-[2.35rem] leading-none whitespace-nowrap text-ink">
+          Your Projects
+        </h1>
+
         {/* ── filter pills ── */}
-        <div className="pg-scroll mt-6 flex gap-2 overflow-x-auto pb-1">
+        <div className="pg-glass mt-5 flex gap-1 rounded-full p-1.5">
           {FILTERS.map((f) => (
             <button
               key={f.id}
               type="button"
-              className={`pg-chip ${filter === f.id ? 'pg-chip-active' : ''}`}
+              className={`flex-1 rounded-full px-1 py-2 text-[13px] font-extrabold transition ${
+                filter === f.id
+                  ? 'bg-butter text-ink shadow-[0_2px_10px_rgba(251,193,60,0.45)]'
+                  : 'text-ink-soft'
+              }`}
               onClick={() => setFilter(f.id)}
             >
               {f.label}

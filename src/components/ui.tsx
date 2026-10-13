@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -111,20 +112,49 @@ export function ConfigNotice() {
 }
 
 /** PostGen's starburst mark on a glass circle. */
-export function SparkleLogo({ size = 48 }: { size?: number }) {
+export function SparkleLogo({ size = 48, gradient = false }: { size?: number; gradient?: boolean }) {
+  const gid = useId()
+  const star =
+    'M12 1.6c.7 3.9 1.9 6.4 3.6 8.1 1.7 1.7 4.2 2.9 8.1 3.6-3.9.7-6.4 1.9-8.1 3.6-1.7 1.7-2.9 4.2-3.6 8.1-.7-3.9-1.9-6.4-3.6-8.1-1.7-1.7-4.2-2.9-8.1-3.6 3.9-.7 6.4-1.9 8.1-3.6 1.7-1.7 2.9-4.2 3.6-8.1z'
   return (
     <div
-      className="pg-glass flex items-center justify-center rounded-full text-ink"
+      className={`flex items-center justify-center rounded-full ${
+        gradient
+          ? 'bg-white/65 shadow-[0_14px_36px_rgba(70,60,130,0.18)] ring-1 ring-white/80'
+          : 'pg-glass text-ink'
+      }`}
       style={{ width: size, height: size }}
     >
       <svg
-        width={size * 0.58}
-        height={size * 0.58}
+        width={size * (gradient ? 0.52 : 0.58)}
+        height={size * (gradient ? 0.52 : 0.58)}
         viewBox="0 0 24 24"
-        fill="currentColor"
         aria-hidden="true"
       >
-        <path d="M12 1.6c.7 3.9 1.9 6.4 3.6 8.1 1.7 1.7 4.2 2.9 8.1 3.6-3.9.7-6.4 1.9-8.1 3.6-1.7 1.7-2.9 4.2-3.6 8.1-.7-3.9-1.9-6.4-3.6-8.1-1.7-1.7-4.2-2.9-8.1-3.6 3.9-.7 6.4-1.9 8.1-3.6 1.7-1.7 2.9-4.2 3.6-8.1z" />
+        {gradient ? (
+          <>
+            <defs>
+              <linearGradient id={`pg-star-${gid}`} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#6fc4f5" />
+                <stop offset="55%" stopColor="#a78bfa" />
+                <stop offset="100%" stopColor="#f6c96b" />
+              </linearGradient>
+            </defs>
+            <path fill={`url(#pg-star-${gid})`} d={star} />
+            <path
+              fill="#7cc7f2"
+              transform="translate(2.2 2.2) scale(0.34)"
+              d={star}
+            />
+            <path
+              fill="#f6c96b"
+              transform="translate(14.2 14.4) scale(0.3)"
+              d={star}
+            />
+          </>
+        ) : (
+          <path fill="currentColor" d={star} />
+        )}
       </svg>
     </div>
   )

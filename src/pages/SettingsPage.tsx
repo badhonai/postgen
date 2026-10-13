@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useAuth } from '../features/auth/context'
 import {
   useAgentActivity,
@@ -43,9 +43,28 @@ function CopyBlock({ title, text }: { title: string; text: string }) {
 
 function GroupTitle({ children }: { children: string }) {
   return (
-    <h2 className="mb-2 ml-1.5 text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">
+    <h2 className="px-4 pt-3 pb-1 text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">
       {children}
     </h2>
+  )
+}
+
+const ROW_ICON = {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2.2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const
+
+function RowIcon({ tint, children }: { tint: string; children: ReactNode }) {
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${tint} text-ink`}>
+      {children}
+    </span>
   )
 }
 
@@ -55,6 +74,7 @@ function Row({
   badge,
   chevron,
   onClick,
+  icon,
   children,
 }: {
   label: string
@@ -62,14 +82,16 @@ function Row({
   badge?: number
   chevron?: boolean
   onClick?: () => void
-  children?: React.ReactNode
+  icon?: ReactNode
+  children?: ReactNode
 }) {
   const content = (
     <>
+      {icon}
       <span className="text-[15px] font-bold text-ink">{label}</span>
       <span className="ml-auto flex items-center gap-2">
         {badge !== undefined ? (
-          <span className="rounded-full bg-white/60 px-2 py-0.5 text-[11px] font-bold text-ink-soft">
+          <span className="rounded-full bg-butter/80 px-2 py-0.5 text-[11px] font-bold text-ink">
             {badge}
           </span>
         ) : null}
@@ -93,6 +115,20 @@ function Row({
   return <div className="flex w-full items-center gap-3 px-4 py-3.5">{content}</div>
 }
 
+function relTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'now'
+  if (m < 60) return `${m}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
+}
+
+function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en', { month: 'short', day: 'numeric' })
+}
+
 export default function SettingsPage() {
   const { user } = useAuth()
   const keys = useApiKeys()
@@ -103,7 +139,7 @@ export default function SettingsPage() {
   const [keyName, setKeyName] = useState('')
   const [freshKey, setFreshKey] = useState<string | null>(null)
   const [accent, setAccent] = useState<AccentId>(getAccent)
-  const [open, setOpen] = useState<'keys' | 'mcp' | 'rest' | null>('keys')
+  const [open, setOpen] = useState<'keys' | 'mcp' | 'rest' | null>(null)
 
   const origin = window.location.origin
   const toggle = (id: 'keys' | 'mcp' | 'rest') => setOpen((o) => (o === id ? null : id))
@@ -112,25 +148,49 @@ export default function SettingsPage() {
     <main className="pg-shell">
       <div className="mx-auto max-w-[440px] px-5 pt-6 pb-24">
         {/* ── header ── */}
-        <header className="flex items-center gap-3">
+        <header>
           <button
             type="button"
             aria-label="Back"
             onClick={() => window.history.back()}
-            className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
+            className="pg-glass flex h-11 w-11 items-center justify-center rounded-full text-ink transition active:scale-95"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </button>
-          <h1 className="pg-title text-2xl text-ink">Settings</h1>
+          <h1 className="pg-title mt-3 text-[2.6rem] leading-none text-ink">Settings</h1>
         </header>
 
         {/* ── Appearance ── */}
         <section className="mt-7">
-          <GroupTitle>Appearance</GroupTitle>
           <div className="pg-glass divide-y divide-white/50 overflow-hidden rounded-[22px]">
-            <Row label="Accent">
+            <GroupTitle>Appearance</GroupTitle>
+            <Row
+              label="Theme"
+              value="Pastel"
+              icon={
+                <RowIcon tint="bg-sky/60">
+                  <svg {...ROW_ICON}>
+                    <circle cx="13.5" cy="6.5" r=".8" />
+                    <circle cx="17.5" cy="10.5" r=".8" />
+                    <circle cx="8.5" cy="7.5" r=".8" />
+                    <circle cx="6.5" cy="12.5" r=".8" />
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.2-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16c3.3 0 6-2.7 6-6 0-4.9-4.5-8.6-10-8.6z" />
+                  </svg>
+                </RowIcon>
+              }
+            />
+            <Row
+              label="Accent"
+              icon={
+                <RowIcon tint="bg-lilac/70">
+                  <svg {...ROW_ICON}>
+                    <path d="M12 2.7l5.7 5.7a8 8 0 1 1-11.4 0z" />
+                  </svg>
+                </RowIcon>
+              }
+            >
               <span className="flex items-center gap-1.5">
                 {ACCENTS.map((a) => (
                   <button
@@ -138,7 +198,7 @@ export default function SettingsPage() {
                     type="button"
                     title={a.label}
                     aria-label={a.label}
-                    className={`h-7 w-7 rounded-full transition-transform hover:scale-110 ${
+                    className={`h-6 w-6 rounded-full transition-transform hover:scale-110 ${
                       accent === a.id ? 'ring-2 ring-ink ring-offset-2 ring-offset-white/40' : ''
                     }`}
                     style={{ background: SWATCH[a.id] }}
@@ -150,19 +210,26 @@ export default function SettingsPage() {
                 ))}
               </span>
             </Row>
-            <Row label="Theme" value="Pastel" />
           </div>
         </section>
 
         {/* ── AI connections ── */}
         <section className="mt-7">
-          <GroupTitle>AI connections</GroupTitle>
           <div className="pg-glass divide-y divide-white/50 overflow-hidden rounded-[22px]">
+            <GroupTitle>AI</GroupTitle>
             <Row
               label="API keys"
               badge={(keys.data ?? []).filter((k) => !k.revoked_at).length}
               chevron
               onClick={() => toggle('keys')}
+              icon={
+                <RowIcon tint="bg-butter/70">
+                  <svg {...ROW_ICON}>
+                    <circle cx="7.5" cy="15.5" r="3.5" />
+                    <path d="M10.5 12.5L20 3M17 6l2.5 2.5M14.5 8.5L17 11" />
+                  </svg>
+                </RowIcon>
+              }
             />
             {open === 'keys' ? (
               <div className="space-y-3 px-4 pt-1 pb-4">
@@ -191,7 +258,7 @@ export default function SettingsPage() {
                   <Input
                     value={keyName}
                     onChange={(e) => setKeyName(e.target.value)}
-                    placeholder="Key name — e.g. Claude Desktop"
+                    placeholder="Key name — e.g. Claude"
                     className="flex-1 py-2"
                   />
                   <Button type="submit" disabled={createKey.isPending}>
@@ -234,11 +301,9 @@ export default function SettingsPage() {
                             {k.name}{' '}
                             <code className="text-xs font-semibold text-ink-soft">pgk_live_{k.prefix}…</code>
                           </p>
-                          <p className="text-[11px] font-semibold text-ink-soft">
-                            created {new Date(k.created_at).toLocaleDateString()}
-                            {k.last_used_at
-                              ? ` · last used ${new Date(k.last_used_at).toLocaleString()}`
-                              : ' · never used'}
+                          <p className="text-[11px] font-semibold whitespace-nowrap text-ink-soft">
+                            created {shortDate(k.created_at)}
+                            {k.last_used_at ? ` · used ${shortDate(k.last_used_at)}` : ' · never used'}
                           </p>
                         </div>
                         {k.revoked_at ? (
@@ -266,7 +331,21 @@ export default function SettingsPage() {
               </div>
             ) : null}
 
-            <Row label="MCP server" value="Claude · Gemini" chevron onClick={() => toggle('mcp')} />
+            <Row
+              label="MCP server"
+              value="Claude · Gemini"
+              chevron
+              onClick={() => toggle('mcp')}
+              icon={
+                <RowIcon tint="bg-mint/70">
+                  <svg {...ROW_ICON}>
+                    <rect x="3" y="4" width="18" height="7" rx="2.5" />
+                    <rect x="3" y="13" width="18" height="7" rx="2.5" />
+                    <path d="M7 7.5h.01M7 16.5h.01" />
+                  </svg>
+                </RowIcon>
+              }
+            />
             {open === 'mcp' ? (
               <div className="space-y-3 px-4 pt-1 pb-4">
                 <CopyBlock
@@ -280,7 +359,19 @@ export default function SettingsPage() {
               </div>
             ) : null}
 
-            <Row label="REST API" value="curl · OpenAPI" chevron onClick={() => toggle('rest')} />
+            <Row
+              label="REST API"
+              value="curl · OpenAPI"
+              chevron
+              onClick={() => toggle('rest')}
+              icon={
+                <RowIcon tint="bg-peach/70">
+                  <svg {...ROW_ICON}>
+                    <path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.2 9.2 4.4 4.4 0 0 0 6.5 19z" />
+                  </svg>
+                </RowIcon>
+              }
+            />
             {open === 'rest' ? (
               <div className="space-y-3 px-4 pt-1 pb-4">
                 <CopyBlock
@@ -299,8 +390,8 @@ export default function SettingsPage() {
 
         {/* ── Activity ── */}
         <section className="mt-7">
-          <GroupTitle>Agent activity</GroupTitle>
           <div className="pg-glass divide-y divide-white/40 overflow-hidden rounded-[22px]">
+            <GroupTitle>Activity</GroupTitle>
             {activity.isPending ? (
               <div className="p-4">
                 <Spinner />
@@ -320,8 +411,8 @@ export default function SettingsPage() {
                     {a.target_table}
                     {a.target_id ? ` · ${a.target_id.slice(0, 8)}…` : ''}
                   </span>
-                  <span className="shrink-0 text-[10px] font-bold text-ink-soft">
-                    {new Date(a.created_at).toLocaleString()}
+                  <span className="shrink-0 text-[11px] font-bold text-ink-soft">
+                    {relTime(a.created_at)}
                   </span>
                 </div>
               ))

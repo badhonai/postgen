@@ -1,4 +1,4 @@
-import { useDeferredValue, useRef, useState } from 'react'
+import { useDeferredValue, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { exportProject, importBundle, parseImportJson } from '../lib/export'
 import { findExactDuplicate } from '../lib/dedupe'
@@ -20,6 +20,26 @@ import { Button, ErrorBox, Input, Select, Skeleton, Spinner } from '../component
 
 const STATUSES: Array<PostStatus | ''> = ['', 'idea', 'draft', 'approved', 'scheduled', 'published', 'archived']
 const CATEGORIES: Array<PostCategory | ''> = ['', ...(Object.keys(CATEGORY_LABELS) as PostCategory[])]
+
+function SectionTitle({ icon, title, tint }: { icon: ReactNode; title: string; tint: string }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${tint}`}>{icon}</span>
+      <h2 className="pg-title text-[17px] text-ink">{title}</h2>
+    </div>
+  )
+}
+
+const ICON_STROKE = {
+  width: 17,
+  height: 17,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2.2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const
 
 type Tab = 'about' | 'posts' | 'media'
 
@@ -174,13 +194,17 @@ export default function ProjectDetailPage() {
         </header>
 
         {/* ── tabs ── */}
-        <div className="pg-scroll mt-5 flex gap-2 overflow-x-auto pb-1">
+        <div className="pg-glass mt-5 flex gap-1 rounded-full p-1.5">
           {([['about', 'About'], ['posts', 'Posts'], ['media', 'Media']] as Array<[Tab, string]>).map(
             ([id2, label]) => (
               <button
                 key={id2}
                 type="button"
-                className={`pg-chip ${tab === id2 ? 'pg-chip-active' : ''}`}
+                className={`flex-1 rounded-full px-1 py-2 text-[13px] font-extrabold transition ${
+                  tab === id2
+                    ? 'bg-butter text-ink shadow-[0_2px_10px_rgba(251,193,60,0.45)]'
+                    : 'text-ink-soft'
+                }`}
                 onClick={() => setTab(id2)}
               >
                 {label}
@@ -193,7 +217,16 @@ export default function ProjectDetailPage() {
         {tab === 'about' ? (
           <div className="mt-5 space-y-3.5">
             <section className="pg-glass rounded-[24px] p-5">
-              <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">About</h2>
+              <SectionTitle
+                tint="bg-sky/60"
+                icon={
+                  <svg {...ICON_STROKE}>
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6" />
+                  </svg>
+                }
+                title="About"
+              />
               <p className="mt-2.5 text-[14px] leading-relaxed font-semibold whitespace-pre-wrap text-ink">
                 {p.description || 'No description yet.'}
               </p>
@@ -209,7 +242,15 @@ export default function ProjectDetailPage() {
             </section>
 
             <section className="pg-glass rounded-[24px] p-5">
-              <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Brand voice</h2>
+              <SectionTitle
+                tint="bg-lilac/70"
+                icon={
+                  <svg {...ICON_STROKE}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                }
+                title="Brand voice"
+              />
               <div className="mt-2.5 space-y-2 text-[14px] font-semibold text-ink">
                 <p>
                   <span className="text-ink-soft">Tone & voice — </span>
@@ -231,33 +272,41 @@ export default function ProjectDetailPage() {
             </section>
 
             <section className="pg-glass rounded-[24px] p-5">
-              <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Official links</h2>
-              <ul className="mt-2.5 space-y-1.5 text-[14px] font-semibold">
+              <SectionTitle
+                tint="bg-mint/70"
+                icon={
+                  <svg {...ICON_STROKE}>
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                }
+                title="Official links"
+              />
+              <ul className="mt-2.5 space-y-1.5">
                 {p.website_url ? (
-                  <li className="flex items-center gap-2.5">
-                    <LinkChip label="Website" />
-                    <a href={p.website_url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-ink underline underline-offset-2">
-                      {p.website_url}
-                    </a>
-                  </li>
+                  <LinkRow label="Website" url={p.website_url} />
                 ) : null}
                 {(p.official_links ?? []).map((l) => (
-                  <li key={l.url} className="flex items-center gap-2.5">
-                    <LinkChip label={l.label} />
-                    <a href={l.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-ink underline underline-offset-2">
-                      {l.url}
-                    </a>
-                  </li>
+                  <LinkRow key={l.url} label={l.label} url={l.url} />
                 ))}
                 {!p.website_url && (p.official_links ?? []).length === 0 ? (
-                  <li className="text-ink-soft">—</li>
+                  <li className="text-sm font-semibold text-ink-soft">—</li>
                 ) : null}
               </ul>
             </section>
 
             {(p.sample_posts ?? []).length > 0 ? (
               <section className="pg-glass rounded-[24px] p-5">
-                <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Sample posts</h2>
+                <SectionTitle
+                  tint="bg-peach/70"
+                  icon={
+                    <svg {...ICON_STROKE}>
+                      <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
+                      <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
+                    </svg>
+                  }
+                  title="Sample posts"
+                />
                 <div className="mt-2.5 space-y-2.5">
                   {p.sample_posts.map((s, i) => (
                     <blockquote key={i} className="rounded-[16px] bg-white/45 px-4 py-3 text-[13px] leading-relaxed font-semibold text-ink">
@@ -270,7 +319,15 @@ export default function ProjectDetailPage() {
 
             {p.custom_instructions ? (
               <section className="pg-glass rounded-[24px] p-5">
-                <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Custom instructions</h2>
+                <SectionTitle
+                  tint="bg-butter/70"
+                  icon={
+                    <svg {...ICON_STROKE}>
+                      <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+                    </svg>
+                  }
+                  title="Custom instructions"
+                />
                 <p className="mt-2.5 text-[14px] leading-relaxed font-semibold whitespace-pre-wrap text-ink">
                   {p.custom_instructions}
                 </p>
@@ -287,18 +344,20 @@ export default function ProjectDetailPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search posts…"
-                className="flex-1"
+                className="min-w-0 flex-1"
               />
-              <Select value={category} onChange={(e) => setCategory(e.target.value as PostCategory | '')} className="w-32">
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c ? CATEGORY_LABELS[c] : 'Category'}
-                  </option>
-                ))}
-              </Select>
+              <div className="w-[122px] shrink-0">
+                <Select value={category} onChange={(e) => setCategory(e.target.value as PostCategory | '')}>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c ? CATEGORY_LABELS[c] : 'Category'}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
 
-            <div className="pg-scroll flex gap-2 overflow-x-auto pb-1">
+            <div className="flex flex-wrap gap-2">
               {STATUSES.map((s) => (
                 <button
                   key={s || 'any'}
@@ -371,13 +430,18 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* ── floating new post ── */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center pb-[max(env(safe-area-inset-bottom),18px)]">
-        <Button
-          className="pg-fab pointer-events-auto"
-          onClick={() => navigate(`/projects/${p.id}/posts/new`)}
-        >
-          + New post
-        </Button>
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-[#e6e2f8] via-[#e6e2f8]/80 to-transparent pt-8 pb-[max(env(safe-area-inset-bottom),14px)]">
+        <div className="mx-auto flex max-w-[440px] px-5">
+          <Button
+            className="pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full py-4 text-[15px] font-extrabold"
+            onClick={() => navigate(`/projects/${p.id}/posts/new`)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            New post
+          </Button>
+        </div>
       </div>
 
       {/* ── edit sheet ── */}
@@ -439,11 +503,33 @@ function PostRow({ post }: { post: PostListItem }) {
   )
 }
 
-function LinkChip({ label }: { label: string }) {
+function LinkRow({ label, url }: { label: string; url: string }) {
   return (
-    <span className="w-24 shrink-0 truncate rounded-full bg-lilac/70 px-2.5 py-1 text-center text-[11px] font-bold text-ink">
-      {label}
-    </span>
+    <li>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-2.5 rounded-[16px] bg-white/45 px-3 py-2.5 transition hover:bg-white/65"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-lilac/70 text-ink">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M2 12h20" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-bold text-ink">{label}</span>
+          <span className="block truncate text-[11px] font-semibold text-ink-soft">{url}</span>
+        </span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-soft">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+          <path d="M15 3h6v6" />
+          <path d="M10 14L21 3" />
+        </svg>
+      </a>
+    </li>
   )
 }
 

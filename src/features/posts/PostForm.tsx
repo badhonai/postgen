@@ -205,18 +205,7 @@ export default function PostForm({
       />
 
       {/* thread stepper */}
-      <div className="flex items-center gap-2.5">
-        <button
-          type="button"
-          aria-label="Previous tweet"
-          onClick={() => setFocus((f) => Math.max(0, f - 1))}
-          disabled={focus === 0}
-          className="pg-glass flex h-9 w-9 items-center justify-center rounded-full text-ink disabled:opacity-40"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
+      <div className="flex items-center gap-2">
         <div className="flex flex-1 gap-1.5">
           {tweets.map((_, i) => (
             <button
@@ -224,30 +213,55 @@ export default function PostForm({
               type="button"
               aria-label={`Tweet ${i + 1}`}
               onClick={() => setFocus(i)}
-              className={`h-2 flex-1 rounded-full transition ${
-                i === focus ? 'bg-butter shadow-[0_4px_12px_rgba(242,193,78,0.5)]' : 'bg-white/55'
-              }`}
-            />
+              className="min-w-0 flex-1"
+            >
+              <span
+                className={`block truncate text-center text-[10px] font-extrabold ${
+                  i === focus ? 'text-ink' : 'text-ink-soft/70'
+                }`}
+              >
+                Tweet {i + 1}
+              </span>
+              <span
+                className={`mt-1 block h-2 rounded-full transition ${
+                  i <= focus
+                    ? 'bg-butter shadow-[0_4px_12px_rgba(242,193,78,0.5)]'
+                    : 'bg-white/55'
+                }`}
+              />
+            </button>
           ))}
         </div>
-        <span className="w-10 text-center text-xs font-extrabold text-ink-soft">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[3px] border-butter text-xs font-extrabold text-ink">
           {focus + 1}/{tweets.length}
         </span>
+      </div>
+
+      {/* X preview card (arrows float on its sides) */}
+      <div className="relative">
+        <button
+          type="button"
+          aria-label="Previous tweet"
+          onClick={() => setFocus((f) => Math.max(0, f - 1))}
+          disabled={focus === 0}
+          className="pg-glass absolute top-[38%] -left-2 z-10 flex h-11 w-11 items-center justify-center rounded-full text-ink shadow-[0_8px_20px_rgba(70,60,130,0.18)] disabled:opacity-40"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
         <button
           type="button"
           aria-label="Next tweet"
           onClick={() => setFocus((f) => Math.min(tweets.length - 1, f + 1))}
           disabled={focus >= tweets.length - 1}
-          className="pg-glass flex h-9 w-9 items-center justify-center rounded-full text-ink disabled:opacity-40"
+          className="pg-glass absolute top-[38%] -right-2 z-10 flex h-11 w-11 items-center justify-center rounded-full text-ink shadow-[0_8px_20px_rgba(70,60,130,0.18)] disabled:opacity-40"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 18l6-6-6-6" />
           </svg>
         </button>
-      </div>
-
-      {/* X preview card */}
-      <div className="pg-glass rounded-[26px] p-5">
+        <div className="pg-glass rounded-[26px] p-5">
         <div className="flex items-center gap-2.5">
           <PreviewAvatar project={project} />
           <div className="min-w-0">
@@ -285,11 +299,11 @@ export default function PostForm({
           </div>
         ) : null}
 
-        <div className="mt-3 flex items-center gap-2 border-t border-white/50 pt-3">
+        <div className="mt-3 flex items-center gap-1.5 border-t border-white/50 pt-3">
           <button
             type="button"
             onClick={() => setAttachFor(focus)}
-            className="rounded-full bg-white/55 px-3 py-1.5 text-xs font-bold text-ink hover:bg-white/75"
+            className="rounded-full bg-white/55 px-2.5 py-1.5 text-[11px] font-bold whitespace-nowrap text-ink hover:bg-white/75"
           >
             📎 Attach
           </button>
@@ -297,7 +311,7 @@ export default function PostForm({
             type="button"
             onClick={() => move(-1)}
             disabled={focus === 0}
-            className="rounded-full bg-white/55 px-3 py-1.5 text-xs font-bold text-ink hover:bg-white/75 disabled:opacity-40"
+            className="rounded-full bg-white/55 px-2.5 py-1.5 text-[11px] font-bold whitespace-nowrap text-ink hover:bg-white/75 disabled:opacity-40"
           >
             ← Earlier
           </button>
@@ -305,17 +319,18 @@ export default function PostForm({
             type="button"
             onClick={() => move(1)}
             disabled={focus >= tweets.length - 1}
-            className="rounded-full bg-white/55 px-3 py-1.5 text-xs font-bold text-ink hover:bg-white/75 disabled:opacity-40"
+            className="rounded-full bg-white/55 px-2.5 py-1.5 text-[11px] font-bold whitespace-nowrap text-ink hover:bg-white/75 disabled:opacity-40"
           >
             Later →
           </button>
           <span
-            className={`ml-auto rounded-full px-2.5 py-1 text-xs font-extrabold ${
+            className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold ${
               overLimit ? 'bg-rose-soft text-rose-700' : 'bg-white/55 text-ink-soft'
             }`}
           >
             {count}/{X_WEIGHTED_LIMIT}
           </span>
+        </div>
         </div>
       </div>
 

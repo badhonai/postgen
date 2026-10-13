@@ -37,16 +37,25 @@ export function HeroTile({ project, posts }: { project: Project; posts: PostSumm
   const shown = posts.slice(0, 3)
   const more = posts.length - shown.length
   return (
-    <Link to={`/projects/${project.id}`} className="pg-tile block bg-mint p-5">
+    <Link to={`/projects/${project.id}`} className="pg-tile relative block bg-mint p-5">
+      <span className="absolute top-4 right-4 rounded-full bg-white/55 px-2.5 py-1 text-[10px] font-bold text-ink">
+        {posts.length} post{posts.length === 1 ? '' : 's'}
+      </span>
       <div className="flex items-center gap-3.5">
         <Logo r2Key={project.logo?.r2_key} size={58} />
-        <div className="min-w-0">
+        <div className="min-w-0 pr-14">
           <h3 className="pg-title truncate text-xl text-ink">{project.name}</h3>
           {project.x_username ? (
             <p className="truncate text-xs font-bold text-ink-soft">@{project.x_username}</p>
           ) : null}
         </div>
       </div>
+
+      {project.description ? (
+        <p className="mt-2.5 line-clamp-2 text-[13px] leading-snug font-semibold text-ink-soft">
+          {project.description}
+        </p>
+      ) : null}
 
       {(project.content_pillars ?? []).length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-1.5">
