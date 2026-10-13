@@ -208,6 +208,25 @@ External AI tools connect **into** PostGen and draft posts (drafts-only — you 
   duplicates skipped on import)
 - **Appearance** (Settings): 4 accent themes
 
+## Project profile 🪪
+
+Every project carries a full brand profile (created in the New project flow):
+
+- **Logo** + **asset gallery** (mascot, product shots…) — each asset gets a kind label;
+  one image is the project logo (dashboard + previews)
+- **Name · Description/Context · X username · website**
+- **Chain / ecosystem + token ticker** (`Base`, `$PROJ`)
+- **Content pillars** — the recurring topics you post about
+- **Sample posts you love** — few-shot style examples for the AI
+- **Tone & voice · emoji policy · default hashtags · CTA style**
+- **Blacklist words/symbols** — see below
+- **Custom instructions** — anything else the AI must know
+- **Official links** (Discord, Telegram, GitHub, …) and **official contract addresses** —
+  agents cite these and never invent links or CAs
+
+The whole profile is served to connected AIs via `GET /api/v1/projects/:id` and the MCP
+resource `project://<id>/context`, so every external agent drafts with full brand context.
+
 ## No-repeat posts 🔁
 
 Every write (web app **and** agent API) is checked against your own posts:
@@ -222,15 +241,26 @@ Every write (web app **and** agent API) is checked against your own posts:
 Normalization: lowercase · strip thread numbering (`1/n`) · collapse whitespace ·
 replace URLs with `<URL>`. Scope is always *your* posts only (RLS).
 
+## Blacklist 🚫
+
+Per-project **blacklist words/symbols** (part of the brand profile):
+
+- **Agent writes are hard-blocked** — a draft containing a blacklisted term is
+  rejected with `403 {"error":"blacklisted","hits":[…]}` (REST and MCP).
+- **Web editor warns, never blocks** — you're the human, so you can override.
+- Words match at word boundaries (`gm` matches `gm!`, not `legma`); symbols match
+  anywhere (`🚀`, `🔥🔥`). Case-insensitive.
+
 ---
 
 ## Roadmap
 
 - **M0** ✅ scaffold, schema + RLS, dedupe engine, keep-alive, deploy config
-- **M1** auth & projects (brand voice per project)
-- **M2** posts CRUD, threads (n/n), X char counter, search, copy, no-repeat dialog
-- **M3** R2 media upload + signed reads
-- **M4** Agent API: REST + API keys + MCP + OpenAPI + drafts-only guardrails
-- **M5** polish, ⌘K, export
+- **M1** ✅ auth & projects (brand voice per project)
+- **M2** ✅ posts CRUD, threads (n/n), X char counter, search, copy, no-repeat dialog
+- **M3** ✅ R2 media upload + signed reads
+- **M4** ✅ Agent API: REST + API keys + MCP + OpenAPI + drafts-only guardrails
+- **M5** ✅ polish, ⌘K, export
+- ✅ project profile (logo, links, chains, pillars, samples, blacklist, …)
 
 Full detail in [`PLAN.md`](./PLAN.md).

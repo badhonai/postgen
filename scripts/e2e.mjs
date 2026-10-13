@@ -130,7 +130,20 @@ async function main() {
   console.log('\n▸ Web path (supabase-js + RLS)')
   const { data: project, error: projErr } = await supa
     .from('projects')
-    .insert({ user_id: session.user.id, name: 'E2E Project', slug: `e2e-${Date.now().toString(36)}` })
+    .insert({
+      user_id: session.user.id,
+      name: 'E2E Project',
+      slug: `e2e-${Date.now().toString(36)}`,
+      x_username: 'e2eweb',
+      website_url: 'https://example.com',
+      chains: ['Base'],
+      token_ticker: 'E2E',
+      content_pillars: ['testing'],
+      sample_posts: ['A sample post the AI should learn from.'],
+      custom_instructions: 'Always verify facts.',
+      official_links: [{ label: 'Site', url: 'https://example.com' }],
+      contract_addresses: [{ chain: 'Base', address: '0xdeadbeef', label: 'Token' }],
+    })
     .select()
     .single()
   if (!check('create project (RLS insert)', !projErr && !!project, projErr?.message)) {
@@ -254,6 +267,69 @@ async function main() {
   const r1b = await r1.json()
   check('GET /projects', r1.status === 200 && r1b.projects?.length >= 1)
 
+  // ── project profile (logo/links/chains/pillars/samples/instructions) ──
+  const rp = await api('/api/v1/projects', {
+    method: 'POST',
+    headers: agent,
+    body: JSON.stringify({
+      name: 'E2E Profile Project',
+      description: 'Profile fields test',
+      brand_voice: { tone: 'crisp', blacklist: ['zzzbannedterm'] },
+      x_username: '@e2eagent',
+      website_url: 'https://example.org',
+      chains: ['Solana', 'Base'],
+      token_ticker: '$PROF',
+      content_pillars: ['updates', 'memes'],
+      sample_posts: ['A beloved sample tweet with words yankee zulu.'],
+      custom_instructions: 'Never mention competitors.',
+      official_links: [{ label: 'Discord', url: 'https://discord.gg/e2e' }],
+      contract_addresses: [{ chain: 'Solana', address: 'So1An1111', label: 'Token' }],
+    }),
+  })
+  const rpb = await rp.json()
+  const prof = rpb.project ?? {}
+  check(
+    'POST /projects saves profile fields',
+    rp.status === 201 &&
+      prof.x_username === 'e2eagent' &&
+      prof.token_ticker === 'PROF' &&
+      (prof.chains ?? []).length === 2 &&
+      (prof.content_pillars ?? [])[0] === 'updates' &&
+      (prof.sample_posts ?? []).length === 1 &&
+      (prof.official_links ?? [])[0]?.label === 'Discord' &&
+      (prof.contract_addresses ?? [])[0]?.address === 'So1An1111' &&
+      prof.brand_voice?.blacklist?.[0] === 'zzzbannedterm',
+    `HTTP ${rp.status} ${JSON.stringify(rpb).slice(0, 120)}`,
+  )
+  const profileProjectId = prof.id
+
+  const rbl = await api('/api/v1/posts', {
+    method: 'POST',
+    headers: agent,
+    body: JSON.stringify({
+      project_id: profileProjectId,
+      tweets: ['This one contains a zzzbannedterm inside.'],
+    }),
+  })
+  const rblb = await rbl.json()
+  check(
+    'blacklist: banned term → 403',
+    rbl.status === 403 && rblb.error === 'blacklisted',
+    `HTTP ${rbl.status} ${rblb.error ?? ''}`,
+  )
+
+  const rpp = await api(`/api/v1/projects/${profileProjectId}`, {
+    method: 'PATCH',
+    headers: agent,
+    body: JSON.stringify({ token_ticker: 'PRO2', content_pillars: ['updates'] }),
+  })
+  const rppb = await rpp.json()
+  check(
+    'PATCH /projects/:id updates profile',
+    rpp.status === 200 && rppb.project?.token_ticker === 'PRO2',
+    `HTTP ${rpp.status}`,
+  )
+
   const r2 = await api('/api/v1/posts', {
     method: 'POST',
     headers: agent,
@@ -372,7 +448,11 @@ async function main() {
   check('resources/list', (resList.result?.resources?.length ?? 0) >= 2)
 
   const read = await rpc('resources/read', { uri: `project://${project.id}/context` }, 7)
-  check('resources/read project://…/context', !!read.result?.contents?.[0]?.text)
+  const readText = read.result?.contents?.[0]?.text ?? ''
+  check(
+    'resources/read project://…/context',
+    !!readText && readText.includes('brand_voice') && readText.includes('x_username'),
+  )
 
   // ── 6. KEY REVOCATION + CLEANUP ──────────────────────────
   console.log('\n▸ Revocation + cleanup')
@@ -389,6 +469,7 @@ async function main() {
     check('delete asset (R2 + row)', del.status === 200)
   }
 
+  if (profileProjectId) await supa.from('projects').delete().eq('id', profileProjectId)
   await supa.from('projects').delete().eq('id', project.id)
   const { data: leftover } = await supa.from('projects').select('id').eq('id', project.id)
   check('cleanup: test project removed (cascade)', (leftover ?? []).length === 0)
