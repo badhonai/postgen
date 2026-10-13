@@ -108,3 +108,5 @@ export type Asset = {
 }
 
 export const ASSET_KINDS = ['logo', 'mascot', 'product', 'other'] as const
+
+export const TILE_COLORS = ['bg-mint', 'bg-lilac', 'bg-cream', 'bg-peach', 'bg-sky', 'bg-rose-soft'] as const

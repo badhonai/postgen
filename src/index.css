@@ -1,4 +1,11 @@
 @import "tailwindcss";
+@import '@fontsource/fredoka/400.css';
+@import '@fontsource/fredoka/500.css';
+@import '@fontsource/fredoka/600.css';
+@import '@fontsource/nunito/400.css';
+@import '@fontsource/nunito/600.css';
+@import '@fontsource/nunito/700.css';
+@import '@fontsource/nunito/800.css';
 
 /* ── Accent themes (Settings → Appearance) ───────────────────────────
    Tailwind's emerald scale is remapped to --accent-* so one override
@@ -64,4 +71,106 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PostGen "fresh" theme — mobile-first redesign (bento style #1).
+   Scoped via .pg-* classes so un-redesigned pages keep working
+   until their own round. Pastel gradient · frosted glass · rounded
+   display type · butter-yellow actives.
+   ══════════════════════════════════════════════════════════════════ */
+
+
+@theme {
+  --font-display: 'Fredoka', ui-rounded, system-ui, sans-serif;
+  --font-body: 'Nunito', ui-rounded, system-ui, sans-serif;
+  --color-ink: #2f2b5e;
+  --color-ink-soft: #75709e;
+  --color-butter: #ffe68a;
+  --color-butter-deep: #f2c14e;
+  --color-mint: #c3ead8;
+  --color-lilac: #dcd6f8;
+  --color-cream: #f7efd3;
+  --color-peach: #f8d5c4;
+  --color-sky: #d3e5f7;
+  --color-rose-soft: #f7c9d4;
+}
+
+.pg-shell {
+  min-height: 100dvh;
+  color: var(--color-ink);
+  color-scheme: light;
+  font-family: var(--font-body);
+  background:
+    radial-gradient(900px 480px at 85% -8%, rgba(255, 255, 255, 0.85), transparent 62%),
+    radial-gradient(700px 420px at -10% 108%, rgba(255, 255, 255, 0.5), transparent 55%),
+    linear-gradient(168deg, #cfe0f7 0%, #dcd6f6 44%, #e9d8ef 74%, #d6e5f5 100%);
+  background-attachment: fixed;
+}
+
+.pg-glass {
+  background: rgba(255, 255, 255, 0.56);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 14px 34px rgba(70, 60, 130, 0.12);
+}
+
+.pg-glass-strong {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 18px 44px rgba(70, 60, 130, 0.16);
+}
+
+.pg-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+}
+
+.pg-chip {
+  border-radius: 9999px;
+  padding: 0.42rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-ink);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+
+.pg-chip:active {
+  transform: scale(0.96);
+}
+
+.pg-chip-active {
+  background: var(--color-butter);
+  border-color: rgba(242, 193, 78, 0.65);
+  box-shadow: 0 8px 20px rgba(242, 193, 78, 0.4);
+}
+
+.pg-tile {
+  border-radius: 28px;
+  box-shadow: 0 16px 36px rgba(70, 60, 130, 0.14);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.pg-tile:active {
+  transform: scale(0.975);
+}
+
+.pg-fab {
+  box-shadow: 0 14px 30px rgba(47, 43, 94, 0.4);
+}
+
+.pg-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.pg-scroll {
+  scrollbar-width: none;
 }

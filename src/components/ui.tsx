@@ -8,32 +8,37 @@ import type {
 import { cn } from '../lib/cn'
 
 const inputClass =
-  'w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 ' +
-  'placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500'
+  'w-full rounded-2xl border border-white/70 bg-white/55 px-3.5 py-2.5 text-sm text-ink ' +
+  'placeholder:text-ink-soft/70 shadow-[0_6px_18px_rgba(70,60,130,0.08)] ' +
+  'focus:border-white focus:outline-none focus:ring-2 focus:ring-ink/15'
 
 export function Button({
   variant = 'primary',
   className,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'ghost' | 'danger'
+  variant?: 'primary' | 'ghost' | 'danger' | 'accent'
 }) {
   const styles = {
     primary:
-      'rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-emerald-400 disabled:opacity-50',
+      'rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(47,43,94,0.32)] ' +
+      'hover:brightness-110 active:scale-[0.97] transition disabled:opacity-50 disabled:pointer-events-none',
+    accent:
+      'rounded-full bg-butter px-5 py-2.5 text-sm font-bold text-ink shadow-[0_10px_24px_rgba(242,193,78,0.42)] ' +
+      'hover:brightness-105 active:scale-[0.97] transition disabled:opacity-50 disabled:pointer-events-none',
     ghost:
-      'rounded-lg border border-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-900 disabled:opacity-50',
+      'rounded-full border border-white/75 bg-white/55 px-5 py-2.5 text-sm font-bold text-ink ' +
+      'hover:bg-white/75 active:scale-[0.97] transition disabled:opacity-50 disabled:pointer-events-none',
     danger:
-      'rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 disabled:opacity-50',
+      'rounded-full border border-rose-300/70 bg-rose-soft/60 px-5 py-2.5 text-sm font-bold text-rose-700 ' +
+      'hover:bg-rose-soft active:scale-[0.97] transition disabled:opacity-50 disabled:pointer-events-none',
   }
   return <button className={cn(styles[variant], className)} {...props} />
 }
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={cn('rounded-xl border border-zinc-800 bg-zinc-900/50 p-6', className)}>
-      {children}
-    </div>
+    <div className={cn('pg-glass rounded-[28px] p-6', className)}>{children}</div>
   )
 }
 
@@ -48,9 +53,9 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-zinc-300">{label}</span>
+      <span className="mb-1.5 block text-sm font-bold text-ink">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-xs text-zinc-500">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-xs font-semibold text-ink-soft">{hint}</span> : null}
     </label>
   )
 }
@@ -64,13 +69,13 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
 }
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(inputClass, className)} {...props} />
+  return <select className={cn(inputClass, 'appearance-none', className)} {...props} />
 }
 
 export function Spinner() {
   return (
     <div className="flex justify-center py-12">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-700 border-t-emerald-400" />
+      <div className="h-7 w-7 animate-spin rounded-full border-[3px] border-white/60 border-t-ink" />
     </div>
   )
 }
@@ -78,7 +83,7 @@ export function Spinner() {
 export function Skeleton({ className }: { className?: string }) {
   return (
     <div
-      className={cn('animate-pulse rounded-md bg-zinc-800/60', className)}
+      className={cn('animate-pulse rounded-2xl bg-white/50', className)}
       aria-hidden="true"
     />
   )
@@ -86,7 +91,7 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+    <div className="rounded-2xl border border-rose-300/70 bg-rose-soft/50 px-4 py-3 text-sm font-semibold text-rose-700">
       {message}
     </div>
   )
