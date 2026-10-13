@@ -1,7 +1,7 @@
 # PostGen — Twitter/X Post Studio for Web3 Projects
 
 > Plan v1.5 — 2026-10-13
-> Status: **M0 + M1 built & live on main** ✅ — see §13 for next steps
+> Status: **M0–M2 built & live on main** ✅ — see §13 for next steps
 > v1.5 change: **JWT strategy locked** — Supabase **signing keys (ES256)** + JWKS verification; agent JWTs minted via an imported signing key; legacy HS256 secret is fallback only (§6, §12.12).
 > v1.4 change: migrations deploy via **Supabase GitHub integration** ("Deploy to production" ON). Automatic branching (PR preview DBs) is Pro-only → OFF per the $0 rule; repo structured per docs so enabling it later is one click.
 > v1.3 change: **No repeat posts** — exact + near-duplicate detection on every write (web + agent API), see §5 M2 & §6.
@@ -150,7 +150,8 @@ generations       (backlog) optional prompt/output audit
 - Live **X character counter** (280 weighted, links=23)
 - Tags, filters, full-text search
 - **One-click copy** (single tweet or numbered thread)
-- Draft autosave; `created_via` badge ("drafted via MCP")
+- Explicit save is the **no-repeat gate** (create + update run the full dupes check); debounced autosave moved to M5 so it can't bypass the gate
+- `created_via` badge ("drafted via MCP")
 - **No-repeat guard**: every save runs exact-hash + similarity check against *your* posts → dialog lists similar posts (view / save anyway / cancel)
 
 ### M3 — Media (R2)
@@ -384,7 +385,7 @@ postgen/
 |---|---|---|
 | **M0** ✅ done | Scaffold + deploy + DB migration + keep-alive cron | small |
 | **M1** ✅ done | Auth + projects + dashboard | medium |
-| **M2** | Posts CRUD + threads + counter + search + copy | large |
+| **M2** ✅ done | Posts CRUD + threads + counter + search + copy + no-repeat dialog | large |
 | **M3** | R2 media upload/signed reads | medium |
 | **M4a** | REST Agent API + API-key management + OpenAPI spec | medium |
 | **M4b** | MCP server + Connect-your-AI page + guardrails + audit feed | large |
@@ -415,5 +416,6 @@ We build milestone by milestone, testing each before moving on.
 
 1. ✅ **M0 built & live** — scaffold, schema + RLS + dedupe, migrations via GitHub integration.
 2. ✅ **M1 built & live** — login/signup (Supabase sessions), protected routes, projects CRUD, brand voice editor, dashboard.
-3. **M2 next**: posts CRUD, thread builder (n/n), X char counter, search, one-click copy, no-repeat dialog.
-4. Then M3 (R2 media) → M4 (Agent API + MCP) → M5 (polish).
+3. ✅ **M2 built & live** — posts CRUD, thread builder (n/n), X weighted counter, FTS search, one-click copy, no-repeat dialog + atomic post saver RPC.
+4. **M3 next**: R2 media — drag & drop upload, signed reads, attach media to tweets, project asset library.
+5. Then M4 (Agent API: REST + keys + MCP + OpenAPI) → M5 (polish: autosave, shortcuts, export).
