@@ -1,0 +1,26 @@
+# Supabase free-tier projects auto-pause after ~7 days of inactivity.
+# This workflow (free on GitHub Actions) pings the project twice a week
+# so PostGen is always awake. Set repo secrets: SUPABASE_URL, SUPABASE_ANON_KEY.
+
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '17 9 * * 1,4' # Mon & Thu, 09:17 UTC
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase (keeps free project awake)
+        run: |
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
+            echo "SUPABASE_URL secret not set — skipping."
+            exit 0
+          fi
+          curl -fsS --max-time 20 \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/auth/v1/health" \
+            && echo " OK — project is alive" \
+            || echo " ping failed (check secrets)"

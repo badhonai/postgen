@@ -1,0 +1,30 @@
+# ─────────────────────────────────────────────────────────────
+# Free fallback: apply Supabase migrations WITHOUT the GitHub integration.
+#
+# Normally DISABLED — the Supabase GitHub integration ("Deploy to production")
+# applies migrations automatically on push to main. Enable this workflow only
+# if you cannot use the integration:
+#   1. Repo Settings → Variables → USE_SUPABASE_ACTION = "true"
+#   2. Repo Settings → Secrets → SUPABASE_DB_URL = Session pooler connection
+#      string (Supabase Dashboard → Connect → Session pooler)
+# ─────────────────────────────────────────────────────────────
+
+name: Supabase db push (fallback)
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/migrations/**']
+  workflow_dispatch: {}
+
+jobs:
+  migrate:
+    if: vars.USE_SUPABASE_ACTION == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Apply migrations
+        run: supabase db push --db-url "${{ secrets.SUPABASE_DB_URL }}"
