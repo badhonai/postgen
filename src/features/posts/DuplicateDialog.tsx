@@ -1,5 +1,6 @@
 import type { SimilarPost } from '../../lib/dedupe'
 import { SIMILARITY_BLOCK } from '../../lib/dedupe'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Card } from '../../components/ui'
 
@@ -35,6 +36,14 @@ export default function DuplicateDialog({
   onSaveAnyway: () => void
   onCancel: () => void
 }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <Card className="max-h-[80vh] w-full max-w-lg overflow-y-auto">

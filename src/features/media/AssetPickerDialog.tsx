@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useProjectAssets } from '../../lib/media'
 import type { Asset } from '../../lib/types'
@@ -16,6 +17,14 @@ export default function AssetPickerDialog({
 }) {
   const qc = useQueryClient()
   const assets = useProjectAssets(projectId)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">

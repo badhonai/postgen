@@ -129,6 +129,8 @@ export type SavePostInput = {
   contentHash: string
   /** Attachments keyed by tweet index (0-based) in the `tweets` array. */
   media: Array<{ tweetIndex: number; asset: Asset }>
+  /** Preserved on import; otherwise defaults to 'web'. */
+  createdVia?: 'web' | 'api' | 'mcp'
 }
 
 export function useSavePost() {
@@ -155,6 +157,7 @@ export function useSavePost() {
         p_tweets: input.tweets,
         p_tag_names: input.tagNames,
         p_media: p_media,
+        p_created_via: input.createdVia ?? 'web',
       })
       if (error) throw error
       return data as string

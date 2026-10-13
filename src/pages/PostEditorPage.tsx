@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { checkDuplicates, hasBlockingDuplicates, type DupCheck } from '../lib/dedupe'
+import { checkDuplicates, hasBlockingDuplicates, type DupCheck, type SimilarPost } from '../lib/dedupe'
 import { numberedTweets } from '../lib/text'
 import {
   useDeletePost,
@@ -26,9 +26,71 @@ export default function PostEditorPage() {
   const [pendingInput, setPendingInput] = useState<SavePostInput | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [similarBanner, setSimilarBanner] = useState<SimilarPost[] | null>(null)
+  const [autosavedAt, setAutosavedAt] = useState<number | null>(null)
+
+  const latestRef = useRef<SavePostInput | null>(null)
+  const lastSavedRef = useRef<string>('')
+  const timerRef = useRef<number | undefined>(undefined)
+  const hydratedRef = useRef(false)
 
   const projectId = isNew ? (params.get('project') ?? '') : (post.data?.project_id ?? '')
   const postData = post.data ?? null
+
+  // ── autosave (existing drafts only): silent save + non-blocking similar banner ──
+  const serialize = (snap: SavePostInput) =>
+    JSON.stringify([snap.title, snap.status, snap.category, snap.tagNames, snap.tweets, snap.media.map((m) => m.asset.id)])
+
+  useEffect(() => {
+    return () => window.clearTimeout(timerRef.current)
+  }, [])
+
+  const runAutosave = async () => {
+    const snap = latestRef.current
+    if (!snap?.postId || dupCheck || savePost.isPending) return
+    if (snap.status !== 'idea' && snap.status !== 'draft') return
+    if (serialize(snap) === lastSavedRef.current) return
+    const tweets = snap.tweets.map((t) => t.trim()).filter(Boolean)
+    if (tweets.length === 0) return
+    try {
+      const check = await checkDuplicates(tweets, {
+        excludePostId: snap.postId,
+        projectId: snap.projectId,
+      })
+      setSimilarBanner(hasBlockingDuplicates(check) ? check.similar : null)
+      await savePost.mutateAsync({ ...snap, tweets, contentText: check.contentText, contentHash: check.contentHash })
+      lastSavedRef.current = serialize(snap)
+      setAutosavedAt(Date.now())
+    } catch {
+      /* autosave is best-effort — explicit save reports errors */
+    }
+  }
+
+  const onFormChange = (snap: SavePostInput) => {
+    latestRef.current = snap
+    // first emission = pristine form state → baseline, no autosave
+    if (!hydratedRef.current) {
+      hydratedRef.current = true
+      if (snap.postId) lastSavedRef.current = serialize(snap)
+      return
+    }
+    if (isNew) return
+    window.clearTimeout(timerRef.current)
+    timerRef.current = window.setTimeout(() => void runAutosave(), 2000)
+  }
+
+  // ⌘S / Ctrl+S → explicit save (full no-repeat gate)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        if (latestRef.current) void handleSubmit(latestRef.current)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, id])
 
   if (!isNew && post.isPending) {
     return (
@@ -195,10 +257,36 @@ export default function PostEditorPage() {
           {postData.post_tweets.length} tweet{postData.post_tweets.length > 1 ? 's' : ''} ·
           created via {postData.created_via} ·{' '}
           {new Date(postData.created_at).toLocaleString()}
+          {autosavedAt ? ` · autosaved ${new Date(autosavedAt).toLocaleTimeString()}` : ''}
         </p>
       ) : null}
 
-      <Card className="mt-8">
+      {similarBanner ? (
+        <div className="mt-6 flex items-start justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          <p>
+            ⚠️ This draft is very similar to{' '}
+            {similarBanner.slice(0, 2).map((s, i) => (
+              <span key={s.id}>
+                {i > 0 ? ' and ' : ''}
+                <Link to={`/posts/${s.id}`} className="font-medium underline hover:text-amber-200">
+                  {s.title || 'an untitled post'}
+                </Link>{' '}
+                ({Math.round(s.similarity * 100)}%)
+              </span>
+            ))}
+            . Autosaved anyway — edit one of them to avoid a repeat.
+          </p>
+          <button
+            type="button"
+            className="shrink-0 text-amber-400 hover:text-amber-200"
+            onClick={() => setSimilarBanner(null)}
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
+
+      <Card className="mt-6">
         <PostForm
           initial={initial}
           busy={savePost.isPending}
@@ -207,6 +295,7 @@ export default function PostEditorPage() {
           onCancel={() =>
             navigate(projectId ? `/projects/${projectId}` : '/dashboard', { replace: true })
           }
+          onChange={onFormChange}
         />
       </Card>
 

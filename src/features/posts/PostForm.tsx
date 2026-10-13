@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import type { Asset, PostCategory, PostStatus } from '../../lib/types'
 import { CATEGORY_LABELS } from '../../lib/types'
 import { Button, ErrorBox, Field, Input, Select } from '../../components/ui'
@@ -21,12 +21,15 @@ export default function PostForm({
   error,
   onSubmit,
   onCancel,
+  onChange,
 }: {
   initial?: SavePostInput
   busy: boolean
   error?: string | null
   onSubmit: (input: SavePostInput) => void
   onCancel: () => void
+  /** Fires on every edit with the current snapshot (used for autosave + ⌘S). */
+  onChange?: (snapshot: SavePostInput) => void
 }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [category, setCategory] = useState<PostCategory>(initial?.category ?? 'promotional')
@@ -40,20 +43,28 @@ export default function PostForm({
   )
   const [attachFor, setAttachFor] = useState<number | null>(null)
 
+  const snapshot = (): SavePostInput => ({
+    postId: initial?.postId,
+    projectId: initial!.projectId,
+    category,
+    status,
+    title: title.trim(),
+    tweets,
+    tagNames: csvToList(tagNames),
+    contentText: '', // filled by caller (normalize + hash)
+    contentHash: '',
+    media: attachments,
+    createdVia: initial?.createdVia,
+  })
+
+  useEffect(() => {
+    onChange?.(snapshot())
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot mirrors form state
+  }, [title, category, status, tagNames, tweets, attachments])
+
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    onSubmit({
-      postId: initial?.postId,
-      projectId: initial!.projectId,
-      category,
-      status,
-      title: title.trim(),
-      tweets,
-      tagNames: csvToList(tagNames),
-      contentText: '', // filled by caller (normalize + hash)
-      contentHash: '',
-      media: attachments,
-    })
+    onSubmit(snapshot())
   }
 
   return (
