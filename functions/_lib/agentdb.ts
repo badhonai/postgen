@@ -1,0 +1,430 @@
+import { serviceClient } from './auth'
+import type { Env } from './env'
+import { sha256Hex, threadToContentText } from '../../src/lib/text'
+
+export class AgentError extends Error {
+  status: number
+  body: unknown
+  constructor(status: number, body: unknown) {
+    super(typeof body === 'object' && body !== null ? JSON.stringify(body) : String(body))
+    this.status = status
+    this.body = body
+  }
+}
+
+export type CreatedVia = 'api' | 'mcp'
+export type AgentAuth = { keyId: string; userId: string }
+
+export const SIMILARITY_BLOCK = 0.65
+export const SIMILARITY_SHOW = 0.45
+export const DAILY_POST_CAP = 50
+
+function db(env: Env) {
+  return serviceClient(env)
+}
+
+function fail(error: { message: string } | null): never {
+  throw new AgentError(500, { error: error?.message ?? 'database error' })
+}
+
+function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'project'
+  )
+}
+
+// ────────────────────────────── activity ──────────────────────────────
+
+export async function logActivity(
+  env: Env,
+  auth: AgentAuth,
+  action: string,
+  target: { table?: string; id?: string },
+  metadata?: unknown,
+): Promise<void> {
+  await db(env).from('agent_activity').insert({
+    user_id: auth.userId,
+    key_id: auth.keyId,
+    action,
+    target_table: target.table ?? null,
+    target_id: target.id ?? null,
+    metadata: metadata ?? null,
+  })
+}
+
+// ────────────────────────────── projects ──────────────────────────────
+
+export async function listProjects(env: Env, userId: string) {
+  const { data, error } = await db(env)
+    .from('projects')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at')
+  if (error) fail(error)
+  return data
+}
+
+export async function getProject(env: Env, userId: string, id: string) {
+  const client = db(env)
+  const { data: project, error } = await client
+    .from('projects')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) fail(error)
+  if (!project) throw new AgentError(404, { error: 'project not found' })
+
+  const { data: knowledge, error: kErr } = await client
+    .from('knowledge')
+    .select('*')
+    .eq('project_id', id)
+    .eq('user_id', userId)
+    .order('created_at')
+  if (kErr) fail(kErr)
+
+  return { ...project, knowledge: knowledge ?? [] }
+}
+
+export async function createProject(
+  env: Env,
+  userId: string,
+  input: { name?: string; description?: string; brand_voice?: unknown },
+) {
+  const name = (input.name ?? '').trim()
+  if (!name) throw new AgentError(400, { error: 'name is required' })
+
+  const base = slugify(name)
+  const insert = (slug: string) =>
+    db(env)
+      .from('projects')
+      .insert({
+        user_id: userId,
+        name,
+        slug,
+        description: input.description?.trim() || null,
+        brand_voice: input.brand_voice ?? {},
+      })
+      .select()
+      .single()
+
+  let { data, error } = await insert(base)
+  if (error && error.code === '23505') {
+    ;({ data, error } = await insert(`${base}-${Date.now().toString(36).slice(-4)}`))
+  }
+  if (error) fail(error)
+  return data
+}
+
+export async function updateProject(
+  env: Env,
+  userId: string,
+  id: string,
+  patch: { name?: string; description?: string; brand_voice?: unknown },
+) {
+  const updates: Record<string, unknown> = {}
+  if (patch.name !== undefined) updates.name = patch.name.trim()
+  if (patch.description !== undefined) updates.description = patch.description.trim() || null
+  if (patch.brand_voice !== undefined) updates.brand_voice = patch.brand_voice
+
+  const { data, error } = await db(env)
+    .from('projects')
+    .update(updates)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select()
+    .maybeSingle()
+  if (error) fail(error)
+  if (!data) throw new AgentError(404, { error: 'project not found' })
+  return data
+}
+
+// ─────────────────────────────── posts ───────────────────────────────
+
+export type PostWrite = {
+  projectId?: string
+  title?: string
+  category?: 'promotional' | 'educational' | 'announcement' | 'other'
+  status?: 'idea' | 'draft'
+  tweets: string[]
+  tagNames?: string[]
+  allowSimilar?: boolean
+}
+
+function assertDraftsOnly(status?: string): 'idea' | 'draft' {
+  if (status === undefined) return 'draft'
+  if (status !== 'idea' && status !== 'draft') {
+    throw new AgentError(403, {
+      error: 'agents_drafts_only',
+      message: 'Agents can only create/update drafts (status: idea | draft). A human approves/publishes in the web app.',
+    })
+  }
+  return status
+}
+
+function assertTweets(tweets: unknown): string[] {
+  if (!Array.isArray(tweets) || tweets.length === 0) {
+    throw new AgentError(400, { error: 'tweets must be a non-empty array of strings' })
+  }
+  return tweets.map((t) => String(t).trim()).filter(Boolean)
+}
+
+/** Runs the no-repeat check; throws 409 unless allowSimilar. */
+async function assertNoRepeat(
+  env: Env,
+  userId: string,
+  tweets: string[],
+  opts: { excludePostId?: string; projectId?: string; allowSimilar?: boolean },
+): Promise<{ contentText: string; contentHash: string }> {
+  const contentText = threadToContentText(tweets)
+  const contentHash = await sha256Hex(contentText)
+  const client = db(env)
+
+  const { data: dup, error: dupErr } = await client.rpc('find_duplicate_post', {
+    p_content_hash: contentHash,
+  })
+  if (dupErr) fail(dupErr)
+
+  const { data: similar, error: simErr } = await client.rpc('find_similar_posts', {
+    p_content_text: contentText,
+    p_exclude_post_id: opts.excludePostId ?? null,
+    p_project_id: opts.projectId ?? null,
+    p_threshold: SIMILARITY_SHOW,
+  })
+  if (simErr) fail(simErr)
+
+  const dupId = (dup as string | null) ?? null
+  const simList = (similar ?? []) as Array<{
+    id: string
+    title: string
+    project_id: string
+    similarity: number
+  }>
+  const blocking = simList.filter((s) => s.similarity >= SIMILARITY_BLOCK)
+
+  if (!opts.allowSimilar && (dupId || blocking.length > 0)) {
+    throw new AgentError(409, {
+      error: dupId ? 'duplicate' : 'similar',
+      duplicate_of: dupId,
+      similar: simList,
+      message:
+        'No-repeat guard: this content matches an existing post. Retry with "allow_similar": true only if an intentional variant.',
+    })
+  }
+
+  return { contentText, contentHash }
+}
+
+async function assertDailyCap(env: Env, userId: string): Promise<void> {
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+  const { count, error } = await db(env)
+    .from('posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .in('created_via', ['api', 'mcp'])
+    .gte('created_at', today.toISOString())
+  if (error) fail(error)
+  if ((count ?? 0) >= DAILY_POST_CAP) {
+    throw new AgentError(429, {
+      error: 'daily_post_cap',
+      message: `Agent post limit reached (${DAILY_POST_CAP}/day per user).`,
+    })
+  }
+}
+
+export async function listPosts(
+  env: Env,
+  userId: string,
+  filters: { projectId?: string; status?: string },
+) {
+  let q = db(env)
+    .from('posts')
+    .select('id, project_id, category, status, title, created_via, content_text, created_at, updated_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(100)
+  if (filters.projectId) q = q.eq('project_id', filters.projectId)
+  if (filters.status) q = q.eq('status', filters.status)
+  const { data, error } = await q
+  if (error) fail(error)
+  return data
+}
+
+export async function getPost(env: Env, userId: string, id: string) {
+  const client = db(env)
+  const { data: post, error } = await client
+    .from('posts')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) fail(error)
+  if (!post) throw new AgentError(404, { error: 'post not found' })
+
+  const { data: tweets, error: tErr } = await client
+    .from('post_tweets')
+    .select('id, position, content')
+    .eq('post_id', id)
+    .order('position')
+  if (tErr) fail(tErr)
+
+  return { ...post, tweets: (tweets ?? []).map((t) => t.content) }
+}
+
+export async function createDraft(
+  env: Env,
+  auth: AgentAuth,
+  via: CreatedVia,
+  input: PostWrite,
+) {
+  const status = assertDraftsOnly(input.status)
+  const tweets = assertTweets(input.tweets)
+  if (!input.projectId) throw new AgentError(400, { error: 'project_id is required' })
+
+  const client = db(env)
+  const { data: project } = await client
+    .from('projects')
+    .select('id')
+    .eq('id', input.projectId)
+    .eq('user_id', auth.userId)
+    .maybeSingle()
+  if (!project) throw new AgentError(404, { error: 'project not found' })
+
+  await assertDailyCap(env, auth.userId)
+  const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {
+    projectId: input.projectId,
+    allowSimilar: input.allowSimilar,
+  })
+
+  const { data: postId, error } = await client.rpc('save_post_with_tweets', {
+    p_post_id: null,
+    p_project_id: input.projectId,
+    p_category: input.category ?? 'other',
+    p_status: status,
+    p_title: input.title ?? '',
+    p_content_text: contentText,
+    p_content_hash: contentHash,
+    p_tweets: tweets,
+    p_tag_names: input.tagNames ?? [],
+    p_media: [],
+    p_created_via: via,
+  })
+  if (error) fail(error)
+
+  await logActivity(env, auth, 'post.create', { table: 'posts', id: postId as string }, { via, title: input.title ?? '' })
+  return getPost(env, auth.userId, postId as string)
+}
+
+export async function updateDraft(
+  env: Env,
+  auth: AgentAuth,
+  via: CreatedVia,
+  id: string,
+  patch: Partial<PostWrite>,
+) {
+  const existing = await getPost(env, auth.userId, id)
+  const status = assertDraftsOnly(patch.status)
+  const tweets = patch.tweets ? assertTweets(patch.tweets) : (existing.tweets as string[])
+
+  const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {
+    excludePostId: id,
+    projectId: patch.projectId ?? existing.project_id,
+    allowSimilar: patch.allowSimilar,
+  })
+
+  const { error } = await db(env).rpc('save_post_with_tweets', {
+    p_post_id: id,
+    p_project_id: existing.project_id,
+    p_category: patch.category ?? existing.category,
+    p_status: status,
+    p_title: patch.title ?? existing.title,
+    p_content_text: contentText,
+    p_content_hash: contentHash,
+    p_tweets: tweets,
+    p_tag_names: patch.tagNames ?? [],
+    p_media: [],
+    p_created_via: via,
+  })
+  if (error) fail(error)
+
+  await logActivity(env, auth, 'post.update', { table: 'posts', id }, { via })
+  return getPost(env, auth.userId, id)
+}
+
+export async function appendThread(
+  env: Env,
+  auth: AgentAuth,
+  via: CreatedVia,
+  id: string,
+  newTweets: string[],
+  opts: { allowSimilar?: boolean } = {},
+) {
+  const existing = await getPost(env, auth.userId, id)
+  const add = assertTweets(newTweets)
+  return updateDraft(env, auth, via, id, {
+    tweets: [...(existing.tweets as string[]), ...add],
+    allowSimilar: opts.allowSimilar,
+  })
+}
+
+// ────────────────────────────── knowledge ──────────────────────────────
+
+export async function addKnowledge(
+  env: Env,
+  auth: AgentAuth,
+  input: {
+    projectId?: string
+    kind?: 'knowledge' | 'source'
+    title?: string
+    content?: string
+    url?: string
+    notes?: string
+  },
+) {
+  if (!input.projectId) throw new AgentError(400, { error: 'project_id is required' })
+  const title = (input.title ?? '').trim()
+  if (!title) throw new AgentError(400, { error: 'title is required' })
+
+  const { data, error } = await db(env)
+    .from('knowledge')
+    .insert({
+      user_id: auth.userId,
+      project_id: input.projectId,
+      kind: input.kind ?? (input.url ? 'source' : 'knowledge'),
+      title,
+      content: input.content ?? null,
+      url: input.url ?? null,
+      notes: input.notes ?? null,
+    })
+    .select()
+    .single()
+  if (error) fail(error)
+
+  await logActivity(env, auth, 'knowledge.create', { table: 'knowledge', id: data.id }, { title })
+  return data
+}
+
+// ─────────────────────────────── helpers ───────────────────────────────
+
+export async function findSimilar(
+  env: Env,
+  userId: string,
+  text: string,
+  opts: { projectId?: string } = {},
+) {
+  const client = db(env)
+  const { data, error } = await client.rpc('find_similar_posts', {
+    p_content_text: threadToContentText([text]),
+    p_exclude_post_id: null,
+    p_project_id: opts.projectId ?? null,
+    p_threshold: SIMILARITY_SHOW,
+  })
+  if (error) fail(error)
+  return { similar: (data ?? []) as Array<{ id: string; title: string; project_id: string; similarity: number }> }
+}
