@@ -155,6 +155,18 @@ project every Monday & Thursday (free on GitHub Actions).
 
 ---
 
+## Media API (R2, private) 🖼️
+
+Media lives in **R2** (free tier) and is never public. Flow:
+
+- `POST /api/media/upload` — multipart (`file`, `project_id`, `width`, `height`)
+  with a Supabase JWT → stored at `users/{uid}/projects/{pid}/…`, `assets` row created.
+  Limits: images ≤ 10 MB, videos ≤ 50 MB, 5 GB/user soft cap.
+- `GET /api/media/sign?key=…&ttl=300` — returns a short-lived signed URL.
+- `GET /api/media/<key>?exp=…&sig=…` — streams the object (HMAC-signed, 5-min TTL),
+  or serves it directly for a valid user JWT that owns the key.
+- `POST /api/media/delete` — `{ "key" }` → removes R2 object + DB row (owner only).
+
 ## No-repeat posts 🔁
 
 Every write (web app **and** agent API) is checked against your own posts:
