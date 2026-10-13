@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import type { PostCategory, PostStatus } from '../../lib/types'
+import type { Asset, PostCategory, PostStatus } from '../../lib/types'
 import { CATEGORY_LABELS } from '../../lib/types'
 import { Button, ErrorBox, Field, Input, Select } from '../../components/ui'
 import ThreadBuilder from './ThreadBuilder'
+import AssetPickerDialog from '../media/AssetPickerDialog'
 import type { SavePostInput } from './api'
 
 const STATUSES: PostStatus[] = ['idea', 'draft', 'approved', 'scheduled', 'published', 'archived']
@@ -34,6 +35,10 @@ export default function PostForm({
   const [tweets, setTweets] = useState<string[]>(
     initial?.tweets.length ? initial.tweets : [''],
   )
+  const [attachments, setAttachments] = useState<Array<{ tweetIndex: number; asset: Asset }>>(
+    initial?.media ?? [],
+  )
+  const [attachFor, setAttachFor] = useState<number | null>(null)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -47,6 +52,7 @@ export default function PostForm({
       tagNames: csvToList(tagNames),
       contentText: '', // filled by caller (normalize + hash)
       contentHash: '',
+      media: attachments,
     })
   }
 
@@ -93,8 +99,26 @@ export default function PostForm({
         <h3 className="mb-3 text-sm font-semibold tracking-wide text-zinc-300 uppercase">
           Thread
         </h3>
-        <ThreadBuilder tweets={tweets} onChange={setTweets} />
+        <ThreadBuilder
+          tweets={tweets}
+          attachments={attachments}
+          onChange={setTweets}
+          onAttach={(i) => setAttachFor(i)}
+          onRemoveAttachment={(assetId) =>
+            setAttachments((prev) => prev.filter((a) => a.asset.id !== assetId))
+          }
+        />
       </div>
+
+      {attachFor !== null ? (
+        <AssetPickerDialog
+          projectId={initial!.projectId}
+          onSelect={(asset) =>
+            setAttachments((prev) => [...prev.filter((a) => a.asset.id !== asset.id), { tweetIndex: attachFor, asset }])
+          }
+          onClose={() => setAttachFor(null)}
+        />
+      ) : null}
 
       <div className="flex gap-3">
         <Button type="submit" disabled={busy}>

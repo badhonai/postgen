@@ -8,6 +8,7 @@ import {
 } from '../features/projects/api'
 import ProjectForm from '../features/projects/ProjectForm'
 import PostCard from '../features/posts/PostCard'
+import MediaLibrary from '../features/media/MediaLibrary'
 import { usePosts, type PostFilters } from '../features/posts/api'
 import { CATEGORY_LABELS, type PostCategory, type PostStatus } from '../lib/types'
 import { Button, Card, ErrorBox, Input, Select, Spinner } from '../components/ui'
@@ -221,10 +222,13 @@ export default function ProjectDetailPage() {
         </div>
       </section>
 
+      <div className="mt-10">
+        <MediaLibrary projectId={p.id} />
+      </div>
+
       <div className="mt-10 flex flex-wrap gap-2">
         {(
           [
-            ['Media library', 'M3'],
             ['Knowledge & AI agents', 'M4'],
           ] as const
         ).map(([label, milestone]) => (

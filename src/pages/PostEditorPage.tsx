@@ -58,17 +58,20 @@ export default function PostEditorPage() {
   }
 
   const initial: SavePostInput | undefined =
-    post.data && !isNew
+    postData && !isNew
       ? {
-          postId: post.data.id,
-          projectId: post.data.project_id,
-          category: post.data.category,
-          status: post.data.status,
-          title: post.data.title,
-          tweets: post.data.post_tweets.map((t) => t.content),
-          tagNames: post.data.tags,
+          postId: postData.id,
+          projectId: postData.project_id,
+          category: postData.category,
+          status: postData.status,
+          title: postData.title,
+          tweets: postData.post_tweets.map((t) => t.content),
+          tagNames: postData.tags,
           contentText: '',
           contentHash: '',
+          media: postData.post_tweets.flatMap((t, i) =>
+            (postData.mediaByTweet[t.id] ?? []).map((asset) => ({ tweetIndex: i, asset })),
+          ),
         }
       : projectId
         ? {
@@ -81,6 +84,7 @@ export default function PostEditorPage() {
             tagNames: [],
             contentText: '',
             contentHash: '',
+            media: [],
           }
         : undefined
 

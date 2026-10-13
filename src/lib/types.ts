@@ -78,3 +78,18 @@ export const CATEGORY_LABELS: Record<PostCategory, string> = {
   announcement: 'Announcement',
   other: 'Other',
 }
+
+export type Asset = {
+  id: string
+  user_id: string
+  project_id: string
+  r2_key: string
+  filename: string
+  mime_type: string
+  size_bytes: number
+  width: number | null
+  height: number | null
+  alt_text: string | null
+  created_at: string
+  updated_at: string
+}

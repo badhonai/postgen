@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import type { Post, PostCategory, PostStatus, PostTweet } from '../../lib/types'
+import type { Asset, Post, PostCategory, PostStatus, PostTweet } from '../../lib/types'
 
 export type PostListItem = Pick<
   Post,
@@ -68,6 +68,7 @@ export function usePosts(filters: PostFilters = {}) {
 export type PostDetail = Post & {
   post_tweets: PostTweet[]
   tags: string[]
+  mediaByTweet: Record<string, Asset[]>
 }
 
 export function usePost(id: string) {
@@ -86,10 +87,31 @@ export function usePost(id: string) {
         post_tweets: PostTweet[]
         post_tags: Array<{ tags: { name: string } | null }>
       }
+      const tweets = [...row.post_tweets].sort((a, b) => a.position - b.position)
+
+      const mediaByTweet: Record<string, Asset[]> = {}
+      const tweetIds = tweets.map((t) => t.id)
+      if (tweetIds.length > 0) {
+        const { data: mediaRows, error: mediaErr } = await supabase!
+          .from('post_media')
+          .select('post_tweet_id, position, assets(*)')
+          .in('post_tweet_id', tweetIds)
+          .order('position')
+        if (mediaErr) throw mediaErr
+        for (const r of (mediaRows ?? []) as unknown as Array<{
+          post_tweet_id: string
+          assets: Asset | null
+        }>) {
+          if (!r.assets) continue
+          ;(mediaByTweet[r.post_tweet_id] ??= []).push(r.assets)
+        }
+      }
+
       return {
         ...row,
-        post_tweets: [...row.post_tweets].sort((a, b) => a.position - b.position),
+        post_tweets: tweets,
         tags: row.post_tags.map((pt) => pt.tags?.name).filter((n): n is string => !!n),
+        mediaByTweet,
       }
     },
   })
@@ -105,12 +127,23 @@ export type SavePostInput = {
   tagNames: string[]
   contentText: string
   contentHash: string
+  /** Attachments keyed by tweet index (0-based) in the `tweets` array. */
+  media: Array<{ tweetIndex: number; asset: Asset }>
 }
 
 export function useSavePost() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: SavePostInput): Promise<string> => {
+      const counters: Record<number, number> = {}
+      const p_media = input.media.map((m) => {
+        counters[m.tweetIndex] = (counters[m.tweetIndex] ?? 0) + 1
+        return {
+          tweet_position: m.tweetIndex + 1,
+          asset_id: m.asset.id,
+          position: counters[m.tweetIndex],
+        }
+      })
       const { data, error } = await supabase!.rpc('save_post_with_tweets', {
         p_post_id: input.postId ?? null,
         p_project_id: input.projectId,
@@ -121,6 +154,7 @@ export function useSavePost() {
         p_content_hash: input.contentHash,
         p_tweets: input.tweets,
         p_tag_names: input.tagNames,
+        p_media: p_media,
       })
       if (error) throw error
       return data as string
