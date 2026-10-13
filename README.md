@@ -181,6 +181,17 @@ External AI tools connect **into** PostGen and draft posts (drafts-only — you 
   check (409 unless `"allow_similar": true`), 250 req/min & 50 posts/day per key,
   full `agent_activity` log.
 
+## Keyboard shortcuts & autosave ⌨️
+
+- **⌘K / Ctrl+K** — quick switcher (jump to projects, posts, pages)
+- **⌘S / Ctrl+S** — save post (runs the no-repeat gate)
+- **Esc** — close dialogs (duplicates, media picker, palette)
+- Drafts **autosave** 2s after you stop typing; if a draft drifts into repeat
+  territory a non-blocking banner warns you (explicit save still blocks repeats)
+- **Export/Import** per project: Markdown or JSON out, JSON back in (exact
+  duplicates skipped on import)
+- **Appearance** (Settings): 4 accent themes
+
 ## No-repeat posts 🔁
 
 Every write (web app **and** agent API) is checked against your own posts:
