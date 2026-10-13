@@ -167,6 +167,20 @@ Media lives in **R2** (free tier) and is never public. Flow:
   or serves it directly for a valid user JWT that owns the key.
 - `POST /api/media/delete` — `{ "key" }` → removes R2 object + DB row (owner only).
 
+## Agent API + MCP 🤖
+
+External AI tools connect **into** PostGen and draft posts (drafts-only — you approve/publish).
+
+- **REST**: `https://postgen.pages.dev/api/v1` — OpenAPI 3.1 spec at the same URL.
+  Auth: `Authorization: Bearer pgk_live_…` (create keys in **Settings → AI connections**).
+- **MCP** (Streamable HTTP): `https://postgen.pages.dev/api/mcp` — 6 tools
+  (`list_projects`, `get_project`, `create_draft`, `update_draft`, `append_to_thread`,
+  `find_similar`) + `project://…` resources. Claude Desktop / Claude Code:
+  `npx mcp-remote https://postgen.pages.dev/api/mcp --header "Authorization: Bearer pgk_live_…"`
+- **Guardrails** (every write, web + agents): drafts-only for agents, the no-repeat
+  check (409 unless `"allow_similar": true`), 250 req/min & 50 posts/day per key,
+  full `agent_activity` log.
+
 ## No-repeat posts 🔁
 
 Every write (web app **and** agent API) is checked against your own posts:

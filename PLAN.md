@@ -1,7 +1,7 @@
 # PostGen — Twitter/X Post Studio for Web3 Projects
 
 > Plan v1.5 — 2026-10-13
-> Status: **M0–M3 built & live on main** ✅ — see §13 for next steps
+> Status: **M0–M4 built & live on main** ✅ — M5 (polish) remains
 > v1.5 change: **JWT strategy locked** — Supabase **signing keys (ES256)** + JWKS verification; agent JWTs minted via an imported signing key; legacy HS256 secret is fallback only (§6, §12.12).
 > v1.4 change: migrations deploy via **Supabase GitHub integration** ("Deploy to production" ON). Automatic branching (PR preview DBs) is Pro-only → OFF per the $0 rule; repo structured per docs so enabling it later is one click.
 > v1.3 change: **No repeat posts** — exact + near-duplicate detection on every write (web + agent API), see §5 M2 & §6.
@@ -68,7 +68,7 @@ A private workspace to **store and organize Twitter/X posts** for multiple web3 
 | Styling | Tailwind CSS v4 + shadcn-style components | MIT, free |
 | Forms | react-hook-form + zod | MIT, free |
 | Auth/DB | `@supabase/supabase-js` v2 | Apache-2.0, free (free tier) |
-| Agent API | REST + **MCP TypeScript SDK** (Streamable HTTP) + OpenAPI 3.1 | Apache-2.0/MIT, free |
+| Agent API | REST + **MCP Streamable HTTP** (hand-rolled JSON-RPC, Workers-native) + OpenAPI 3.1 | Apache-2.0/MIT, free |
 | JWT | `jose` — JWKS verification + ES256/HS256 signing | MIT, free |
 | Cloudflare | `wrangler` (R2 binding) | Apache-2.0, free (free tier) |
 | Keep-alive | GitHub Actions cron (see §7) | free tier |
@@ -387,8 +387,8 @@ postgen/
 | **M1** ✅ done | Auth + projects + dashboard | medium |
 | **M2** ✅ done | Posts CRUD + threads + counter + search + copy + no-repeat dialog | large |
 | **M3** ✅ done | R2 media upload/signed reads | medium |
-| **M4a** | REST Agent API + API-key management + OpenAPI spec | medium |
-| **M4b** | MCP server + Connect-your-AI page + guardrails + audit feed | large |
+| **M4a** ✅ done | REST Agent API + API-key management + OpenAPI spec | medium |
+| **M4b** ✅ done | MCP server + Connect-your-AI page + guardrails + audit feed | large |
 | **M5** | Polish: shortcuts, themes, export | medium |
 
 We build milestone by milestone, testing each before moving on.
@@ -417,6 +417,6 @@ We build milestone by milestone, testing each before moving on.
 1. ✅ **M0 built & live** — scaffold, schema + RLS + dedupe, migrations via GitHub integration.
 2. ✅ **M1 built & live** — login/signup (Supabase sessions), protected routes, projects CRUD, brand voice editor, dashboard.
 3. ✅ **M2 built & live** — posts CRUD, thread builder (n/n), X weighted counter, FTS search, one-click copy, no-repeat dialog + atomic post saver RPC.
-4. ✅ **M3 built & live** — R2 media: drag & drop upload, signed 5-min URLs, private streaming, project media library, per-tweet attachments (survive thread saves).
-5. **M4 next**: Agent API — REST `/api/v1/*`, API-key management, MCP server, OpenAPI spec, Connect-your-AI page, drafts-only guardrails + agent activity feed.
-6. Then M5 (polish: autosave with non-blocking banner, ⌘K, export).
+4. ✅ **M3 built & live** — R2 media: drag & drop upload, signed 5-min URLs, private streaming, project media library, per-tweet attachments.
+5. ✅ **M4 built & live** — Agent API: REST `/api/v1` + OpenAPI 3.1, API-key management (hashed, shown once), MCP Streamable HTTP `/api/mcp` (6 tools + resources), drafts-only + no-repeat + rate caps, agent activity feed, Connect-your-AI page.
+6. **M5 last**: polish — autosave with non-blocking similar-post banner, ⌘K quick switcher, export/import, loading skeletons.
