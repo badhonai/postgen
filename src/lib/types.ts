@@ -4,17 +4,13 @@
 
 export type BrandVoice = {
   tone?: string
-  emojiPolicy?: 'none' | 'light' | 'any' | string
   /** Words/symbols the agent must never use. Server-enforced on agent writes. */
   blacklist?: string[]
   /** @deprecated migrated to `blacklist` — kept for old exported bundles. */
   tabooWords?: string[]
-  hashtags?: string[]
-  ctaStyle?: string
 }
 
 export type OfficialLink = { label: string; url: string }
-export type ContractAddress = { chain: string; address: string; label?: string }
 
 export type Profile = {
   id: string
@@ -32,13 +28,10 @@ export type Project = {
   brand_voice: BrandVoice
   x_username: string | null
   website_url: string | null
-  chains: string[]
-  token_ticker: string | null
   content_pillars: string[]
   sample_posts: string[]
   custom_instructions: string | null
   official_links: OfficialLink[]
-  contract_addresses: ContractAddress[]
   logo_asset_id: string | null
   /** Populated via FK embed when listed (`logo:assets!projects_logo_asset_id_fkey(r2_key)`). */
   logo?: { r2_key: string } | null

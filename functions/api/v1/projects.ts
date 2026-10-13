@@ -19,13 +19,10 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
       brand_voice: body.brand_voice,
       x_username: body.x_username as string | undefined,
       website_url: body.website_url as string | undefined,
-      chains: body.chains as string[] | undefined,
-      token_ticker: body.token_ticker as string | undefined,
       content_pillars: body.content_pillars as string[] | undefined,
       sample_posts: body.sample_posts as string[] | undefined,
       custom_instructions: body.custom_instructions as string | undefined,
       official_links: body.official_links,
-      contract_addresses: body.contract_addresses,
     })
     await agent.logActivity(ctx.env, auth, 'project.create', { table: 'projects', id: project.id }, {
       name: project.name,

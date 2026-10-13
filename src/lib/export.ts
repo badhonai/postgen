@@ -24,13 +24,10 @@ export type ExportBundle = {
     brand_voice?: unknown
     x_username?: string | null
     website_url?: string | null
-    chains?: string[]
-    token_ticker?: string | null
     content_pillars?: string[]
     sample_posts?: string[]
     custom_instructions?: string | null
     official_links?: Array<{ label: string; url: string }>
-    contract_addresses?: Array<{ chain: string; address: string; label?: string }>
   }
   posts: ExportPost[]
 }
@@ -40,7 +37,7 @@ async function fetchProjectBundle(projectId: string): Promise<ExportBundle> {
   const { data: project, error: pErr } = await supa
     .from('projects')
     .select(
-      'name, slug, description, brand_voice, x_username, website_url, chains, token_ticker, content_pillars, sample_posts, custom_instructions, official_links, contract_addresses',
+      'name, slug, description, brand_voice, x_username, website_url, content_pillars, sample_posts, custom_instructions, official_links',
     )
     .eq('id', projectId)
     .single()
@@ -87,13 +84,10 @@ async function fetchProjectBundle(projectId: string): Promise<ExportBundle> {
       brand_voice: project.brand_voice,
       x_username: project.x_username,
       website_url: project.website_url,
-      chains: project.chains,
-      token_ticker: project.token_ticker,
       content_pillars: project.content_pillars,
       sample_posts: project.sample_posts,
       custom_instructions: project.custom_instructions,
       official_links: project.official_links,
-      contract_addresses: project.contract_addresses,
     },
     posts,
   }
@@ -110,8 +104,6 @@ export function bundleToMarkdown(bundle: ExportBundle): string {
   const profileLines = [
     p.x_username ? `- X: @${p.x_username}` : null,
     p.website_url ? `- Website: ${p.website_url}` : null,
-    (p.chains ?? []).length ? `- Chains: ${(p.chains ?? []).join(', ')}` : null,
-    p.token_ticker ? `- Token: $${p.token_ticker}` : null,
     (p.content_pillars ?? []).length ? `- Pillars: ${(p.content_pillars ?? []).join(', ')}` : null,
   ].filter((l): l is string => !!l)
   if (p.description) {

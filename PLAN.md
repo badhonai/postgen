@@ -419,6 +419,6 @@ We build milestone by milestone, testing each before moving on.
 
 1. ✅ **M0–M5 complete** — scaffold, schema+RLS+dedupe, auth, projects, posts/threads, R2 media, Agent API + MCP, polish (autosave + banner, ⌘K palette, accent themes, export/import, skeletons).
 2. ✅ **A→Z E2E green (2026-10-13): 31/31** via `scripts/e2e.mjs` against production. It caught 3 real bugs, now fixed: media URL signing had no configured secret (falls back to the service key), agent draft saves were rejected by the save RPC ('not authenticated' — service-role calls pass the actor via `p_user_id`), and the agent-side no-repeat guard never ran (same actor fix on `find_duplicate_post`/`find_similar_posts`).
-3. ✅ **Project profile** (2026-10-13) — logo + asset kinds, X username, official links & contract addresses, chain/ticker, content pillars, sample posts, custom instructions; blacklist enforced (agent 403 / web warning); full profile flows into agent context (REST + MCP resource).
+3. ✅ **Project profile** (2026-10-13) — logo + asset kinds, X username, website, official links, content pillars, sample posts, custom instructions, tone & voice, blacklist (agent 403 / web warning); logo & assets upload lives in the project form; full profile flows into agent context (REST + MCP resource).
 4. **Next: redesign the whole UI**, then resume real-world use (projects, threads, Claude/Gemini connections).
 5. **Optional future ideas** (not in scope): scheduled posting to X, light theme, per-key scopes, webhooks.

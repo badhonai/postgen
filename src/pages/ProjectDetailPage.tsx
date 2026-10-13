@@ -5,6 +5,7 @@ import { findExactDuplicate } from '../lib/dedupe'
 import { projectBlacklist } from '../lib/blacklist'
 import { useAssetUrl } from '../lib/media'
 import {
+  applyNewAssets,
   useDeleteProject,
   useProject,
   useUpdateProject,
@@ -78,7 +79,12 @@ export default function ProjectDetailPage() {
 
   const handleUpdate = (input: ProjectInput) => {
     updateProject.mutate(input, {
-      onSuccess: () => setEditing(false),
+      onSuccess: () => {
+        setEditing(false)
+        void applyNewAssets(p.id, input).catch((err: unknown) =>
+          window.alert(err instanceof Error ? err.message : 'asset upload failed'),
+        )
+      },
     })
   }
 
@@ -199,14 +205,6 @@ export default function ProjectDetailPage() {
                 </dd>
               </div>
               <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Token</dt>
-                <dd className="text-zinc-300">{p.token_ticker ? `$${p.token_ticker}` : '—'}</dd>
-              </div>
-              <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Chains</dt>
-                <dd className="text-zinc-300">{(p.chains ?? []).join(', ') || '—'}</dd>
-              </div>
-              <div className="flex gap-3">
                 <dt className="w-32 shrink-0 text-zinc-500">Pillars</dt>
                 <dd className="text-zinc-300">{(p.content_pillars ?? []).join(', ') || '—'}</dd>
               </div>
@@ -222,22 +220,6 @@ export default function ProjectDetailPage() {
                       <a href={l.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-emerald-400 hover:underline">
                         {l.url}
                       </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {(p.contract_addresses ?? []).length > 0 ? (
-              <div className="mt-6">
-                <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">Contract addresses</h2>
-                <ul className="mt-3 space-y-1 text-sm">
-                  {(p.contract_addresses ?? []).map((c) => (
-                    <li key={c.address} className="flex gap-3">
-                      <span className="w-32 shrink-0 text-zinc-500">
-                        {c.label ? `${c.label} (${c.chain})` : c.chain}
-                      </span>
-                      <code className="min-w-0 truncate text-zinc-300">{c.address}</code>
                     </li>
                   ))}
                 </ul>
@@ -277,24 +259,10 @@ export default function ProjectDetailPage() {
                 <dd className="text-zinc-300">{p.brand_voice.tone || '—'}</dd>
               </div>
               <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Emoji policy</dt>
-                <dd className="text-zinc-300">{p.brand_voice.emojiPolicy || '—'}</dd>
-              </div>
-              <div className="flex gap-3">
                 <dt className="w-32 shrink-0 text-zinc-500">Blacklist</dt>
                 <dd className="text-zinc-300">
                   {projectBlacklist(p.brand_voice).join(', ') || '—'}
                 </dd>
-              </div>
-              <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Hashtags</dt>
-                <dd className="text-zinc-300">
-                  {(p.brand_voice.hashtags ?? []).map((h) => `#${h}`).join(' ') || '—'}
-                </dd>
-              </div>
-              <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">CTA style</dt>
-                <dd className="text-zinc-300">{p.brand_voice.ctaStyle || '—'}</dd>
               </div>
             </dl>
           </Card>

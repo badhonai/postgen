@@ -111,26 +111,20 @@ export type ProjectWrite = {
   brand_voice?: unknown
   x_username?: string
   website_url?: string
-  chains?: string[]
-  token_ticker?: string
   content_pillars?: string[]
   sample_posts?: string[]
   custom_instructions?: string
   official_links?: unknown
-  contract_addresses?: unknown
 }
 
 function projectProfileFields(input: ProjectWrite): Record<string, unknown> {
   const fields: Record<string, unknown> = {}
   if (input.x_username !== undefined) fields.x_username = input.x_username.trim().replace(/^@/, '') || null
   if (input.website_url !== undefined) fields.website_url = input.website_url.trim() || null
-  if (input.chains !== undefined) fields.chains = input.chains.map((c) => c.trim()).filter(Boolean)
-  if (input.token_ticker !== undefined) fields.token_ticker = input.token_ticker.trim().replace(/^\$/, '') || null
   if (input.content_pillars !== undefined) fields.content_pillars = input.content_pillars.map((c) => c.trim()).filter(Boolean)
   if (input.sample_posts !== undefined) fields.sample_posts = input.sample_posts.map((c) => c.trim()).filter(Boolean)
   if (input.custom_instructions !== undefined) fields.custom_instructions = input.custom_instructions.trim() || null
   if (input.official_links !== undefined) fields.official_links = input.official_links ?? []
-  if (input.contract_addresses !== undefined) fields.contract_addresses = input.contract_addresses ?? []
   return fields
 }
 

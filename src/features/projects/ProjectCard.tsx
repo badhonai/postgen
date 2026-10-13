@@ -28,14 +28,14 @@ export default function ProjectCard({ project }: { project: Project }) {
             </div>
           </div>
           <span className="shrink-0 rounded-full border border-zinc-800 px-2 py-0.5 text-xs text-zinc-500">
-            {project.token_ticker ? `$${project.token_ticker}` : project.slug}
+            {project.slug}
           </span>
         </div>
         <p className="mt-2 line-clamp-3 text-sm text-zinc-400">
           {project.description || 'No description yet.'}
         </p>
         <div className="mt-4 flex flex-wrap gap-1.5">
-          {(project.chains ?? []).slice(0, 3).map((c) => (
+          {(project.content_pillars ?? []).slice(0, 3).map((c) => (
             <span key={c} className="rounded-full bg-zinc-800/80 px-2 py-0.5 text-xs text-zinc-400">
               {c}
             </span>
@@ -45,11 +45,6 @@ export default function ProjectCard({ project }: { project: Project }) {
               🎙 {project.brand_voice.tone}
             </span>
           ) : null}
-          {(project.brand_voice.hashtags ?? []).slice(0, 3).map((h) => (
-            <span key={h} className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400">
-              #{h}
-            </span>
-          ))}
         </div>
       </Card>
     </Link>

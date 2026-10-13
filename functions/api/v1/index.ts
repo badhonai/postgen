@@ -28,25 +28,16 @@ const spec = {
                   description: { type: 'string' },
                   brand_voice: {
                     type: 'object',
-                    description: 'tone, emojiPolicy, blacklist[], hashtags[], ctaStyle',
+                    description: 'tone, blacklist[]',
                   },
                   x_username: { type: 'string' },
                   website_url: { type: 'string' },
-                  chains: { type: 'array', items: { type: 'string' } },
-                  token_ticker: { type: 'string' },
                   content_pillars: { type: 'array', items: { type: 'string' } },
                   sample_posts: { type: 'array', items: { type: 'string' } },
                   custom_instructions: { type: 'string' },
                   official_links: {
                     type: 'array',
                     items: { type: 'object', properties: { label: { type: 'string' }, url: { type: 'string' } } },
-                  },
-                  contract_addresses: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: { chain: { type: 'string' }, address: { type: 'string' }, label: { type: 'string' } },
-                    },
                   },
                 },
               },

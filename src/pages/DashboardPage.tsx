@@ -2,15 +2,14 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../features/auth/context'
 import {
+  applyNewAssets,
   useCreateProject,
   useProjects,
   type ProjectInput,
 } from '../features/projects/api'
-import ProjectAssetsStep from '../features/projects/ProjectAssetsStep'
 import ProjectCard from '../features/projects/ProjectCard'
 import ProjectForm from '../features/projects/ProjectForm'
 import { Button, Card, Skeleton, ErrorBox } from '../components/ui'
-import type { Project } from '../lib/types'
 
 export default function DashboardPage() {
   const { user, signOut } = useAuth()
@@ -18,17 +17,21 @@ export default function DashboardPage() {
   const projects = useProjects()
   const createProject = useCreateProject()
   const [creating, setCreating] = useState(false)
-  const [created, setCreated] = useState<Project | null>(null)
 
   const startCreate = () => {
     setCreating(true)
-    setCreated(null)
     createProject.reset()
   }
 
   const handleCreate = (input: ProjectInput) => {
     createProject.mutate(input, {
-      onSuccess: (project) => setCreated(project),
+      onSuccess: (project) => {
+        void applyNewAssets(project.id, input)
+          .catch((err: unknown) =>
+            window.alert(err instanceof Error ? err.message : 'asset upload failed'),
+          )
+          .finally(() => navigate(`/projects/${project.id}`))
+      },
     })
   }
 
@@ -53,16 +56,7 @@ export default function DashboardPage() {
       </header>
 
       <section className="mt-8">
-        {creating && created ? (
-          <div className="max-w-2xl space-y-3">
-            <ProjectAssetsStep projectId={created.id} onDone={() => setCreating(false)} />
-            <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => navigate(`/projects/${created.id}`)}>
-                Open project →
-              </Button>
-            </div>
-          </div>
-        ) : creating ? (
+        {creating ? (
           <Card className="max-w-2xl">
             <h2 className="mb-6 text-lg font-semibold">New project</h2>
             <ProjectForm

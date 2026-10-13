@@ -210,19 +210,18 @@ External AI tools connect **into** PostGen and draft posts (drafts-only — you 
 
 ## Project profile 🪪
 
-Every project carries a full brand profile (created in the New project flow):
+Every project carries a full brand profile (created in the New project form —
+logo & assets upload is the first section of the form):
 
 - **Logo** + **asset gallery** (mascot, product shots…) — each asset gets a kind label;
   one image is the project logo (dashboard + previews)
 - **Name · Description/Context · X username · website**
-- **Chain / ecosystem + token ticker** (`Base`, `$PROJ`)
 - **Content pillars** — the recurring topics you post about
 - **Sample posts you love** — few-shot style examples for the AI
-- **Tone & voice · emoji policy · default hashtags · CTA style**
+- **Tone & voice**
 - **Blacklist words/symbols** — see below
 - **Custom instructions** — anything else the AI must know
-- **Official links** (Discord, Telegram, GitHub, …) and **official contract addresses** —
-  agents cite these and never invent links or CAs
+- **Official links** (Discord, Telegram, GitHub, …) — agents cite these and never invent links
 
 The whole profile is served to connected AIs via `GET /api/v1/projects/:id` and the MCP
 resource `project://<id>/context`, so every external agent drafts with full brand context.

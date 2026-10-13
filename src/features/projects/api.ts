@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import type { BrandVoice, ContractAddress, OfficialLink, Project } from '../../lib/types'
+import { uploadAsset } from '../../lib/media'
+import type { Asset, BrandVoice, OfficialLink, Project } from '../../lib/types'
 
 function slugify(name: string): string {
   return (
@@ -23,16 +24,6 @@ function cleanLinks(links: OfficialLink[] | undefined): OfficialLink[] {
     .filter((l) => l.label && l.url)
 }
 
-function cleanContracts(list: ContractAddress[] | undefined): ContractAddress[] {
-  return (list ?? [])
-    .map((c) => ({
-      chain: c.chain.trim(),
-      address: c.address.trim(),
-      ...(c.label?.trim() ? { label: c.label.trim() } : {}),
-    }))
-    .filter((c) => c.chain && c.address)
-}
-
 function projectRow(input: ProjectInput): Record<string, unknown> {
   return {
     name: input.name.trim(),
@@ -40,13 +31,10 @@ function projectRow(input: ProjectInput): Record<string, unknown> {
     brand_voice: input.brandVoice,
     x_username: input.xUsername.trim().replace(/^@/, '') || null,
     website_url: input.websiteUrl.trim() || null,
-    chains: cleanList(input.chains),
-    token_ticker: input.tokenTicker.trim().replace(/^\$/, '') || null,
     content_pillars: cleanList(input.contentPillars),
     sample_posts: cleanList(input.samplePosts),
     custom_instructions: input.customInstructions.trim() || null,
     official_links: cleanLinks(input.officialLinks),
-    contract_addresses: cleanContracts(input.contractAddresses),
   }
 }
 
@@ -87,13 +75,14 @@ export type ProjectInput = {
   brandVoice: BrandVoice
   xUsername: string
   websiteUrl: string
-  chains: string[]
-  tokenTicker: string
   contentPillars: string[]
   samplePosts: string[]
   customInstructions: string
   officialLinks: OfficialLink[]
-  contractAddresses: ContractAddress[]
+  /** Files picked in the form, uploaded after the project row exists (or after save). */
+  newAssets: File[]
+  /** Index into newAssets that becomes the project logo (default: first image). */
+  newLogoIndex: number | null
 }
 
 export const EMPTY_PROJECT_INPUT: ProjectInput = {
@@ -102,13 +91,12 @@ export const EMPTY_PROJECT_INPUT: ProjectInput = {
   brandVoice: {},
   xUsername: '',
   websiteUrl: '',
-  chains: [],
-  tokenTicker: '',
   contentPillars: [],
   samplePosts: [],
   customInstructions: '',
   officialLinks: [],
-  contractAddresses: [],
+  newAssets: [],
+  newLogoIndex: null,
 }
 
 export function projectInputOf(project: Project): ProjectInput {
@@ -118,13 +106,12 @@ export function projectInputOf(project: Project): ProjectInput {
     brandVoice: project.brand_voice ?? {},
     xUsername: project.x_username ?? '',
     websiteUrl: project.website_url ?? '',
-    chains: project.chains ?? [],
-    tokenTicker: project.token_ticker ?? '',
     contentPillars: project.content_pillars ?? [],
     samplePosts: project.sample_posts ?? [],
     customInstructions: project.custom_instructions ?? '',
     officialLinks: project.official_links ?? [],
-    contractAddresses: project.contract_addresses ?? [],
+    newAssets: [],
+    newLogoIndex: null,
   }
 }
 
@@ -181,18 +168,37 @@ export function useUpdateProject(id: string) {
 export function useSetProjectLogo(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (logoAssetId: string | null): Promise<void> => {
-      const { error } = await supabase!
-        .from('projects')
-        .update({ logo_asset_id: logoAssetId })
-        .eq('id', id)
-      if (error) throw error
-    },
+    mutationFn: (logoAssetId: string | null) => setProjectLogo(id, logoAssetId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['projects'] })
       void qc.invalidateQueries({ queryKey: ['projects', id] })
     },
   })
+}
+
+export async function setProjectLogo(id: string, logoAssetId: string | null): Promise<void> {
+  const { error } = await supabase!
+    .from('projects')
+    .update({ logo_asset_id: logoAssetId })
+    .eq('id', id)
+  if (error) throw error
+}
+
+/**
+ * Uploads files picked in the project form (after the project row exists)
+ * and marks the chosen one as project logo (default: first image).
+ */
+export async function applyNewAssets(projectId: string, input: ProjectInput): Promise<void> {
+  const files = input.newAssets ?? []
+  if (!files.length) return
+  const uploaded: Asset[] = []
+  for (const file of files) {
+    uploaded.push(await uploadAsset(file, projectId))
+  }
+  const firstImage = uploaded.find((a) => a.mime_type.startsWith('image/'))
+  const chosen = input.newLogoIndex != null ? uploaded[input.newLogoIndex] : undefined
+  const logo = chosen && chosen.mime_type.startsWith('image/') ? chosen : firstImage
+  if (logo) await setProjectLogo(projectId, logo.id)
 }
 
 export function useSetAssetKind() {

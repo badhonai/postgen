@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from 'react'
-import type { BrandVoice, ContractAddress, OfficialLink, Project } from '../../lib/types'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import type { BrandVoice, OfficialLink, Project } from '../../lib/types'
 import { Button, ErrorBox, Field, Input, Textarea } from '../../components/ui'
 import BrandVoiceEditor from './BrandVoiceEditor'
 import type { ProjectInput } from './api'
 import { EMPTY_PROJECT_INPUT, projectInputOf } from './api'
+
+type QueuedFile = { file: File; url: string }
 
 function csvToList(value: string): string[] {
   return value
@@ -19,6 +21,91 @@ function listToCsv(list: string[] | undefined): string {
 function SectionTitle({ children }: { children: string }) {
   return (
     <h3 className="mb-4 text-sm font-semibold tracking-wide text-zinc-300 uppercase">{children}</h3>
+  )
+}
+
+function LogoAssetsField({
+  queued,
+  logoIndex,
+  onAdd,
+  onRemove,
+  onLogoIndex,
+}: {
+  queued: QueuedFile[]
+  logoIndex: number | null
+  onAdd: (files: QueuedFile[]) => void
+  onRemove: (index: number) => void
+  onLogoIndex: (index: number | null) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const effectiveLogo =
+    logoIndex ?? queued.findIndex((q) => q.file.type.startsWith('image/'))
+
+  return (
+    <div className="space-y-3">
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept="image/*,video/*"
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? [])
+          if (files.length) {
+            onAdd(files.map((file) => ({ file, url: URL.createObjectURL(file) })))
+          }
+          if (inputRef.current) inputRef.current.value = ''
+        }}
+      />
+      <Button type="button" variant="ghost" onClick={() => inputRef.current?.click()}>
+        + Add logo & assets
+      </Button>
+      <p className="text-xs text-zinc-500">
+        Logo first, then extra logos, mascot images, product shots… Click a thumbnail to choose
+        which one becomes the project logo (default: first image).
+      </p>
+
+      {queued.length > 0 ? (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+          {queued.map((q, i) => (
+            <div
+              key={q.url}
+              className={`group relative overflow-hidden rounded-xl border bg-zinc-900/50 ${
+                effectiveLogo === i ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-zinc-800'
+              }`}
+            >
+              <button
+                type="button"
+                className="block h-24 w-full"
+                onClick={() => onLogoIndex(effectiveLogo === i ? null : i)}
+                title="Set as project logo"
+              >
+                {q.file.type.startsWith('image/') ? (
+                  <img src={q.url} alt={q.file.name} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-3xl">🎬</span>
+                )}
+              </button>
+              {effectiveLogo === i ? (
+                <span className="absolute top-1.5 left-1.5 rounded-full bg-emerald-500/90 px-2 py-0.5 text-xs font-medium text-zinc-950">
+                  Logo
+                </span>
+              ) : null}
+              <button
+                type="button"
+                className="absolute top-1.5 right-1.5 rounded-md bg-zinc-950/80 px-1.5 py-0.5 text-xs text-zinc-300 opacity-0 group-hover:opacity-100"
+                onClick={() => onRemove(i)}
+              >
+                ✕
+              </button>
+              <p className="truncate px-2 py-1 text-xs text-zinc-500" title={q.file.name}>
+                {q.file.name}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -40,12 +127,33 @@ export default function ProjectForm({
   const setVoice = (brandVoice: BrandVoice) => set({ brandVoice })
 
   const [links, setLinks] = useState<OfficialLink[]>(draft.officialLinks)
-  const [contracts, setContracts] = useState<ContractAddress[]>(draft.contractAddresses)
+  const [queued, setQueued] = useState<QueuedFile[]>([])
+  const [logoIndex, setLogoIndex] = useState<number | null>(null)
+
+  // release object URLs on unmount
+  useEffect(() => {
+    return () => queued.forEach((q) => URL.revokeObjectURL(q.url))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const addQueued = (files: QueuedFile[]) => setQueued((q) => [...q, ...files])
+  const removeQueued = (index: number) => {
+    setQueued((q) => {
+      URL.revokeObjectURL(q[index].url)
+      return q.filter((_, i) => i !== index)
+    })
+    setLogoIndex((li) => (li === null ? null : li === index ? null : li > index ? li - 1 : li))
+  }
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!draft.name.trim()) return
-    onSubmit({ ...draft, officialLinks: links, contractAddresses: contracts })
+    onSubmit({
+      ...draft,
+      officialLinks: links,
+      newAssets: queued.map((q) => q.file),
+      newLogoIndex: logoIndex,
+    })
   }
 
   return (
@@ -53,6 +161,23 @@ export default function ProjectForm({
       {error ? <ErrorBox message={error} /> : null}
 
       <div className="space-y-4">
+        <SectionTitle>Logo & assets</SectionTitle>
+        <LogoAssetsField
+          queued={queued}
+          logoIndex={logoIndex}
+          onAdd={addQueued}
+          onRemove={removeQueued}
+          onLogoIndex={setLogoIndex}
+        />
+        {initial ? (
+          <p className="text-xs text-zinc-500">
+            Already-uploaded assets (and “Set as logo”) are in the Media & brand assets gallery
+            below — new picks upload when you save.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="border-t border-zinc-800 pt-6">
         <SectionTitle>Identity</SectionTitle>
         <Field
           label="Project name"
@@ -79,20 +204,6 @@ export default function ProjectForm({
               value={draft.websiteUrl}
               onChange={(e) => set({ websiteUrl: e.target.value })}
               placeholder="https://myprotocol.xyz"
-            />
-          </Field>
-          <Field label="Chain / ecosystem" hint="Comma-separated.">
-            <Input
-              value={listToCsv(draft.chains)}
-              onChange={(e) => set({ chains: csvToList(e.target.value) })}
-              placeholder="Base, Solana"
-            />
-          </Field>
-          <Field label="Token ticker" hint="Without the $.">
-            <Input
-              value={draft.tokenTicker}
-              onChange={(e) => set({ tokenTicker: e.target.value })}
-              placeholder="PROJ"
             />
           </Field>
         </div>
@@ -171,103 +282,49 @@ export default function ProjectForm({
       </div>
 
       <div className="border-t border-zinc-800 pt-6">
-        <SectionTitle>Official links & contracts</SectionTitle>
-        <div className="space-y-4">
-          <Field label="Official links" hint="Website, Discord, Telegram, GitHub — agents cite these and never invent links.">
-            <div className="space-y-2">
-              {links.map((link, i) => (
-                <div key={i} className="flex gap-2">
-                  <Input
-                    className="w-36"
-                    value={link.label}
-                    onChange={(e) => {
-                      const next = [...links]
-                      next[i] = { ...next[i], label: e.target.value }
-                      setLinks(next)
-                    }}
-                    placeholder="Discord"
-                  />
-                  <Input
-                    type="url"
-                    value={link.url}
-                    onChange={(e) => {
-                      const next = [...links]
-                      next[i] = { ...next[i], url: e.target.value }
-                      setLinks(next)
-                    }}
-                    placeholder="https://discord.gg/…"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setLinks(links.filter((_, j) => j !== i))}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setLinks([...links, { label: '', url: '' }])}
-              >
-                + Add link
-              </Button>
-            </div>
-          </Field>
-
-          <Field label="Contract addresses" hint="Official CAs — agents will never invent one.">
-            <div className="space-y-2">
-              {contracts.map((c, i) => (
-                <div key={i} className="flex gap-2">
-                  <Input
-                    className="w-28"
-                    value={c.chain}
-                    onChange={(e) => {
-                      const next = [...contracts]
-                      next[i] = { ...next[i], chain: e.target.value }
-                      setContracts(next)
-                    }}
-                    placeholder="Base"
-                  />
-                  <Input
-                    value={c.address}
-                    onChange={(e) => {
-                      const next = [...contracts]
-                      next[i] = { ...next[i], address: e.target.value }
-                      setContracts(next)
-                    }}
-                    placeholder="0x…"
-                  />
-                  <Input
-                    className="w-28"
-                    value={c.label ?? ''}
-                    onChange={(e) => {
-                      const next = [...contracts]
-                      next[i] = { ...next[i], label: e.target.value }
-                      setContracts(next)
-                    }}
-                    placeholder="Token"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setContracts(contracts.filter((_, j) => j !== i))}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setContracts([...contracts, { chain: '', address: '', label: '' }])}
-              >
-                + Add contract
-              </Button>
-            </div>
-          </Field>
-        </div>
+        <SectionTitle>Official links</SectionTitle>
+        <Field label="Official links" hint="Website, Discord, Telegram, GitHub — agents cite these and never invent links.">
+          <div className="space-y-2">
+            {links.map((link, i) => (
+              <div key={i} className="flex gap-2">
+                <Input
+                  className="w-36"
+                  value={link.label}
+                  onChange={(e) => {
+                    const next = [...links]
+                    next[i] = { ...next[i], label: e.target.value }
+                    setLinks(next)
+                  }}
+                  placeholder="Discord"
+                />
+                <Input
+                  type="url"
+                  value={link.url}
+                  onChange={(e) => {
+                    const next = [...links]
+                    next[i] = { ...next[i], url: e.target.value }
+                    setLinks(next)
+                  }}
+                  placeholder="https://discord.gg/…"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setLinks(links.filter((_, j) => j !== i))}
+                >
+                  ✕
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setLinks([...links, { label: '', url: '' }])}
+            >
+              + Add link
+            </Button>
+          </div>
+        </Field>
       </div>
 
       <div className="flex gap-3 border-t border-zinc-800 pt-6">

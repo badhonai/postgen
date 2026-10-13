@@ -136,13 +136,10 @@ async function main() {
       slug: `e2e-${Date.now().toString(36)}`,
       x_username: 'e2eweb',
       website_url: 'https://example.com',
-      chains: ['Base'],
-      token_ticker: 'E2E',
       content_pillars: ['testing'],
       sample_posts: ['A sample post the AI should learn from.'],
       custom_instructions: 'Always verify facts.',
       official_links: [{ label: 'Site', url: 'https://example.com' }],
-      contract_addresses: [{ chain: 'Base', address: '0xdeadbeef', label: 'Token' }],
     })
     .select()
     .single()
@@ -277,13 +274,10 @@ async function main() {
       brand_voice: { tone: 'crisp', blacklist: ['zzzbannedterm'] },
       x_username: '@e2eagent',
       website_url: 'https://example.org',
-      chains: ['Solana', 'Base'],
-      token_ticker: '$PROF',
       content_pillars: ['updates', 'memes'],
       sample_posts: ['A beloved sample tweet with words yankee zulu.'],
       custom_instructions: 'Never mention competitors.',
       official_links: [{ label: 'Discord', url: 'https://discord.gg/e2e' }],
-      contract_addresses: [{ chain: 'Solana', address: 'So1An1111', label: 'Token' }],
     }),
   })
   const rpb = await rp.json()
@@ -292,12 +286,9 @@ async function main() {
     'POST /projects saves profile fields',
     rp.status === 201 &&
       prof.x_username === 'e2eagent' &&
-      prof.token_ticker === 'PROF' &&
-      (prof.chains ?? []).length === 2 &&
       (prof.content_pillars ?? [])[0] === 'updates' &&
       (prof.sample_posts ?? []).length === 1 &&
       (prof.official_links ?? [])[0]?.label === 'Discord' &&
-      (prof.contract_addresses ?? [])[0]?.address === 'So1An1111' &&
       prof.brand_voice?.blacklist?.[0] === 'zzzbannedterm',
     `HTTP ${rp.status} ${JSON.stringify(rpb).slice(0, 120)}`,
   )
@@ -321,12 +312,12 @@ async function main() {
   const rpp = await api(`/api/v1/projects/${profileProjectId}`, {
     method: 'PATCH',
     headers: agent,
-    body: JSON.stringify({ token_ticker: 'PRO2', content_pillars: ['updates'] }),
+    body: JSON.stringify({ custom_instructions: 'Updated instructions.', content_pillars: ['updates'] }),
   })
   const rppb = await rpp.json()
   check(
     'PATCH /projects/:id updates profile',
-    rpp.status === 200 && rppb.project?.token_ticker === 'PRO2',
+    rpp.status === 200 && rppb.project?.custom_instructions === 'Updated instructions.',
     `HTTP ${rpp.status}`,
   )
 
