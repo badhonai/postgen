@@ -1,7 +1,7 @@
 # PostGen — Twitter/X Post Studio for Web3 Projects
 
 > Plan v1.5 — 2026-10-13
-> Status: **M0 built & verified** ✅ — see §13 for next steps
+> Status: **M0 + M1 built & live on main** ✅ — see §13 for next steps
 > v1.5 change: **JWT strategy locked** — Supabase **signing keys (ES256)** + JWKS verification; agent JWTs minted via an imported signing key; legacy HS256 secret is fallback only (§6, §12.12).
 > v1.4 change: migrations deploy via **Supabase GitHub integration** ("Deploy to production" ON). Automatic branching (PR preview DBs) is Pro-only → OFF per the $0 rule; repo structured per docs so enabling it later is one click.
 > v1.3 change: **No repeat posts** — exact + near-duplicate detection on every write (web + agent API), see §5 M2 & §6.
@@ -383,7 +383,7 @@ postgen/
 | Milestone | Deliverable | Est. scope |
 |---|---|---|
 | **M0** ✅ done | Scaffold + deploy + DB migration + keep-alive cron | small |
-| **M1** | Auth + projects + dashboard | medium |
+| **M1** ✅ done | Auth + projects + dashboard | medium |
 | **M2** | Posts CRUD + threads + counter + search + copy | large |
 | **M3** | R2 media upload/signed reads | medium |
 | **M4a** | REST Agent API + API-key management + OpenAPI spec | medium |
@@ -413,6 +413,7 @@ We build milestone by milestone, testing each before moving on.
 
 ## 13. Next Steps
 
-1. ✅ **M0 built** (this repo) — follow `README.md` to create the Supabase project, connect the GitHub integration (migrations auto-deploy on push), and deploy to `postgen.pages.dev`
-2. **M1**: auth & projects (brand voice per project)
-3. Then M2 → M5 in order, in follow-up messages.
+1. ✅ **M0 built & live** — scaffold, schema + RLS + dedupe, migrations via GitHub integration.
+2. ✅ **M1 built & live** — login/signup (Supabase sessions), protected routes, projects CRUD, brand voice editor, dashboard.
+3. **M2 next**: posts CRUD, thread builder (n/n), X char counter, search, one-click copy, no-repeat dialog.
+4. Then M3 (R2 media) → M4 (Agent API + MCP) → M5 (polish).
