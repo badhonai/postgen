@@ -24,7 +24,12 @@ export async function onRequestGet(
 
   const ttl = Math.min(Number(url.searchParams.get('ttl')) || DEFAULT_TTL, MAX_TTL)
   const exp = Math.floor(Date.now() / 1000) + ttl
-  const sig = await signAsset(key, exp, env)
+  let sig: string
+  try {
+    sig = await signAsset(key, exp, env)
+  } catch {
+    return jsonError('media signing not configured (set MEDIA_URL_SECRET)', 500)
+  }
 
   return Response.json({
     url: `/api/media/${key}?exp=${exp}&sig=${sig}`,

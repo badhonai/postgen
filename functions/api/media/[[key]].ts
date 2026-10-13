@@ -22,7 +22,11 @@ export async function onRequestGet(
 
   let allowed = false
   if (sig && exp) {
-    allowed = await verifyAsset(key, exp, sig, env)
+    try {
+      allowed = await verifyAsset(key, exp, sig, env)
+    } catch {
+      return jsonError('media signing not configured (set MEDIA_URL_SECRET)', 500)
+    }
   }
   if (!allowed) {
     const user = await getUserFromRequest(request, env)
