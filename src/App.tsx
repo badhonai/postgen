@@ -6,10 +6,13 @@ import DashboardPage from './pages/DashboardPage'
 import ProjectDetailPage from './pages/ProjectDetailPage'
 import PostEditorPage from './pages/PostEditorPage'
 import SettingsPage from './pages/SettingsPage'
+import CommandPalette from './components/CommandPalette'
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <CommandPalette />
+      <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
@@ -53,6 +56,7 @@ export default function App() {
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   )
 }

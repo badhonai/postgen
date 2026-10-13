@@ -8,7 +8,7 @@ import {
 } from '../features/projects/api'
 import ProjectCard from '../features/projects/ProjectCard'
 import ProjectForm from '../features/projects/ProjectForm'
-import { Button, Card, Spinner, ErrorBox } from '../components/ui'
+import { Button, Card, Skeleton, ErrorBox } from '../components/ui'
 
 export default function DashboardPage() {
   const { user, signOut } = useAuth()
@@ -65,7 +65,11 @@ export default function DashboardPage() {
 
       <section className="mt-8">
         {projects.isPending ? (
-          <Spinner />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-40 w-full rounded-xl" />
+            ))}
+          </div>
         ) : projects.error ? (
           <ErrorBox
             message={

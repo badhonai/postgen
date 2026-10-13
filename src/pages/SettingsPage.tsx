@@ -8,6 +8,14 @@ import {
   useRevokeApiKey,
 } from '../features/agents/keys'
 import { Button, Card, ErrorBox, Field, Input, Spinner } from '../components/ui'
+import { ACCENTS, applyAccent, getAccent, type AccentId } from '../lib/theme'
+
+const SWATCH: Record<AccentId, string> = {
+  emerald: '#34d399',
+  violet: '#a78bfa',
+  amber: '#fbbf24',
+  rose: '#fb7185',
+}
 
 function CopyBlock({ title, text }: { title: string; text: string }) {
   const [copied, setCopied] = useState(false)
@@ -41,6 +49,7 @@ export default function SettingsPage() {
 
   const [keyName, setKeyName] = useState('')
   const [freshKey, setFreshKey] = useState<string | null>(null)
+  const [accent, setAccent] = useState<AccentId>(getAccent)
 
   const origin = window.location.origin
 
@@ -50,6 +59,30 @@ export default function SettingsPage() {
         ← Dashboard
       </Link>
       <h1 className="mt-2 text-3xl font-bold tracking-tight">Settings</h1>
+
+      {/* ── Appearance ── */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold">Appearance</h2>
+        <p className="mt-1 text-sm text-zinc-400">Pick an accent theme — applies instantly.</p>
+        <div className="mt-3 flex gap-2">
+          {ACCENTS.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              title={a.label}
+              aria-label={a.label}
+              className={`h-9 w-9 rounded-full border-2 transition-transform hover:scale-110 ${
+                accent === a.id ? 'border-zinc-100' : 'border-transparent'
+              }`}
+              style={{ background: SWATCH[a.id] }}
+              onClick={() => {
+                applyAccent(a.id)
+                setAccent(a.id)
+              }}
+            />
+          ))}
+        </div>
+      </section>
 
       {/* ── API keys ── */}
       <section className="mt-8">
