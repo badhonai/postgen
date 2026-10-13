@@ -67,7 +67,7 @@ export default function HomePage() {
         {/* ── bento tiles ── */}
         <section id="features" className="mt-9 grid grid-cols-2 gap-3">
           {/* wide mint — no repeat posts */}
-          <div className="pg-tile bg-mint p-4">
+          <div className="pg-tile col-span-2 bg-mint p-4">
             <div className="flex items-center gap-3">
               <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/55">
                 {/* little star-face mascot */}
@@ -120,7 +120,7 @@ export default function HomePage() {
           </div>
 
           {/* wide peach — posts & threads */}
-          <div className="pg-tile bg-peach p-4">
+          <div className="pg-tile col-span-2 bg-peach p-4">
             <div className="flex items-center gap-3">
               <TileIcon>
                 <svg {...ICON}>
