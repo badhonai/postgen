@@ -68,6 +68,18 @@ npm run build          # typecheck + production build
 npm run deploy         # wrangler pages deploy (after first-time setup below)
 ```
 
+### E2E smoke test (against a live deployment)
+
+```bash
+SUPABASE_URL=… SUPABASE_ANON_KEY=… BASE_URL=https://postgen.pages.dev \
+E2E_EMAIL=… E2E_PASSWORD=… node scripts/e2e.mjs
+```
+
+Covers auth → web CRUD (RLS) → no-repeat dedupe → media upload/sign/serve/delete →
+Agent REST → MCP → key revocation → cleanup. It creates and removes its own
+throwaway data, so it is safe to run repeatedly (use a test account — sign-in is
+whitelist-only).
+
 > **Node version:** wrangler is pinned to `4.86.0` — the last release that runs
 > on Node 20 (20.3+). If you use Node 22+, feel free to `npm i -D wrangler@latest`
 > and raise `compatibility_date` in `wrangler.toml`. Cloudflare Pages' own
