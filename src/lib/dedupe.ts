@@ -32,14 +32,17 @@ export async function checkDuplicates(
 ): Promise<DupCheck> {
   const contentText = threadToContentText(tweets)
   const contentHash = await sha256Hex(contentText)
+  const { data: userData } = await supabase!.auth.getUser()
+  const userId = userData.user?.id ?? null
 
   const [exact, similar] = await Promise.all([
-    supabase!.rpc('find_duplicate_post', { p_content_hash: contentHash }),
+    supabase!.rpc('find_duplicate_post', { p_content_hash: contentHash, p_user_id: userId }),
     supabase!.rpc('find_similar_posts', {
       p_content_text: contentText,
       p_exclude_post_id: opts.excludePostId ?? null,
       p_project_id: opts.projectId ?? null,
       p_threshold: SIMILARITY_SHOW,
+      p_user_id: userId,
     }),
   ])
 
