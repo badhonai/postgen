@@ -60,3 +60,12 @@ export function hasBlockingDuplicates(check: DupCheck): boolean {
     check.similar.some((s) => s.similarity >= SIMILARITY_BLOCK)
   )
 }
+
+/** Exact-duplicate lookup by content hash (used by import). */
+export async function findExactDuplicate(contentHash: string): Promise<string | null> {
+  const { data, error } = await supabase!.rpc('find_duplicate_post', {
+    p_content_hash: contentHash,
+  })
+  if (error) throw error
+  return (data as string | null) ?? null
+}

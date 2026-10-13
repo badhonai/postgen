@@ -1,5 +1,7 @@
-import { useDeferredValue, useState } from 'react'
+import { useDeferredValue, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { exportProject, importBundle, parseImportJson } from '../lib/export'
+import { findExactDuplicate } from '../lib/dedupe'
 import {
   useDeleteProject,
   useProject,
@@ -9,9 +11,9 @@ import {
 import ProjectForm from '../features/projects/ProjectForm'
 import PostCard from '../features/posts/PostCard'
 import MediaLibrary from '../features/media/MediaLibrary'
-import { usePosts, type PostFilters } from '../features/posts/api'
+import { usePosts, useSavePost, type PostFilters } from '../features/posts/api'
 import { CATEGORY_LABELS, type PostCategory, type PostStatus } from '../lib/types'
-import { Button, Card, ErrorBox, Input, Select, Spinner } from '../components/ui'
+import { Button, Card, ErrorBox, Input, Select, Skeleton, Spinner } from '../components/ui'
 
 const STATUSES: Array<PostStatus | ''> = ['', 'idea', 'draft', 'approved', 'scheduled', 'published', 'archived']
 const CATEGORIES: Array<PostCategory | ''> = ['', ...(Object.keys(CATEGORY_LABELS) as PostCategory[])]
@@ -22,7 +24,10 @@ export default function ProjectDetailPage() {
   const project = useProject(id)
   const updateProject = useUpdateProject(id)
   const deleteProject = useDeleteProject()
+  const savePost = useSavePost()
   const [editing, setEditing] = useState(false)
+  const [busyTransfer, setBusyTransfer] = useState(false)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<PostStatus | ''>('')
@@ -80,6 +85,41 @@ export default function ProjectDetailPage() {
     deleteProject.mutate(p.id, {
       onSuccess: () => navigate('/dashboard', { replace: true }),
     })
+  }
+
+  const handleExport = async (format: 'json' | 'md') => {
+    setBusyTransfer(true)
+    try {
+      await exportProject(p.id, p.slug, format)
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'export failed')
+    } finally {
+      setBusyTransfer(false)
+    }
+  }
+
+  const handleImport = async (file: File) => {
+    setBusyTransfer(true)
+    try {
+      const bundle = parseImportJson(await file.text())
+      const result = await importBundle(
+        bundle,
+        p.id,
+        (input) => savePost.mutateAsync(input),
+        async (hash) => (await findExactDuplicate(hash)) !== null,
+      )
+      void posts.refetch()
+      window.alert(
+        `Imported ${result.imported} post${result.imported === 1 ? '' : 's'}` +
+          (result.skippedDuplicates ? `, skipped ${result.skippedDuplicates} exact duplicate${result.skippedDuplicates === 1 ? '' : 's'}` : '') +
+          (result.failed ? `, failed ${result.failed}` : ''),
+      )
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'import failed')
+    } finally {
+      setBusyTransfer(false)
+      if (importInputRef.current) importInputRef.current.value = ''
+    }
   }
 
   return (
@@ -160,9 +200,30 @@ export default function ProjectDetailPage() {
       <section className="mt-10">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl font-semibold tracking-tight">Posts</h2>
-          <Link to={`/projects/${p.id}/posts/new`}>
-            <Button>+ New post</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" disabled={busyTransfer} onClick={() => void handleExport('md')}>
+              {busyTransfer ? '…' : 'Export .md'}
+            </Button>
+            <Button variant="ghost" disabled={busyTransfer} onClick={() => void handleExport('json')}>
+              Export .json
+            </Button>
+            <Button variant="ghost" disabled={busyTransfer} onClick={() => importInputRef.current?.click()}>
+              Import
+            </Button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) void handleImport(file)
+              }}
+            />
+            <Link to={`/projects/${p.id}/posts/new`}>
+              <Button>+ New post</Button>
+            </Link>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -199,7 +260,11 @@ export default function ProjectDetailPage() {
 
         <div className="mt-4">
           {posts.isPending ? (
-            <Spinner />
+            <div className="grid gap-3">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
           ) : posts.error ? (
             <ErrorBox
               message={posts.error instanceof Error ? posts.error.message : 'Failed to load posts'}
