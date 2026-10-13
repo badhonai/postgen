@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import ProjectDetailPage from './pages/ProjectDetailPage'
+import PostEditorPage from './pages/PostEditorPage'
 
 export default function App() {
   return (
@@ -23,6 +24,22 @@ export default function App() {
         element={
           <RequireAuth>
             <ProjectDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/projects/:id/posts/new"
+        element={
+          <RequireAuth>
+            <PostEditorPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/posts/:id"
+        element={
+          <RequireAuth>
+            <PostEditorPage />
           </RequireAuth>
         }
       />

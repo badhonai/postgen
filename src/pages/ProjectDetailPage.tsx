@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useDeferredValue, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   useDeleteProject,
@@ -7,7 +7,13 @@ import {
   type ProjectInput,
 } from '../features/projects/api'
 import ProjectForm from '../features/projects/ProjectForm'
-import { Button, Card, ErrorBox, Spinner } from '../components/ui'
+import PostCard from '../features/posts/PostCard'
+import { usePosts, type PostFilters } from '../features/posts/api'
+import { CATEGORY_LABELS, type PostCategory, type PostStatus } from '../lib/types'
+import { Button, Card, ErrorBox, Input, Select, Spinner } from '../components/ui'
+
+const STATUSES: Array<PostStatus | ''> = ['', 'idea', 'draft', 'approved', 'scheduled', 'published', 'archived']
+const CATEGORIES: Array<PostCategory | ''> = ['', ...(Object.keys(CATEGORY_LABELS) as PostCategory[])]
 
 export default function ProjectDetailPage() {
   const { id = '' } = useParams()
@@ -16,6 +22,20 @@ export default function ProjectDetailPage() {
   const updateProject = useUpdateProject(id)
   const deleteProject = useDeleteProject()
   const [editing, setEditing] = useState(false)
+
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState<PostStatus | ''>('')
+  const [category, setCategory] = useState<PostCategory | ''>('')
+  const [tag, setTag] = useState('')
+
+  const filters: PostFilters = {
+    projectId: id,
+    search: useDeferredValue(search) || undefined,
+    status,
+    category,
+    tag: tag || undefined,
+  }
+  const posts = usePosts(filters)
 
   if (project.isPending) {
     return (
@@ -100,9 +120,7 @@ export default function ProjectDetailPage() {
           </Card>
         ) : (
           <Card>
-            <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">
-              About
-            </h2>
+            <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">About</h2>
             <p className="mt-3 whitespace-pre-wrap text-sm text-zinc-300">
               {p.description || 'No description yet.'}
             </p>
@@ -121,9 +139,7 @@ export default function ProjectDetailPage() {
               </div>
               <div className="flex gap-3">
                 <dt className="w-32 shrink-0 text-zinc-500">Taboo words</dt>
-                <dd className="text-zinc-300">
-                  {(p.brand_voice.tabooWords ?? []).join(', ') || '—'}
-                </dd>
+                <dd className="text-zinc-300">{(p.brand_voice.tabooWords ?? []).join(', ') || '—'}</dd>
               </div>
               <div className="flex gap-3">
                 <dt className="w-32 shrink-0 text-zinc-500">Hashtags</dt>
@@ -140,10 +156,74 @@ export default function ProjectDetailPage() {
         )}
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <section className="mt-10">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold tracking-tight">Posts</h2>
+          <Link to={`/projects/${p.id}/posts/new`}>
+            <Button>+ New post</Button>
+          </Link>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search posts…"
+            className="w-56"
+          />
+          <Select value={status} onChange={(e) => setStatus(e.target.value as PostStatus | '')} className="w-36">
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s || 'Any status'}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as PostCategory | '')}
+            className="w-40"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c ? CATEGORY_LABELS[c] : 'Any category'}
+              </option>
+            ))}
+          </Select>
+          {tag ? (
+            <Button variant="ghost" onClick={() => setTag('')}>
+              #{tag} ✕
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="mt-4">
+          {posts.isPending ? (
+            <Spinner />
+          ) : posts.error ? (
+            <ErrorBox
+              message={posts.error instanceof Error ? posts.error.message : 'Failed to load posts'}
+            />
+          ) : (posts.data ?? []).length === 0 ? (
+            <Card className="border-dashed text-center">
+              <h3 className="font-semibold text-zinc-200">No posts yet</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+                Write your first post — a single tweet or a full thread. Duplicates are
+                blocked automatically.
+              </p>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {(posts.data ?? []).map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <div className="mt-10 flex flex-wrap gap-2">
         {(
           [
-            ['Posts & threads', 'M2'],
             ['Media library', 'M3'],
             ['Knowledge & AI agents', 'M4'],
           ] as const
