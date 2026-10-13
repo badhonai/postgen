@@ -75,6 +75,6 @@ export async function onRequestGet({ request }: { request: Request }): Promise<R
       verified: Boolean(u.verification?.verified),
       protectedAccount: String(u.protected) === 'True' || u.protected === true,
     },
-    { headers: { 'Cache-Control': 'public, max-age=21600' } },
+    { headers: { 'Cache-Control': 'public, max-age=3600' } },
   )
 }

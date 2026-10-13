@@ -30,7 +30,33 @@ export async function fetchXProfile(handle: string): Promise<XProfile> {
     if (body.error === 'bad_handle') throw new Error('That does not look like an X handle.')
     throw new Error('Could not load X profile right now.')
   }
-  return (await res.json()) as XProfile
+  const raw = (await res.json()) as Record<string, unknown>
+  // Harden against odd shapes (and stale cached proxy responses): every
+  // rendered field must be a primitive.
+  const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+  const strOrNull = (v: unknown): string | null => {
+    if (typeof v === 'string') return v || null
+    if (v && typeof v === 'object' && 'url' in v) return str((v as { url?: unknown }).url) || null
+    return null
+  }
+  const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  return {
+    handle: str(raw.handle) || handle,
+    name: str(raw.name) || str(raw.handle) || handle,
+    bio: str(raw.bio),
+    avatarUrl: strOrNull(raw.avatarUrl),
+    bannerUrl: strOrNull(raw.bannerUrl),
+    followers: num(raw.followers),
+    following: num(raw.following),
+    tweets: num(raw.tweets),
+    likes: num(raw.likes),
+    mediaCount: num(raw.mediaCount),
+    joined: strOrNull(raw.joined),
+    location: strOrNull(raw.location),
+    website: strOrNull(raw.website),
+    verified: Boolean(raw.verified),
+    protectedAccount: Boolean(raw.protectedAccount),
+  }
 }
 
 export type ScorePart = { key: string; label: string; points: number; max: number }
