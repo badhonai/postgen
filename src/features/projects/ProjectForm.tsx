@@ -28,6 +28,33 @@ function StepLabel({ children }: { children: string }) {
   )
 }
 
+/**
+ * Comma-separated list input that keeps the RAW text while typing
+ * (commas and trailing spaces must survive keystrokes) and exposes the
+ * parsed array to the form.
+ */
+function CsvInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string[]
+  onChange: (next: string[]) => void
+  placeholder?: string
+}) {
+  const [text, setText] = useState(() => listToCsv(value))
+  return (
+    <Input
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value)
+        onChange(csvToList(e.target.value))
+      }}
+      placeholder={placeholder}
+    />
+  )
+}
+
 function LogoAssetsField({
   queued,
   logoIndex,
@@ -266,9 +293,9 @@ export default function ProjectForm({
       {step === 2 ? (
         <div key="s2" className="space-y-5">
           <Field label="Content pillars">
-            <Input
-              value={listToCsv(draft.contentPillars)}
-              onChange={(e) => set({ contentPillars: csvToList(e.target.value) })}
+            <CsvInput
+              value={draft.contentPillars}
+              onChange={(next) => set({ contentPillars: next })}
               placeholder="product updates, memes, AMAs"
             />
           </Field>

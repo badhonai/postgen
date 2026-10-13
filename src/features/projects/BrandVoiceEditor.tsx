@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { BrandVoice } from '../../lib/types'
 import { Field, Input, Textarea } from '../../components/ui'
 
@@ -20,6 +21,9 @@ export default function BrandVoiceEditor({
   onChange: (next: BrandVoice) => void
 }) {
   const set = (patch: Partial<BrandVoice>) => onChange({ ...value, ...patch })
+  const [blacklistText, setBlacklistText] = useState(() =>
+    listToCsv(value.blacklist ?? value.tabooWords),
+  )
 
   return (
     <div className="space-y-4">
@@ -34,8 +38,11 @@ export default function BrandVoiceEditor({
 
       <Field label="Blacklist words / symbols">
         <Input
-          value={listToCsv(value.blacklist ?? value.tabooWords)}
-          onChange={(e) => set({ blacklist: csvToList(e.target.value), tabooWords: undefined })}
+          value={blacklistText}
+          onChange={(e) => {
+            setBlacklistText(e.target.value)
+            set({ blacklist: csvToList(e.target.value), tabooWords: undefined })
+          }}
           placeholder="gm, wagmi, guaranteed, risk-free, 🚀"
         />
       </Field>

@@ -116,9 +116,12 @@ export function projectInputOf(project: Project): ProjectInput {
 }
 
 async function insertProject(input: ProjectInput, slug: string): Promise<Project> {
+  const { data: authData, error: authErr } = await supabase!.auth.getUser()
+  const userId = authData.user?.id
+  if (authErr || !userId) throw authErr ?? new Error('Not signed in')
   const { data, error } = await supabase!
     .from('projects')
-    .insert({ ...projectRow(input), slug })
+    .insert({ ...projectRow(input), slug, user_id: userId })
     .select()
     .single()
   if (error) throw error
