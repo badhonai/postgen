@@ -187,6 +187,7 @@ async function assertNoRepeat(
 
   const { data: dup, error: dupErr } = await client.rpc('find_duplicate_post', {
     p_content_hash: contentHash,
+    p_user_id: userId,
   })
   if (dupErr) fail(dupErr)
 
@@ -195,6 +196,7 @@ async function assertNoRepeat(
     p_exclude_post_id: opts.excludePostId ?? null,
     p_project_id: opts.projectId ?? null,
     p_threshold: SIMILARITY_SHOW,
+    p_user_id: userId,
   })
   if (simErr) fail(simErr)
 
@@ -426,6 +428,7 @@ export async function findSimilar(
     p_exclude_post_id: null,
     p_project_id: opts.projectId ?? null,
     p_threshold: SIMILARITY_SHOW,
+    p_user_id: userId,
   })
   if (error) fail(error)
   return { similar: (data ?? []) as Array<{ id: string; title: string; project_id: string; similarity: number }> }
