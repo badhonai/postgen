@@ -217,7 +217,6 @@ export default function ProjectForm({
           </div>
           <Field label="Project name">
             <Input
-              required
               value={draft.name}
               onChange={(e) => set({ name: e.target.value })}
               placeholder="My DeFi Protocol"
