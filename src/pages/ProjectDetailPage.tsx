@@ -50,7 +50,7 @@ export default function ProjectDetailPage() {
   const updateProject = useUpdateProject(id)
   const deleteProject = useDeleteProject()
   const savePost = useSavePost()
-  const [tab, setTab] = useState<Tab>('about')
+  const [tab, setTab] = useState<Tab>('posts')
   const [editing, setEditing] = useState(false)
   const [busyTransfer, setBusyTransfer] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
@@ -195,7 +195,7 @@ export default function ProjectDetailPage() {
 
         {/* ── tabs ── */}
         <div className="pg-glass mt-5 flex gap-1 rounded-full p-1.5">
-          {([['about', 'About'], ['posts', 'Posts'], ['media', 'Media']] as Array<[Tab, string]>).map(
+          {([['posts', 'Posts'], ['media', 'Media'], ['about', 'About']] as Array<[Tab, string]>).map(
             ([id2, label]) => (
               <button
                 key={id2}

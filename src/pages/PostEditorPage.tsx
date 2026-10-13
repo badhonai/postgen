@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { checkDuplicates, hasBlockingDuplicates, type DupCheck, type SimilarPost } from '../lib/dedupe'
 import { projectBlacklist } from '../lib/blacklist'
 import { numberedTweets } from '../lib/text'
@@ -17,10 +17,15 @@ import { Button, ErrorBox, Spinner } from '../components/ui'
 export default function PostEditorPage() {
   const { id } = useParams()
   const [params] = useSearchParams()
+  const location = useLocation()
   const navigate = useNavigate()
-  const isNew = !id
+  // Two "new" entry shapes: /projects/:id/posts/new (here :id is the PROJECT)
+  // and /posts/new?project=… . Everything else (/posts/:id) is edit mode.
+  const onNewProjectRoute = /\/projects\/[^/]+\/posts\/new$/.test(location.pathname)
+  const isNew = onNewProjectRoute || !id || id === 'new'
+  const editId = !isNew && id && id !== 'new' ? id : ''
 
-  const post = usePost(id ?? '')
+  const post = usePost(editId)
   const savePost = useSavePost()
   const deletePost = useDeletePost()
 
@@ -36,7 +41,11 @@ export default function PostEditorPage() {
   const timerRef = useRef<number | undefined>(undefined)
   const hydratedRef = useRef(false)
 
-  const projectId = isNew ? (params.get('project') ?? '') : (post.data?.project_id ?? '')
+  const projectId = isNew
+    ? onNewProjectRoute
+      ? (id ?? '')
+      : (params.get('project') ?? '')
+    : (post.data?.project_id ?? '')
   const postData = post.data ?? null
   const project = useProject(projectId)
 
