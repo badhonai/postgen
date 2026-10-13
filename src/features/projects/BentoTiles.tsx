@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Project } from '../../lib/types'
-import { TILE_COLORS } from '../../lib/types'
+import { STATUS_DOT, STATUS_LABEL, TILE_COLORS } from '../../lib/types'
 import { useAssetUrl } from '../../lib/media'
 
 export type PostSummary = {
@@ -8,24 +8,6 @@ export type PostSummary = {
   project_id: string
   title: string
   status: string
-}
-
-const STATUS_DOT: Record<string, string> = {
-  idea: '#b9a6f0',
-  draft: '#f2c14e',
-  approved: '#34c98e',
-  scheduled: '#5b8def',
-  published: '#4f7dff',
-  archived: '#a09cc4',
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  idea: 'Idea',
-  draft: 'Draft',
-  approved: 'Approved',
-  scheduled: 'Scheduled',
-  published: 'Published',
-  archived: 'Archived',
 }
 
 function Logo({ r2Key, size }: { r2Key?: string | null; size: number }) {

@@ -4,6 +4,8 @@ import { exportProject, importBundle, parseImportJson } from '../lib/export'
 import { findExactDuplicate } from '../lib/dedupe'
 import { projectBlacklist } from '../lib/blacklist'
 import { useAssetUrl } from '../lib/media'
+import { STATUS_DOT, STATUS_LABEL, CATEGORY_LABELS, type PostCategory, type PostStatus } from '../lib/types'
+import type { PostListItem } from '../features/posts/api'
 import {
   applyNewAssets,
   useDeleteProject,
@@ -12,14 +14,14 @@ import {
   type ProjectInput,
 } from '../features/projects/api'
 import ProjectForm from '../features/projects/ProjectForm'
-import PostCard from '../features/posts/PostCard'
 import MediaLibrary from '../features/media/MediaLibrary'
 import { usePosts, useSavePost, type PostFilters } from '../features/posts/api'
-import { CATEGORY_LABELS, type PostCategory, type PostStatus } from '../lib/types'
-import { Button, Card, ErrorBox, Input, Select, Skeleton, Spinner } from '../components/ui'
+import { Button, ErrorBox, Input, Select, Skeleton, Spinner } from '../components/ui'
 
 const STATUSES: Array<PostStatus | ''> = ['', 'idea', 'draft', 'approved', 'scheduled', 'published', 'archived']
 const CATEGORIES: Array<PostCategory | ''> = ['', ...(Object.keys(CATEGORY_LABELS) as PostCategory[])]
+
+type Tab = 'about' | 'posts' | 'media'
 
 export default function ProjectDetailPage() {
   const { id = '' } = useParams()
@@ -28,6 +30,7 @@ export default function ProjectDetailPage() {
   const updateProject = useUpdateProject(id)
   const deleteProject = useDeleteProject()
   const savePost = useSavePost()
+  const [tab, setTab] = useState<Tab>('about')
   const [editing, setEditing] = useState(false)
   const [busyTransfer, setBusyTransfer] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
@@ -35,43 +38,47 @@ export default function ProjectDetailPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<PostStatus | ''>('')
   const [category, setCategory] = useState<PostCategory | ''>('')
-  const [tag, setTag] = useState('')
 
   const filters: PostFilters = {
     projectId: id,
     search: useDeferredValue(search) || undefined,
     status,
     category,
-    tag: tag || undefined,
   }
   const posts = usePosts(filters)
 
   if (project.isPending) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <Spinner />
-      </main>
+      <div className="pg-shell">
+        <div className="mx-auto max-w-[440px] px-5 pt-10">
+          <Spinner />
+        </div>
+      </div>
     )
   }
 
   if (project.error) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <ErrorBox
-          message={project.error instanceof Error ? project.error.message : 'Failed to load project'}
-        />
-      </main>
+      <div className="pg-shell">
+        <div className="mx-auto max-w-[440px] px-5 pt-10">
+          <ErrorBox
+            message={project.error instanceof Error ? project.error.message : 'Failed to load project'}
+          />
+        </div>
+      </div>
     )
   }
 
   if (!project.data) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <h1 className="text-xl font-semibold">Project not found</h1>
-        <Link to="/dashboard" className="mt-4 inline-block text-sm text-emerald-400 hover:underline">
-          ← Back to dashboard
-        </Link>
-      </main>
+      <div className="pg-shell">
+        <div className="mx-auto max-w-[440px] px-5 pt-10">
+          <h1 className="pg-title text-2xl text-ink">Project not found</h1>
+          <Link to="/dashboard" className="mt-4 inline-block text-sm font-bold text-ink underline underline-offset-2">
+            ← Back to dashboard
+          </Link>
+        </div>
+      </div>
     )
   }
 
@@ -131,51 +138,263 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-6 py-10">
-      <Link to="/dashboard" className="text-sm text-zinc-500 hover:text-zinc-300">
-        ← Projects
-      </Link>
-
-      <header className="mt-2 flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          {p.logo?.r2_key ? <ProjectLogo r2Key={p.logo.r2_key} /> : null}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{p.name}</h1>
-            <p className="mt-1 text-sm text-zinc-500">
-              slug: <code className="text-zinc-400">{p.slug}</code>
-              {p.x_username ? (
-                <>
-                  {' · '}
-                  <a
-                    className="text-emerald-400 hover:underline"
-                    href={`https://x.com/${p.x_username}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    @{p.x_username}
-                  </a>
-                </>
-              ) : null}
-              {' · created '}
-              {new Date(p.created_at).toLocaleDateString()}
-            </p>
+    <div className="pg-shell">
+      <div className="mx-auto max-w-[440px] px-5 pt-6 pb-32">
+        {/* ── header ── */}
+        <header className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => navigate('/dashboard')}
+            className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <ProjectLogo r2Key={p.logo?.r2_key} />
+          <div className="min-w-0 flex-1">
+            <h1 className="pg-title truncate text-2xl text-ink">{p.name}</h1>
+            {p.x_username ? (
+              <p className="truncate text-xs font-bold text-ink-soft">@{p.x_username}</p>
+            ) : (
+              <p className="truncate text-xs font-bold text-ink-soft">{p.slug}</p>
+            )}
           </div>
+          <button
+            type="button"
+            aria-label="Edit project"
+            onClick={() => setEditing(true)}
+            className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+            </svg>
+          </button>
+        </header>
+
+        {/* ── tabs ── */}
+        <div className="pg-scroll mt-5 flex gap-2 overflow-x-auto pb-1">
+          {([['about', 'About'], ['posts', 'Posts'], ['media', 'Media']] as Array<[Tab, string]>).map(
+            ([id2, label]) => (
+              <button
+                key={id2}
+                type="button"
+                className={`pg-chip ${tab === id2 ? 'pg-chip-active' : ''}`}
+                onClick={() => setTab(id2)}
+              >
+                {label}
+              </button>
+            ),
+          )}
         </div>
-        {!editing ? (
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => setEditing(true)}>
-              Edit
-            </Button>
-            <Button variant="danger" onClick={handleDelete} disabled={deleteProject.isPending}>
-              {deleteProject.isPending ? 'Deleting…' : 'Delete'}
-            </Button>
+
+        {/* ── About ── */}
+        {tab === 'about' ? (
+          <div className="mt-5 space-y-3.5">
+            <section className="pg-glass rounded-[24px] p-5">
+              <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">About</h2>
+              <p className="mt-2.5 text-[14px] leading-relaxed font-semibold whitespace-pre-wrap text-ink">
+                {p.description || 'No description yet.'}
+              </p>
+              {(p.content_pillars ?? []).length > 0 ? (
+                <div className="mt-3.5 flex flex-wrap gap-1.5">
+                  {p.content_pillars.map((c) => (
+                    <span key={c} className="rounded-full bg-mint/70 px-2.5 py-1 text-[11px] font-bold text-ink">
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+
+            <section className="pg-glass rounded-[24px] p-5">
+              <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Brand voice</h2>
+              <div className="mt-2.5 space-y-2 text-[14px] font-semibold text-ink">
+                <p>
+                  <span className="text-ink-soft">Tone & voice — </span>
+                  {p.brand_voice.tone || '—'}
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-ink-soft">Blacklist —</span>
+                  {projectBlacklist(p.brand_voice).length ? (
+                    projectBlacklist(p.brand_voice).map((w) => (
+                      <span key={w} className="rounded-full bg-rose-soft/70 px-2.5 py-0.5 text-[11px] font-bold text-ink">
+                        {w}
+                      </span>
+                    ))
+                  ) : (
+                    <span>—</span>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="pg-glass rounded-[24px] p-5">
+              <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Official links</h2>
+              <ul className="mt-2.5 space-y-1.5 text-[14px] font-semibold">
+                {p.website_url ? (
+                  <li className="flex items-center gap-2.5">
+                    <LinkChip label="Website" />
+                    <a href={p.website_url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-ink underline underline-offset-2">
+                      {p.website_url}
+                    </a>
+                  </li>
+                ) : null}
+                {(p.official_links ?? []).map((l) => (
+                  <li key={l.url} className="flex items-center gap-2.5">
+                    <LinkChip label={l.label} />
+                    <a href={l.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-ink underline underline-offset-2">
+                      {l.url}
+                    </a>
+                  </li>
+                ))}
+                {!p.website_url && (p.official_links ?? []).length === 0 ? (
+                  <li className="text-ink-soft">—</li>
+                ) : null}
+              </ul>
+            </section>
+
+            {(p.sample_posts ?? []).length > 0 ? (
+              <section className="pg-glass rounded-[24px] p-5">
+                <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Sample posts</h2>
+                <div className="mt-2.5 space-y-2.5">
+                  {p.sample_posts.map((s, i) => (
+                    <blockquote key={i} className="rounded-[16px] bg-white/45 px-4 py-3 text-[13px] leading-relaxed font-semibold text-ink">
+                      “{s}”
+                    </blockquote>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {p.custom_instructions ? (
+              <section className="pg-glass rounded-[24px] p-5">
+                <h2 className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Custom instructions</h2>
+                <p className="mt-2.5 text-[14px] leading-relaxed font-semibold whitespace-pre-wrap text-ink">
+                  {p.custom_instructions}
+                </p>
+              </section>
+            ) : null}
           </div>
         ) : null}
-      </header>
 
-      <div className="mt-8">
-        {editing ? (
-          <Card>
+        {/* ── Posts ── */}
+        {tab === 'posts' ? (
+          <div className="mt-5 space-y-3.5">
+            <div className="flex gap-2">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search posts…"
+                className="flex-1"
+              />
+              <Select value={category} onChange={(e) => setCategory(e.target.value as PostCategory | '')} className="w-32">
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c ? CATEGORY_LABELS[c] : 'Category'}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="pg-scroll flex gap-2 overflow-x-auto pb-1">
+              {STATUSES.map((s) => (
+                <button
+                  key={s || 'any'}
+                  type="button"
+                  className={`pg-chip text-xs ${status === s ? 'pg-chip-active' : ''}`}
+                  onClick={() => setStatus(s)}
+                >
+                  {s ? STATUS_LABEL[s] : 'Any status'}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" className="px-3.5 py-1.5 text-xs" disabled={busyTransfer} onClick={() => void handleExport('md')}>
+                Export .md
+              </Button>
+              <Button variant="ghost" className="px-3.5 py-1.5 text-xs" disabled={busyTransfer} onClick={() => void handleExport('json')}>
+                Export .json
+              </Button>
+              <Button variant="ghost" className="px-3.5 py-1.5 text-xs" disabled={busyTransfer} onClick={() => importInputRef.current?.click()}>
+                Import
+              </Button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void handleImport(file)
+                }}
+              />
+            </div>
+
+            {posts.isPending ? (
+              <div className="space-y-2.5">
+                <Skeleton className="h-16 w-full rounded-[20px]" />
+                <Skeleton className="h-16 w-full rounded-[20px]" />
+                <Skeleton className="h-16 w-full rounded-[20px]" />
+              </div>
+            ) : posts.error ? (
+              <ErrorBox message={posts.error instanceof Error ? posts.error.message : 'Failed to load posts'} />
+            ) : (posts.data ?? []).length === 0 ? (
+              <div className="pg-glass rounded-[24px] p-7 text-center">
+                <p className="text-sm font-semibold text-ink-soft">
+                  {search || status || category ? 'No posts match these filters.' : 'No posts yet.'}
+                </p>
+                {!search && !status && !category ? (
+                  <Button className="mt-4" onClick={() => navigate(`/projects/${p.id}/posts/new`)}>
+                    + New post
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {(posts.data ?? []).map((post) => (
+                  <PostRow key={post.id} post={post} />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {/* ── Media ── */}
+        {tab === 'media' ? (
+          <div className="mt-5">
+            <MediaLibrary projectId={p.id} />
+          </div>
+        ) : null}
+      </div>
+
+      {/* ── floating new post ── */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center pb-[max(env(safe-area-inset-bottom),18px)]">
+        <Button
+          className="pg-fab pointer-events-auto"
+          onClick={() => navigate(`/projects/${p.id}/posts/new`)}
+        >
+          + New post
+        </Button>
+      </div>
+
+      {/* ── edit sheet ── */}
+      {editing ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/25 backdrop-blur-sm">
+          <div className="pg-glass-strong max-h-[92dvh] w-full max-w-[440px] overflow-y-auto rounded-t-[32px] p-6 pb-12">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="pg-title text-2xl text-ink">Edit project</h2>
+              <button
+                type="button"
+                aria-label="Close"
+                className="pg-glass flex h-10 w-10 items-center justify-center rounded-full text-ink"
+                onClick={() => setEditing(false)}
+              >
+                ✕
+              </button>
+            </div>
             <ProjectForm
               initial={p}
               busy={updateProject.isPending}
@@ -183,213 +402,65 @@ export default function ProjectDetailPage() {
               onSubmit={handleUpdate}
               onCancel={() => setEditing(false)}
             />
-          </Card>
-        ) : (
-          <Card>
-            <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">About</h2>
-            <p className="mt-3 whitespace-pre-wrap text-sm text-zinc-300">
-              {p.description || 'No description yet.'}
-            </p>
-
-            <dl className="mt-6 grid gap-2 text-sm sm:grid-cols-2">
-              <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Website</dt>
-                <dd className="min-w-0 truncate text-zinc-300">
-                  {p.website_url ? (
-                    <a href={p.website_url} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline">
-                      {p.website_url}
-                    </a>
-                  ) : (
-                    '—'
-                  )}
-                </dd>
-              </div>
-              <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Pillars</dt>
-                <dd className="text-zinc-300">{(p.content_pillars ?? []).join(', ') || '—'}</dd>
-              </div>
-            </dl>
-
-            {(p.official_links ?? []).length > 0 ? (
-              <div className="mt-6">
-                <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">Official links</h2>
-                <ul className="mt-3 space-y-1 text-sm">
-                  {(p.official_links ?? []).map((l) => (
-                    <li key={l.url} className="flex gap-3">
-                      <span className="w-32 shrink-0 text-zinc-500">{l.label}</span>
-                      <a href={l.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-emerald-400 hover:underline">
-                        {l.url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {(p.sample_posts ?? []).length > 0 ? (
-              <div className="mt-6">
-                <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">
-                  Sample posts
-                </h2>
-                <ul className="mt-3 space-y-2">
-                  {(p.sample_posts ?? []).map((s, i) => (
-                    <li key={i} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-sm whitespace-pre-wrap text-zinc-300">
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {p.custom_instructions ? (
-              <div className="mt-6">
-                <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">
-                  Custom instructions
-                </h2>
-                <p className="mt-3 whitespace-pre-wrap text-sm text-zinc-300">{p.custom_instructions}</p>
-              </div>
-            ) : null}
-
-            <h2 className="mt-8 text-sm font-semibold tracking-wide text-zinc-300 uppercase">
-              Brand voice
-            </h2>
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Tone & voice</dt>
-                <dd className="text-zinc-300">{p.brand_voice.tone || '—'}</dd>
-              </div>
-              <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Blacklist</dt>
-                <dd className="text-zinc-300">
-                  {projectBlacklist(p.brand_voice).join(', ') || '—'}
-                </dd>
-              </div>
-            </dl>
-          </Card>
-        )}
-      </div>
-
-      <section className="mt-10">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-semibold tracking-tight">Posts</h2>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" disabled={busyTransfer} onClick={() => void handleExport('md')}>
-              {busyTransfer ? '…' : 'Export .md'}
-            </Button>
-            <Button variant="ghost" disabled={busyTransfer} onClick={() => void handleExport('json')}>
-              Export .json
-            </Button>
-            <Button variant="ghost" disabled={busyTransfer} onClick={() => importInputRef.current?.click()}>
-              Import
-            </Button>
-            <input
-              ref={importInputRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) void handleImport(file)
-              }}
-            />
-            <Link to={`/projects/${p.id}/posts/new`}>
-              <Button>+ New post</Button>
-            </Link>
+            <div className="mt-8 border-t border-white/50 pt-5">
+              <Button variant="danger" onClick={handleDelete} disabled={deleteProject.isPending}>
+                {deleteProject.isPending ? 'Deleting…' : 'Delete project'}
+              </Button>
+            </div>
           </div>
         </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search posts…"
-            className="w-56"
-          />
-          <Select value={status} onChange={(e) => setStatus(e.target.value as PostStatus | '')} className="w-36">
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s || 'Any status'}
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={category}
-            onChange={(e) => setCategory(e.target.value as PostCategory | '')}
-            className="w-40"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c ? CATEGORY_LABELS[c] : 'Any category'}
-              </option>
-            ))}
-          </Select>
-          {tag ? (
-            <Button variant="ghost" onClick={() => setTag('')}>
-              #{tag} ✕
-            </Button>
-          ) : null}
-        </div>
-
-        <div className="mt-4">
-          {posts.isPending ? (
-            <div className="grid gap-3">
-              {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className="h-24 w-full" />
-              ))}
-            </div>
-          ) : posts.error ? (
-            <ErrorBox
-              message={posts.error instanceof Error ? posts.error.message : 'Failed to load posts'}
-            />
-          ) : (posts.data ?? []).length === 0 ? (
-            <Card className="border-dashed text-center">
-              <h3 className="font-semibold text-zinc-200">No posts yet</h3>
-              <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
-                Write your first post — a single tweet or a full thread. Duplicates are
-                blocked automatically.
-              </p>
-            </Card>
-          ) : (
-            <div className="grid gap-3">
-              {(posts.data ?? []).map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <div className="mt-10">
-        <MediaLibrary projectId={p.id} />
-      </div>
-
-      <div className="mt-10 flex flex-wrap gap-2">
-        {(
-          [
-            ['Knowledge & AI agents', 'M4'],
-          ] as const
-        ).map(([label, milestone]) => (
-          <span
-            key={label}
-            className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-500"
-            title={`Arrives in milestone ${milestone}`}
-          >
-            {label} · {milestone}
-          </span>
-        ))}
-      </div>
-    </main>
+      ) : null}
+    </div>
   )
 }
 
-function ProjectLogo({ r2Key }: { r2Key: string }) {
+function PostRow({ post }: { post: PostListItem }) {
+  return (
+    <Link
+      to={`/posts/${post.id}`}
+      className="pg-glass flex items-center gap-3 rounded-[20px] px-4 py-3.5 transition active:scale-[0.98]"
+    >
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ background: STATUS_DOT[post.status] ?? '#a09cc4' }}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] font-bold text-ink">
+          {post.title || post.content_text.slice(0, 70) || 'Untitled post'}
+        </p>
+        <p className="mt-0.5 text-[11px] font-bold text-ink-soft">
+          {CATEGORY_LABELS[post.category]} · {STATUS_LABEL[post.status] ?? post.status} · via {post.created_via}
+        </p>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-soft">
+        <path d="M9 18l6-6-6-6" />
+      </svg>
+    </Link>
+  )
+}
+
+function LinkChip({ label }: { label: string }) {
+  return (
+    <span className="w-24 shrink-0 truncate rounded-full bg-lilac/70 px-2.5 py-1 text-center text-[11px] font-bold text-ink">
+      {label}
+    </span>
+  )
+}
+
+function ProjectLogo({ r2Key }: { r2Key: string | null | undefined }) {
   const url = useAssetUrl(r2Key)
-  if (!url.data) return null
+  if (!url.data) {
+    return (
+      <div className="pg-glass flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] text-lg text-ink-soft">
+        ✦
+      </div>
+    )
+  }
   return (
     <img
       src={url.data}
       alt=""
-      className="h-14 w-14 shrink-0 rounded-xl border border-zinc-800 object-cover"
+      className="h-12 w-12 shrink-0 rounded-[18px] object-cover ring-1 ring-white/70"
     />
   )
 }

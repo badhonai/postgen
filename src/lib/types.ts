@@ -110,3 +110,21 @@ export type Asset = {
 export const ASSET_KINDS = ['logo', 'mascot', 'product', 'other'] as const
 
 export const TILE_COLORS = ['bg-mint', 'bg-lilac', 'bg-cream', 'bg-peach', 'bg-sky', 'bg-rose-soft'] as const
+
+export const STATUS_DOT: Record<string, string> = {
+  idea: '#b9a6f0',
+  draft: '#f2c14e',
+  approved: '#34c98e',
+  scheduled: '#5b8def',
+  published: '#4f7dff',
+  archived: '#a09cc4',
+}
+
+export const STATUS_LABEL: Record<string, string> = {
+  idea: 'Idea',
+  draft: 'Draft',
+  approved: 'Approved',
+  scheduled: 'Scheduled',
+  published: 'Published',
+  archived: 'Archived',
+}

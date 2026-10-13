@@ -45,8 +45,8 @@ export default function MediaUploader({
     <div className="space-y-3">
       <div
         className={cn(
-          'flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors',
-          dragOver ? 'border-emerald-500 bg-emerald-500/5' : 'border-zinc-800 hover:border-zinc-600',
+          'flex cursor-pointer flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-white/70 bg-white/30 px-6 py-8 text-center transition-colors',
+          dragOver ? 'border-ink/40 bg-white/55' : 'hover:border-white hover:bg-white/45',
         )}
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => {
@@ -66,10 +66,10 @@ export default function MediaUploader({
         tabIndex={0}
       >
         <span className="text-2xl">📎</span>
-        <p className="mt-2 text-sm text-zinc-300">
-          Drag &amp; drop, or <span className="text-emerald-400">browse</span>
+        <p className="mt-2 text-sm font-semibold text-ink">
+          Drag &amp; drop, or <span className="font-bold text-ink underline underline-offset-2">browse</span>
         </p>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs font-semibold text-ink-soft">
           Images ≤ 10 MB (png, jpg, gif, webp, avif) · Videos ≤ 50 MB (mp4, webm, mov)
         </p>
         <input
@@ -92,16 +92,16 @@ export default function MediaUploader({
               <span
                 className={
                   e.status === 'done'
-                    ? 'text-emerald-400'
+                    ? 'font-bold text-emerald-600'
                     : e.status === 'error'
-                      ? 'text-red-400'
-                      : 'text-zinc-500'
+                      ? 'font-bold text-rose-600'
+                      : 'text-ink-soft'
                 }
               >
                 {e.status === 'done' ? '✓' : e.status === 'error' ? '✗' : '◌'}
               </span>
-              <span className="min-w-0 flex-1 truncate text-zinc-300">{e.name}</span>
-              {e.error ? <span className="text-red-400">{e.error}</span> : null}
+              <span className="min-w-0 flex-1 truncate font-semibold text-ink">{e.name}</span>
+              {e.error ? <span className="font-semibold text-rose-600">{e.error}</span> : null}
             </li>
           ))}
         </ul>

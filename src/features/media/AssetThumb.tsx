@@ -30,9 +30,9 @@ export default function AssetThumb({
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-xl border bg-zinc-900/50',
-        selected ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-zinc-800',
-        selectable ? 'cursor-pointer hover:border-zinc-600' : '',
+        'pg-glass group relative overflow-hidden rounded-[22px]',
+        selected ? 'ring-2 ring-ink' : '',
+        selectable ? 'cursor-pointer hover:bg-white/70' : '',
       )}
       onClick={selectable ? () => onSelect?.(asset) : undefined}
       onKeyDown={
@@ -45,7 +45,7 @@ export default function AssetThumb({
       role={selectable ? 'button' : undefined}
       tabIndex={selectable ? 0 : undefined}
     >
-      <div className="flex h-28 items-center justify-center bg-zinc-950/60">
+      <div className="flex h-28 items-center justify-center bg-white/35">
         {isImage && url.data ? (
           <img src={url.data} alt={asset.alt_text ?? asset.filename} className="h-full w-full object-cover" />
         ) : (
@@ -53,21 +53,21 @@ export default function AssetThumb({
         )}
       </div>
       {isLogo ? (
-        <span className="absolute top-1.5 left-1.5 rounded-full bg-emerald-500/90 px-2 py-0.5 text-xs font-medium text-zinc-950">
+        <span className="absolute top-1.5 left-1.5 rounded-full bg-butter px-2 py-0.5 text-xs font-bold text-ink shadow-[0_6px_14px_rgba(242,193,78,0.4)]">
           Logo
         </span>
       ) : null}
       <div className="space-y-0.5 p-2.5">
-        <p className="truncate text-xs font-medium text-zinc-200" title={asset.filename}>
+        <p className="truncate text-xs font-bold text-ink" title={asset.filename}>
           {asset.filename}
         </p>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs font-semibold text-ink-soft">
           {formatBytes(asset.size_bytes)}
           {aspect ? ` · ${aspect}` : ''}
         </p>
         {onSetKind ? (
           <Select
-            className="mt-1 w-full text-xs"
+            className="mt-1 w-full py-1.5 text-xs"
             value={ASSET_KINDS.includes(asset.kind as (typeof ASSET_KINDS)[number]) ? asset.kind : 'other'}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => onSetKind(asset, e.target.value)}
@@ -82,12 +82,12 @@ export default function AssetThumb({
             ) : null}
           </Select>
         ) : (
-          <p className="text-xs text-zinc-500">{asset.kind}</p>
+          <p className="text-xs font-semibold text-ink-soft">{asset.kind}</p>
         )}
         {onSetLogo && isImage && !isLogo ? (
           <button
             type="button"
-            className="mt-1 text-xs text-emerald-400 hover:underline"
+            className="mt-1 text-xs font-bold text-ink underline underline-offset-2"
             onClick={(e) => {
               e.stopPropagation()
               onSetLogo(asset)
@@ -99,8 +99,8 @@ export default function AssetThumb({
       </div>
       {onDelete ? (
         <Button
-          variant="danger"
-          className="absolute top-1.5 right-1.5 px-2 py-0.5 text-xs opacity-0 group-hover:opacity-100"
+          variant="ghost"
+          className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-white/70 p-0 text-xs opacity-0 group-hover:opacity-100"
           onClick={(e) => {
             e.stopPropagation()
             onDelete(asset)
