@@ -1,5 +1,5 @@
 import type { BrandVoice } from '../../lib/types'
-import { Field, Input, Select } from '../../components/ui'
+import { Field, Input, Select, Textarea } from '../../components/ui'
 
 function csvToList(value: string): string[] {
   return value
@@ -23,12 +23,9 @@ export default function BrandVoiceEditor({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-zinc-500">
-        Guides how AI agents write posts for this project (used from M4). All fields optional.
-      </p>
-
       <Field label="Tone & voice" hint="e.g. “confident, technical, no fluff, explains like to a friend”">
-        <Input
+        <Textarea
+          rows={2}
           value={value.tone ?? ''}
           onChange={(e) => set({ tone: e.target.value })}
           placeholder="confident, technical, no fluff"
@@ -46,11 +43,14 @@ export default function BrandVoiceEditor({
         </Select>
       </Field>
 
-      <Field label="Taboo words" hint="Comma-separated — the agent must never use these.">
+      <Field
+        label="Blacklist words / symbols"
+        hint="Comma-separated. Agents get a hard block (403) on these; the web editor warns you. Words match at word boundaries, symbols match anywhere."
+      >
         <Input
-          value={listToCsv(value.tabooWords)}
-          onChange={(e) => set({ tabooWords: csvToList(e.target.value) })}
-          placeholder="gm, wagmi, guaranteed, risk-free"
+          value={listToCsv(value.blacklist ?? value.tabooWords)}
+          onChange={(e) => set({ blacklist: csvToList(e.target.value), tabooWords: undefined })}
+          placeholder="gm, wagmi, guaranteed, risk-free, 🚀"
         />
       </Field>
 

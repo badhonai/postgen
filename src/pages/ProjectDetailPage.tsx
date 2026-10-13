@@ -2,6 +2,8 @@ import { useDeferredValue, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { exportProject, importBundle, parseImportJson } from '../lib/export'
 import { findExactDuplicate } from '../lib/dedupe'
+import { projectBlacklist } from '../lib/blacklist'
+import { useAssetUrl } from '../lib/media'
 import {
   useDeleteProject,
   useProject,
@@ -129,12 +131,29 @@ export default function ProjectDetailPage() {
       </Link>
 
       <header className="mt-2 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{p.name}</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            slug: <code className="text-zinc-400">{p.slug}</code> · created{' '}
-            {new Date(p.created_at).toLocaleDateString()}
-          </p>
+        <div className="flex items-start gap-4">
+          {p.logo?.r2_key ? <ProjectLogo r2Key={p.logo.r2_key} /> : null}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{p.name}</h1>
+            <p className="mt-1 text-sm text-zinc-500">
+              slug: <code className="text-zinc-400">{p.slug}</code>
+              {p.x_username ? (
+                <>
+                  {' · '}
+                  <a
+                    className="text-emerald-400 hover:underline"
+                    href={`https://x.com/${p.x_username}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    @{p.x_username}
+                  </a>
+                </>
+              ) : null}
+              {' · created '}
+              {new Date(p.created_at).toLocaleDateString()}
+            </p>
+          </div>
         </div>
         {!editing ? (
           <div className="flex gap-2">
@@ -166,12 +185,95 @@ export default function ProjectDetailPage() {
               {p.description || 'No description yet.'}
             </p>
 
+            <dl className="mt-6 grid gap-2 text-sm sm:grid-cols-2">
+              <div className="flex gap-3">
+                <dt className="w-32 shrink-0 text-zinc-500">Website</dt>
+                <dd className="min-w-0 truncate text-zinc-300">
+                  {p.website_url ? (
+                    <a href={p.website_url} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline">
+                      {p.website_url}
+                    </a>
+                  ) : (
+                    '—'
+                  )}
+                </dd>
+              </div>
+              <div className="flex gap-3">
+                <dt className="w-32 shrink-0 text-zinc-500">Token</dt>
+                <dd className="text-zinc-300">{p.token_ticker ? `$${p.token_ticker}` : '—'}</dd>
+              </div>
+              <div className="flex gap-3">
+                <dt className="w-32 shrink-0 text-zinc-500">Chains</dt>
+                <dd className="text-zinc-300">{(p.chains ?? []).join(', ') || '—'}</dd>
+              </div>
+              <div className="flex gap-3">
+                <dt className="w-32 shrink-0 text-zinc-500">Pillars</dt>
+                <dd className="text-zinc-300">{(p.content_pillars ?? []).join(', ') || '—'}</dd>
+              </div>
+            </dl>
+
+            {(p.official_links ?? []).length > 0 ? (
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">Official links</h2>
+                <ul className="mt-3 space-y-1 text-sm">
+                  {(p.official_links ?? []).map((l) => (
+                    <li key={l.url} className="flex gap-3">
+                      <span className="w-32 shrink-0 text-zinc-500">{l.label}</span>
+                      <a href={l.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-emerald-400 hover:underline">
+                        {l.url}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {(p.contract_addresses ?? []).length > 0 ? (
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">Contract addresses</h2>
+                <ul className="mt-3 space-y-1 text-sm">
+                  {(p.contract_addresses ?? []).map((c) => (
+                    <li key={c.address} className="flex gap-3">
+                      <span className="w-32 shrink-0 text-zinc-500">
+                        {c.label ? `${c.label} (${c.chain})` : c.chain}
+                      </span>
+                      <code className="min-w-0 truncate text-zinc-300">{c.address}</code>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {(p.sample_posts ?? []).length > 0 ? (
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">
+                  Sample posts
+                </h2>
+                <ul className="mt-3 space-y-2">
+                  {(p.sample_posts ?? []).map((s, i) => (
+                    <li key={i} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-sm whitespace-pre-wrap text-zinc-300">
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {p.custom_instructions ? (
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold tracking-wide text-zinc-300 uppercase">
+                  Custom instructions
+                </h2>
+                <p className="mt-3 whitespace-pre-wrap text-sm text-zinc-300">{p.custom_instructions}</p>
+              </div>
+            ) : null}
+
             <h2 className="mt-8 text-sm font-semibold tracking-wide text-zinc-300 uppercase">
               Brand voice
             </h2>
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Tone</dt>
+                <dt className="w-32 shrink-0 text-zinc-500">Tone & voice</dt>
                 <dd className="text-zinc-300">{p.brand_voice.tone || '—'}</dd>
               </div>
               <div className="flex gap-3">
@@ -179,8 +281,10 @@ export default function ProjectDetailPage() {
                 <dd className="text-zinc-300">{p.brand_voice.emojiPolicy || '—'}</dd>
               </div>
               <div className="flex gap-3">
-                <dt className="w-32 shrink-0 text-zinc-500">Taboo words</dt>
-                <dd className="text-zinc-300">{(p.brand_voice.tabooWords ?? []).join(', ') || '—'}</dd>
+                <dt className="w-32 shrink-0 text-zinc-500">Blacklist</dt>
+                <dd className="text-zinc-300">
+                  {projectBlacklist(p.brand_voice).join(', ') || '—'}
+                </dd>
               </div>
               <div className="flex gap-3">
                 <dt className="w-32 shrink-0 text-zinc-500">Hashtags</dt>
@@ -307,5 +411,17 @@ export default function ProjectDetailPage() {
         ))}
       </div>
     </main>
+  )
+}
+
+function ProjectLogo({ r2Key }: { r2Key: string }) {
+  const url = useAssetUrl(r2Key)
+  if (!url.data) return null
+  return (
+    <img
+      src={url.data}
+      alt=""
+      className="h-14 w-14 shrink-0 rounded-xl border border-zinc-800 object-cover"
+    />
   )
 }

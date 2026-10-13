@@ -1,20 +1,27 @@
 import type { Asset } from '../../lib/types'
+import { ASSET_KINDS } from '../../lib/types'
 import { aspectLabel, formatBytes, useAssetUrl } from '../../lib/media'
 import { cn } from '../../lib/cn'
-import { Button } from '../../components/ui'
+import { Button, Select } from '../../components/ui'
 
 export default function AssetThumb({
   asset,
   selected,
   selectable,
+  isLogo,
   onSelect,
   onDelete,
+  onSetLogo,
+  onSetKind,
 }: {
   asset: Asset
   selected?: boolean
   selectable?: boolean
+  isLogo?: boolean
   onSelect?: (asset: Asset) => void
   onDelete?: (asset: Asset) => void
+  onSetLogo?: (asset: Asset) => void
+  onSetKind?: (asset: Asset, kind: string) => void
 }) {
   const url = useAssetUrl(asset.r2_key)
   const isImage = asset.mime_type.startsWith('image/')
@@ -45,6 +52,11 @@ export default function AssetThumb({
           <span className="text-3xl">{asset.mime_type.startsWith('video/') ? '🎬' : '📄'}</span>
         )}
       </div>
+      {isLogo ? (
+        <span className="absolute top-1.5 left-1.5 rounded-full bg-emerald-500/90 px-2 py-0.5 text-xs font-medium text-zinc-950">
+          Logo
+        </span>
+      ) : null}
       <div className="space-y-0.5 p-2.5">
         <p className="truncate text-xs font-medium text-zinc-200" title={asset.filename}>
           {asset.filename}
@@ -53,6 +65,37 @@ export default function AssetThumb({
           {formatBytes(asset.size_bytes)}
           {aspect ? ` · ${aspect}` : ''}
         </p>
+        {onSetKind ? (
+          <Select
+            className="mt-1 w-full text-xs"
+            value={ASSET_KINDS.includes(asset.kind as (typeof ASSET_KINDS)[number]) ? asset.kind : 'other'}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onSetKind(asset, e.target.value)}
+          >
+            {ASSET_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {k}
+              </option>
+            ))}
+            {!ASSET_KINDS.includes(asset.kind as (typeof ASSET_KINDS)[number]) ? (
+              <option value={asset.kind}>{asset.kind}</option>
+            ) : null}
+          </Select>
+        ) : (
+          <p className="text-xs text-zinc-500">{asset.kind}</p>
+        )}
+        {onSetLogo && isImage && !isLogo ? (
+          <button
+            type="button"
+            className="mt-1 text-xs text-emerald-400 hover:underline"
+            onClick={(e) => {
+              e.stopPropagation()
+              onSetLogo(asset)
+            }}
+          >
+            Set as logo
+          </button>
+        ) : null}
       </div>
       {onDelete ? (
         <Button

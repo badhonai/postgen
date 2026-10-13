@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { Asset, PostCategory, PostStatus } from '../../lib/types'
 import { CATEGORY_LABELS } from '../../lib/types'
+import { blacklistHits } from '../../lib/blacklist'
 import { Button, ErrorBox, Field, Input, Select } from '../../components/ui'
 import ThreadBuilder from './ThreadBuilder'
 import AssetPickerDialog from '../media/AssetPickerDialog'
@@ -19,6 +20,7 @@ export default function PostForm({
   initial,
   busy,
   error,
+  blacklist,
   onSubmit,
   onCancel,
   onChange,
@@ -26,6 +28,8 @@ export default function PostForm({
   initial?: SavePostInput
   busy: boolean
   error?: string | null
+  /** Project blacklist entries — hits warn (not block) while writing. */
+  blacklist?: string[]
   onSubmit: (input: SavePostInput) => void
   onCancel: () => void
   /** Fires on every edit with the current snapshot (used for autosave + ⌘S). */
@@ -67,9 +71,17 @@ export default function PostForm({
     onSubmit(snapshot())
   }
 
+  const blacklistHitList = blacklistHits([title, ...tweets].join('\n'), blacklist)
+
   return (
     <form onSubmit={submit} className="space-y-6">
       {error ? <ErrorBox message={error} /> : null}
+      {blacklistHitList.length > 0 ? (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
+          ⚠ Blacklisted terms: <strong>{blacklistHitList.join(', ')}</strong> — agents can't
+          publish these; you're the human, so this is just a warning.
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Title" hint="Internal label — not posted to X.">

@@ -313,7 +313,7 @@ async function main() {
   })
   check('POST /knowledge', r7.status === 201)
 
-  const r8 = await api('/api/v1/openapi.json').catch(() => null)
+  const _r8 = await api('/api/v1/openapi.json').catch(() => null)
   const r9 = await api('/api/v1', { headers: agent })
   check('GET /api/v1 OpenAPI spec', r9.status === 200)
 

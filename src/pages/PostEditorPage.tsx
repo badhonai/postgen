@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { checkDuplicates, hasBlockingDuplicates, type DupCheck, type SimilarPost } from '../lib/dedupe'
+import { projectBlacklist } from '../lib/blacklist'
 import { numberedTweets } from '../lib/text'
 import {
   useDeletePost,
@@ -8,6 +9,7 @@ import {
   useSavePost,
   type SavePostInput,
 } from '../features/posts/api'
+import { useProject } from '../features/projects/api'
 import PostForm from '../features/posts/PostForm'
 import DuplicateDialog from '../features/posts/DuplicateDialog'
 import { Button, Card, ErrorBox, Spinner } from '../components/ui'
@@ -36,6 +38,7 @@ export default function PostEditorPage() {
 
   const projectId = isNew ? (params.get('project') ?? '') : (post.data?.project_id ?? '')
   const postData = post.data ?? null
+  const project = useProject(projectId)
 
   // ── autosave (existing drafts only): silent save + non-blocking similar banner ──
   const serialize = (snap: SavePostInput) =>
@@ -291,6 +294,7 @@ export default function PostEditorPage() {
           initial={initial}
           busy={savePost.isPending}
           error={formError ?? (savePost.error instanceof Error ? savePost.error.message : null)}
+          blacklist={projectBlacklist(project.data?.brand_voice)}
           onSubmit={handleSubmit}
           onCancel={() =>
             navigate(projectId ? `/projects/${projectId}` : '/dashboard', { replace: true })
