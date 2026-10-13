@@ -40,7 +40,7 @@ export async function onRequestGet({ request }: { request: Request }): Promise<R
       media_count?: number
       joined?: string
       location?: string
-      website?: string | null
+      website?: string | { url?: string; display_url?: string } | null
       protected?: string | boolean
       verification?: { verified?: boolean }
     }
@@ -48,11 +48,20 @@ export async function onRequestGet({ request }: { request: Request }): Promise<R
   const u = body.user
   if (!u?.screen_name) return Response.json({ error: 'not_found' }, { status: 404 })
 
+  const website =
+    typeof u.website === 'string'
+      ? u.website || null
+      : u.website && typeof u.website === 'object'
+        ? u.website.url || null
+        : null
+  const location = typeof u.location === 'string' ? u.location || null : null
+  const bio = typeof u.description === 'string' ? u.description : ''
+
   return Response.json(
     {
       handle: u.screen_name,
-      name: u.name ?? u.screen_name,
-      bio: u.description ?? '',
+      name: typeof u.name === 'string' ? u.name : u.screen_name,
+      bio,
       avatarUrl: u.avatar_url ?? null,
       bannerUrl: u.banner_url ?? null,
       followers: u.followers ?? 0,
@@ -60,9 +69,9 @@ export async function onRequestGet({ request }: { request: Request }): Promise<R
       tweets: u.tweets ?? 0,
       likes: u.likes ?? 0,
       mediaCount: u.media_count ?? 0,
-      joined: u.joined ?? null,
-      location: u.location ?? null,
-      website: u.website ?? null,
+      joined: typeof u.joined === 'string' ? u.joined : null,
+      location,
+      website,
       verified: Boolean(u.verification?.verified),
       protectedAccount: String(u.protected) === 'True' || u.protected === true,
     },
