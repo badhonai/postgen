@@ -27,7 +27,7 @@ export default function AssetPickerDialog({
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/25 p-4 backdrop-blur-sm">
       <Card className="max-h-[85vh] w-full max-w-2xl overflow-y-auto">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold">Attach media</h2>
@@ -47,7 +47,7 @@ export default function AssetPickerDialog({
           {assets.isPending ? (
             <Spinner />
           ) : (assets.data ?? []).length === 0 ? (
-            <p className="text-sm text-zinc-500">No media in this project yet.</p>
+            <p className="text-sm font-semibold text-ink-soft">No media in this project yet.</p>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {(assets.data ?? []).map((asset) => (

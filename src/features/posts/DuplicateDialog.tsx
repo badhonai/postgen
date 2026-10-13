@@ -1,20 +1,19 @@
-import type { SimilarPost } from '../../lib/dedupe'
-import { SIMILARITY_BLOCK } from '../../lib/dedupe'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Card } from '../../components/ui'
+import type { SimilarPost } from '../../lib/dedupe'
+import { Button } from '../../components/ui'
 
 function SimilarRow({ post }: { post: SimilarPost }) {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 px-3 py-2">
-      <Link to={`/posts/${post.id}`} className="min-w-0 truncate text-sm text-zinc-200 hover:text-emerald-300">
+    <li className="flex items-center justify-between gap-3 rounded-[16px] bg-white/50 px-3.5 py-2.5">
+      <Link to={`/posts/${post.id}`} className="min-w-0 truncate text-sm font-bold text-ink hover:underline">
         {post.title || 'Untitled post'}
       </Link>
       <span
         className={
-          post.similarity >= SIMILARITY_BLOCK
-            ? 'shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 text-xs text-red-400'
-            : 'shrink-0 rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400'
+          post.similarity >= 0.65
+            ? 'shrink-0 rounded-full bg-rose-soft/70 px-2 py-0.5 text-xs font-bold text-rose-700'
+            : 'shrink-0 rounded-full bg-white/65 px-2 py-0.5 text-xs font-bold text-ink-soft'
         }
       >
         {Math.round(post.similarity * 100)}% similar
@@ -45,32 +44,32 @@ export default function DuplicateDialog({
   }, [onCancel])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <Card className="max-h-[80vh] w-full max-w-lg overflow-y-auto">
-        <h2 className="text-lg font-semibold text-zinc-100">⚠️ Repeat post detected</h2>
-        <p className="mt-2 text-sm text-zinc-400">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/25 p-4 backdrop-blur-sm">
+      <div className="pg-glass-strong max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-[28px] p-6">
+        <h2 className="pg-title text-xl text-ink">⚠️ Repeat post detected</h2>
+        <p className="mt-2 text-sm font-semibold text-ink-soft">
           {duplicateOf ? (
             <>
-              This content already exists as{' '}
-              <Link to={`/posts/${duplicateOf}`} className="text-emerald-400 hover:underline">
-                an identical post
-              </Link>
-              .
+              This matches an{' '}
+              <Link to={`/posts/${duplicateOf}`} className="text-ink font-bold underline underline-offset-2">
+                existing post
+              </Link>{' '}
+              exactly.
             </>
           ) : (
-            'This post is very similar to something you already stored:'
+            'These posts are very similar to what you wrote.'
           )}
         </p>
 
         {similar.length > 0 ? (
           <ul className="mt-4 space-y-2">
-            {similar.map((s) => (
-              <SimilarRow key={s.id} post={s} />
+            {similar.map((post) => (
+              <SimilarRow key={post.id} post={post} />
             ))}
           </ul>
         ) : null}
 
-        <p className="mt-4 text-xs text-zinc-500">
+        <p className="mt-4 text-xs font-semibold text-ink-soft">
           PostGen blocks repeats — only save if this is an intentional variant.
         </p>
 
@@ -82,7 +81,7 @@ export default function DuplicateDialog({
             Cancel
           </Button>
         </div>
-      </Card>
+      </div>
     </div>
   )
 }

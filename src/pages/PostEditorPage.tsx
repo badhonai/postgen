@@ -12,7 +12,7 @@ import {
 import { useProject } from '../features/projects/api'
 import PostForm from '../features/posts/PostForm'
 import DuplicateDialog from '../features/posts/DuplicateDialog'
-import { Button, Card, ErrorBox, Spinner } from '../components/ui'
+import { Button, ErrorBox, Spinner } from '../components/ui'
 
 export default function PostEditorPage() {
   const { id } = useParams()
@@ -97,27 +97,33 @@ export default function PostEditorPage() {
 
   if (!isNew && post.isPending) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <Spinner />
+      <main className="pg-shell">
+        <div className="mx-auto max-w-[440px] px-5 pt-10">
+          <Spinner />
+        </div>
       </main>
     )
   }
 
   if (!isNew && post.error) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <ErrorBox message={post.error instanceof Error ? post.error.message : 'Failed to load post'} />
+      <main className="pg-shell">
+        <div className="mx-auto max-w-[440px] px-5 pt-10">
+          <ErrorBox message={post.error instanceof Error ? post.error.message : 'Failed to load post'} />
+        </div>
       </main>
     )
   }
 
   if (!isNew && !post.data) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <h1 className="text-xl font-semibold">Post not found</h1>
-        <Link to="/dashboard" className="mt-4 inline-block text-sm text-emerald-400 hover:underline">
-          ← Back to dashboard
-        </Link>
+      <main className="pg-shell">
+        <div className="mx-auto max-w-[440px] px-5 pt-10">
+          <h1 className="pg-title text-2xl text-ink">Post not found</h1>
+          <Link to="/dashboard" className="mt-4 inline-block text-sm font-bold text-ink underline underline-offset-2">
+            ← Back to dashboard
+          </Link>
+        </div>
       </main>
     )
   }
@@ -155,8 +161,10 @@ export default function PostEditorPage() {
 
   if (!initial) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <ErrorBox message="Missing project — create this post from a project page." />
+      <main className="pg-shell">
+        <div className="mx-auto max-w-[440px] px-5 pt-10">
+          <ErrorBox message="Missing project — create this post from a project page." />
+        </div>
       </main>
     )
   }
@@ -203,23 +211,37 @@ export default function PostEditorPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-6 py-10">
-      <Link
-        to={projectId ? `/projects/${projectId}` : '/dashboard'}
-        className="text-sm text-zinc-500 hover:text-zinc-300"
-      >
-        ← {isNew ? 'Project' : 'Project'}
-      </Link>
-
-      <header className="mt-2 flex items-start justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {isNew ? 'New post' : 'Edit post'}
-        </h1>
-        <div className="flex gap-2">
+    <main className="pg-shell">
+      <div className="mx-auto max-w-[440px] px-5 pt-6 pb-16">
+        {/* ── header ── */}
+        <header className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => navigate(projectId ? `/projects/${projectId}` : '/dashboard')}
+            className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="pg-title truncate text-2xl text-ink">
+              {isNew ? 'New post' : 'Edit post'}
+            </h1>
+            <p className="truncate text-xs font-bold text-ink-soft">
+              {isNew
+                ? 'Repeats are blocked — every save is checked.'
+                : postData
+                  ? `${postData.post_tweets.length} tweet${postData.post_tweets.length > 1 ? 's' : ''} · via ${postData.created_via}${autosavedAt ? ` · autosaved ${new Date(autosavedAt).toLocaleTimeString()}` : ''}`
+                  : ''}
+            </p>
+          </div>
           {!isNew && postData ? (
             <>
               <Button
                 variant="ghost"
+                className="px-3.5 py-2 text-xs"
                 onClick={() =>
                   void copy(
                     postData.post_tweets.length === 1
@@ -233,6 +255,7 @@ export default function PostEditorPage() {
               </Button>
               <Button
                 variant="danger"
+                className="px-3.5 py-2 text-xs"
                 disabled={deletePost.isPending}
                 onClick={() => {
                   if (!window.confirm('Delete this post? This cannot be undone.')) return
@@ -248,78 +271,67 @@ export default function PostEditorPage() {
               </Button>
             </>
           ) : null}
+        </header>
+
+        {/* ── similar-post banner (non-blocking, autosave) ── */}
+        {similarBanner ? (
+          <div className="mt-5 flex items-start justify-between gap-3 rounded-[18px] border border-amber-300/70 bg-butter/50 px-4 py-3 text-sm font-semibold text-ink">
+            <p>
+              ⚠️ This draft is very similar to{' '}
+              {similarBanner.slice(0, 2).map((s, i) => (
+                <span key={s.id}>
+                  {i > 0 ? ' and ' : ''}
+                  <Link to={`/posts/${s.id}`} className="font-bold underline underline-offset-2">
+                    {s.title || 'an untitled post'}
+                  </Link>{' '}
+                  ({Math.round(s.similarity * 100)}%)
+                </span>
+              ))}
+              . Autosaved anyway — edit one of them to avoid a repeat.
+            </p>
+            <button
+              type="button"
+              className="shrink-0 font-bold text-ink-soft hover:text-ink"
+              onClick={() => setSimilarBanner(null)}
+            >
+              ✕
+            </button>
+          </div>
+        ) : null}
+
+        <div className="mt-6">
+          <PostForm
+            initial={initial}
+            busy={savePost.isPending}
+            error={formError ?? (savePost.error instanceof Error ? savePost.error.message : null)}
+            blacklist={projectBlacklist(project.data?.brand_voice)}
+            project={project.data}
+            onSubmit={handleSubmit}
+            onCancel={() =>
+              navigate(projectId ? `/projects/${projectId}` : '/dashboard', { replace: true })
+            }
+            onChange={onFormChange}
+          />
         </div>
-      </header>
 
-      {isNew ? (
-        <p className="mt-1 text-sm text-zinc-500">
-          Saved posts are checked against your existing posts — repeats are blocked.
-        </p>
-      ) : postData ? (
-        <p className="mt-1 text-sm text-zinc-500">
-          {postData.post_tweets.length} tweet{postData.post_tweets.length > 1 ? 's' : ''} ·
-          created via {postData.created_via} ·{' '}
-          {new Date(postData.created_at).toLocaleString()}
-          {autosavedAt ? ` · autosaved ${new Date(autosavedAt).toLocaleTimeString()}` : ''}
-        </p>
-      ) : null}
-
-      {similarBanner ? (
-        <div className="mt-6 flex items-start justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-          <p>
-            ⚠️ This draft is very similar to{' '}
-            {similarBanner.slice(0, 2).map((s, i) => (
-              <span key={s.id}>
-                {i > 0 ? ' and ' : ''}
-                <Link to={`/posts/${s.id}`} className="font-medium underline hover:text-amber-200">
-                  {s.title || 'an untitled post'}
-                </Link>{' '}
-                ({Math.round(s.similarity * 100)}%)
-              </span>
-            ))}
-            . Autosaved anyway — edit one of them to avoid a repeat.
-          </p>
-          <button
-            type="button"
-            className="shrink-0 text-amber-400 hover:text-amber-200"
-            onClick={() => setSimilarBanner(null)}
-          >
-            ✕
-          </button>
-        </div>
-      ) : null}
-
-      <Card className="mt-6">
-        <PostForm
-          initial={initial}
-          busy={savePost.isPending}
-          error={formError ?? (savePost.error instanceof Error ? savePost.error.message : null)}
-          blacklist={projectBlacklist(project.data?.brand_voice)}
-          onSubmit={handleSubmit}
-          onCancel={() =>
-            navigate(projectId ? `/projects/${projectId}` : '/dashboard', { replace: true })
-          }
-          onChange={onFormChange}
-        />
-      </Card>
-
-      {dupCheck && pendingInput ? (
-        <DuplicateDialog
-          duplicateOf={dupCheck.duplicateOf}
-          similar={dupCheck.similar}
-          busy={savePost.isPending}
-          onSaveAnyway={() => {
-            void persist(pendingInput, dupCheck).catch((err) => {
-              setFormError(err instanceof Error ? err.message : 'Failed to save')
+        {dupCheck && pendingInput ? (
+          <DuplicateDialog
+            duplicateOf={dupCheck.duplicateOf}
+            similar={dupCheck.similar}
+            busy={savePost.isPending}
+            onSaveAnyway={() => {
+              void persist(pendingInput, dupCheck).catch((err) => {
+                setFormError(err instanceof Error ? err.message : 'Failed to save')
+                setDupCheck(null)
+              })
+            }}
+            onCancel={() => {
               setDupCheck(null)
-            })
-          }}
-          onCancel={() => {
-            setDupCheck(null)
-            setPendingInput(null)
-          }}
-        />
-      ) : null}
+              setPendingInput(null)
+            }}
+          />
+        ) : null}
+      </div>
     </main>
   )
 }
