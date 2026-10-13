@@ -1,3 +1,4 @@
+import type { User } from '@supabase/supabase-js'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -24,6 +25,29 @@ const FILTERS: Array<{ id: Filter; label: string }> = [
   { id: 'published', label: 'Published' },
 ]
 
+function UserAvatar({ user }: { user: User | null }) {
+  const [failed, setFailed] = useState(false)
+  const handle = String(
+    (user?.user_metadata as { x_username?: string } | undefined)?.x_username ?? '',
+  )
+  const email = user?.email ?? ''
+  if (handle && !failed) {
+    return (
+      <img
+        src={`https://unavatar.io/x/${encodeURIComponent(handle)}?fallback=false`}
+        alt={`@${handle}`}
+        onError={() => setFailed(true)}
+        className="h-11 w-11 rounded-full object-cover ring-2 ring-white/80"
+      />
+    )
+  }
+  return (
+    <span className="pg-glass flex h-11 w-11 items-center justify-center rounded-full font-display text-lg font-semibold text-ink">
+      {(handle || email).slice(0, 1).toUpperCase()}
+    </span>
+  )
+}
+
 function matchesFilter(status: string, filter: Filter): boolean {
   if (filter === 'all') return true
   if (filter === 'draft') return status === 'draft' || status === 'idea'
@@ -31,12 +55,11 @@ function matchesFilter(status: string, filter: Filter): boolean {
 }
 
 export default function DashboardPage() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const projects = useProjects()
   const createProject = useCreateProject()
   const [creating, setCreating] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
 
   const summaries = useQuery({
@@ -93,47 +116,14 @@ export default function DashboardPage() {
               <p className="mt-1 text-[11px] font-bold text-ink-soft">X Post Studio</p>
             </div>
           </div>
-          <div className="relative">
-            <button
-              type="button"
-              aria-label="Menu"
-              onClick={() => setMenuOpen((o) => !o)}
-              className="pg-glass flex h-11 w-11 items-center justify-center rounded-full text-ink transition active:scale-95"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <circle cx="5" cy="12" r="2" />
-                <circle cx="12" cy="12" r="2" />
-                <circle cx="19" cy="12" r="2" />
-              </svg>
-            </button>
-            {menuOpen ? (
-              <>
-                <button
-                  type="button"
-                  aria-label="Close menu"
-                  className="fixed inset-0 z-30"
-                  onClick={() => setMenuOpen(false)}
-                />
-                <div className="pg-glass-strong absolute right-0 z-40 mt-2 w-48 overflow-hidden rounded-2xl p-1.5">
-                  <p className="truncate px-3 py-2 text-[11px] font-bold text-ink-soft">{user?.email}</p>
-                  <button
-                    type="button"
-                    className="block w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-ink hover:bg-white/60"
-                    onClick={() => navigate('/settings')}
-                  >
-                    Settings
-                  </button>
-                  <button
-                    type="button"
-                    className="block w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-rose-700 hover:bg-white/60"
-                    onClick={() => void signOut()}
-                  >
-                    Sign out
-                  </button>
-                </div>
-              </>
-            ) : null}
-          </div>
+          <button
+            type="button"
+            aria-label="Your profile"
+            onClick={() => navigate('/profile')}
+            className="transition active:scale-95"
+          >
+            <UserAvatar user={user} />
+          </button>
         </header>
 
         <h1 className="pg-title mt-5 text-[2.35rem] leading-none whitespace-nowrap text-ink">
