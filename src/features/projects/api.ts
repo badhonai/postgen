@@ -35,6 +35,7 @@ function projectRow(input: ProjectInput): Record<string, unknown> {
     sample_posts: cleanList(input.samplePosts),
     custom_instructions: input.customInstructions.trim() || null,
     official_links: cleanLinks(input.officialLinks),
+    x_premium: input.xPremium,
   }
 }
 
@@ -79,8 +80,11 @@ export type ProjectInput = {
   samplePosts: string[]
   customInstructions: string
   officialLinks: OfficialLink[]
+  xPremium: boolean
   /** Files picked in the form, uploaded after the project row exists (or after save). */
   newAssets: File[]
+  /** Asset kind per file in newAssets (same order); defaults to 'other'. */
+  newAssetKinds: string[]
   /** Index into newAssets that becomes the project logo (default: first image). */
   newLogoIndex: number | null
 }
@@ -95,7 +99,9 @@ export const EMPTY_PROJECT_INPUT: ProjectInput = {
   samplePosts: [],
   customInstructions: '',
   officialLinks: [],
+  xPremium: false,
   newAssets: [],
+  newAssetKinds: [],
   newLogoIndex: null,
 }
 
@@ -110,7 +116,9 @@ export function projectInputOf(project: Project): ProjectInput {
     samplePosts: project.sample_posts ?? [],
     customInstructions: project.custom_instructions ?? '',
     officialLinks: project.official_links ?? [],
+    xPremium: project.x_premium ?? false,
     newAssets: [],
+    newAssetKinds: [],
     newLogoIndex: null,
   }
 }
@@ -195,8 +203,14 @@ export async function applyNewAssets(projectId: string, input: ProjectInput): Pr
   const files = input.newAssets ?? []
   if (!files.length) return
   const uploaded: Asset[] = []
-  for (const file of files) {
-    uploaded.push(await uploadAsset(file, projectId))
+  for (const [i, file] of files.entries()) {
+    const asset = await uploadAsset(file, projectId)
+    const kind = input.newAssetKinds?.[i]
+    if (kind && kind !== asset.kind) {
+      const { error } = await supabase!.from('assets').update({ kind }).eq('id', asset.id)
+      if (!error) asset.kind = kind
+    }
+    uploaded.push(asset)
   }
   const firstImage = uploaded.find((a) => a.mime_type.startsWith('image/'))
   const chosen = input.newLogoIndex != null ? uploaded[input.newLogoIndex] : undefined

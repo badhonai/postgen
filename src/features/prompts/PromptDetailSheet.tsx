@@ -5,6 +5,7 @@ import { RefThumbRow } from './PromptCard'
 
 type Props = {
   prompt: ImagePrompt
+  projectNames?: string[]
   deletePending: boolean
   onClose: () => void
   onEdit: () => void
@@ -17,6 +18,7 @@ type Props = {
  */
 export default function PromptDetailSheet({
   prompt,
+  projectNames = [],
   deletePending,
   onClose,
   onEdit,
@@ -50,6 +52,8 @@ export default function PromptDetailSheet({
               {refs.length === 0
                 ? 'No references'
                 : `${refs.length} reference${refs.length === 1 ? '' : 's'}`}
+              {' · '}
+              {projectNames.length ? `For: ${projectNames.join(', ')}` : 'Global · all projects'}
             </p>
           </div>
           <button

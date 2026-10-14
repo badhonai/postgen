@@ -43,7 +43,7 @@ No feature branches, no preview environments — **real tests on real production
 ```
 postgen/
 ├─ functions/api/          # Pages Functions
-│  ├─ mcp.ts               # MCP server (Streamable HTTP) — 11 tools
+│  ├─ mcp.ts               # MCP server (Streamable HTTP) — 12 tools
 │  ├─ media/               # upload · sign · [[key]] · delete  (R2, private)
 │  ├─ v1/                  # REST agent API (+ index.ts = OpenAPI 3.1 spec)
 │  │  ├─ projects.ts · projects/[id].ts · knowledge.ts
@@ -242,7 +242,7 @@ External AI tools connect **into** PostGen and draft posts (drafts-only — you 
 
 - **Copy for your agent (Settings → AI)** — one click creates a fresh API key
   (`Agent (one-paste)`) and copies a ready-made brief to paste into any agent
-  chat: the MCP link + REST/OpenAPI URLs, the key, all 11 tools, and the rules
+  chat: the MCP link + REST/OpenAPI URLs, the key, all 12 tools, and the rules
   (drafts-only, no-repeat, brand voice/blacklist, official links only). The agent
   connects, lists your projects, and waits — no explaining PostGen in chat. The
   pack text lives in `src/features/agents/agentSetup.ts`; re-copying reuses the
@@ -250,10 +250,12 @@ External AI tools connect **into** PostGen and draft posts (drafts-only — you 
   (only their hash is stored), which is why the pack always uses a fresh key.
 - **REST**: `https://postgen.pages.dev/api/v1` — OpenAPI 3.1 spec at the same URL.
   Auth: `Authorization: Bearer pgk_live_…` (create keys in **Settings → AI connections**).
-- **MCP** (Streamable HTTP): `https://postgen.pages.dev/api/mcp` — 11 tools:
-  `list_projects`, `get_project`, `create_draft`, `update_draft`, `append_to_thread`,
-  `find_similar`, `list_assets`, `list_image_prompts`, `create_image_prompt`,
-  `update_image_prompt`, `delete_image_prompt` + `project://…` resources.
+- **MCP** (Streamable HTTP): `https://postgen.pages.dev/api/mcp` — 12 tools:
+  `list_projects` (lite: name/@handle/count), `get_project` (full profile +
+  `brand_logo` + `char_limit`), `list_posts`, `create_draft`, `update_draft`,
+  `append_to_thread`, `find_similar`, `list_assets`, `list_image_prompts`
+  (`?project_id` filter), `create_image_prompt`, `update_image_prompt`,
+  `delete_image_prompt` + `project://…` resources.
   Claude Desktop / Claude Code:
   `npx mcp-remote https://postgen.pages.dev/api/mcp --header "Authorization: Bearer pgk_live_…"`
 - **Guardrails** (every write, web + agents): drafts-only for agents, the no-repeat
@@ -262,6 +264,25 @@ External AI tools connect **into** PostGen and draft posts (drafts-only — you 
   against the caller's **own** assets, cap the prompt at 4000 chars and notes at 1000.
 - **Update is a whole-object write** — `PATCH /api/v1/prompts/:id` and
   `update_image_prompt` overwrite every field, so send the complete object.
+
+### The agent batch flow (“make 10 posts for X”)
+
+`list_projects` is lite on purpose — the agent loads ONE project with
+`get_project`, which returns `brand_logo` (assets of kind `logo_full` /
+`logo_icon` / `logo_transparent_name`, uploaded from the three labelled slots
+in the project form; the generated-image default is the transparent-with-name
+logo) and `char_limit`: **280**, or **25,000 when the project has X Premium**
+(`projects.x_premium`, toggled in the project form; the web composer counter
+uses the same flag). Image prompts can be tagged to projects
+(`image_prompts.project_ids`, chips in the prompt composer; empty = global) —
+`list_image_prompts` with a project returns that project's prompts first, then
+globals, and excludes other projects' prompts. The paste-pack teaches the
+whole loop: plan distinct angles → lint (limit, blacklist, repeats incl.
+intra-batch) → save text drafts → pick a tagged prompt (shuffle, no repeats)
+→ generate + visually verify the image → upload via
+`POST /api/v1/assets/upload` → attach to the draft. In the editor, **Post on
+X** now asks “Did you post it?” — Yes moves the post to Published
+(`published_at` stamped); Not yet leaves it Approved.
 
 ### REST endpoints
 
@@ -361,7 +382,7 @@ Full detail in [`PLAN.md`](./PLAN.md).
 ## Current state & known gaps
 
 **Live:** <https://postgen.pages.dev> · `origin/main` deploys on every push ·
-11 MCP tools · migrations auto-apply via the Supabase GitHub integration.
+12 MCP tools · migrations auto-apply via the Supabase GitHub integration.
 
 **All suites green** (`scripts/e2e.mjs` in-repo; the Playwright suites live in
 `/home/user/shots/` and run against production):

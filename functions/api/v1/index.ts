@@ -14,7 +14,7 @@ const spec = {
   security: [{ bearerAuth: [] }],
   paths: {
     '/projects': {
-      get: { summary: 'List my projects', responses: { '200': { description: 'Projects' } } },
+      get: { summary: 'List my projects (lite: id, name, x_username, x_premium, post_count)', responses: { '200': { description: 'Projects' } } },
       post: {
         summary: 'Create a project',
         requestBody: {
@@ -49,7 +49,7 @@ const spec = {
     },
     '/projects/{id}': {
       get: {
-        summary: 'Project with knowledge & sources',
+        summary: 'Project in full: profile, knowledge, char_limit (280/25000) & brand_logo',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Project' }, '404': { description: 'Not found' } },
       },
@@ -132,17 +132,17 @@ const spec = {
     },
     '/assets': {
       get: {
-        summary: 'List my media (optionally ?project_id=…) with short-lived signed URLs',
+        summary: 'List my media (optionally ?project_id=…&kind=logo_transparent_name) with short-lived signed URLs',
         responses: { '200': { description: 'Assets' } },
       },
     },
     '/prompts': {
       get: {
-        summary: 'Saved image prompts, each with its reference images and signed URLs',
+        summary: 'Saved image prompts (optionally ?project_id=… for that project + globals), each with reference images and signed URLs',
         responses: { '200': { description: 'Image prompts' } },
       },
       post: {
-        summary: 'Save a new image prompt (name, prompt, notes, reference_asset_ids)',
+        summary: 'Save a new image prompt (name, prompt, notes, reference_asset_ids, project_ids — empty = global)',
         responses: { '201': { description: 'Created' } },
       },
     },

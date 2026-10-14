@@ -13,10 +13,12 @@ import { cn } from '../../lib/cn'
 export default function PromptCard({
   prompt,
   index,
+  projectNames = [],
   onOpen,
 }: {
   prompt: ImagePrompt
   index: number
+  projectNames?: string[]
   onOpen: () => void
 }) {
   const refs = prompt.reference_asset_ids ?? []
@@ -60,6 +62,9 @@ export default function PromptCard({
         <h3 className="pg-title line-clamp-2 text-[15px] leading-tight text-ink">{prompt.name}</h3>
         <p className="mt-0.5 truncate text-[11px] font-bold text-ink-soft">
           {prompt.notes?.trim() ? prompt.notes : 'Tap to view'}
+        </p>
+        <p className="mt-0.5 truncate text-[10px] font-bold text-ink-soft/80">
+          {projectNames.length ? `For: ${projectNames.join(', ')}` : 'Global · all projects'}
         </p>
       </div>
     </button>

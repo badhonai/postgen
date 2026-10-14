@@ -33,6 +33,8 @@ export type Project = {
   custom_instructions: string | null
   official_links: OfficialLink[]
   logo_asset_id: string | null
+  /** The project's X account has Premium → long posts (25k chars), not 280. */
+  x_premium: boolean
   /** Populated via FK embed when listed (`logo:assets!projects_logo_asset_id_fkey(r2_key)`). */
   logo?: { r2_key: string } | null
   created_at: string
@@ -77,6 +79,15 @@ export const POST_TYPE_LIMIT: Record<PostType, number> = {
   article: 25000,
   artwork: 280,
   quote: 280,
+}
+
+/** X Premium long-post cap — applies to every type when the account has Premium. */
+export const X_PREMIUM_LIMIT = 25000
+
+/** Effective cap for a post type on this project (Premium → 25k, else 280/article 25k). */
+export function postTypeLimit(type: PostType, xPremium = false): number {
+  if (type === 'article') return X_PREMIUM_LIMIT
+  return xPremium ? X_PREMIUM_LIMIT : POST_TYPE_LIMIT[type]
 }
 
 /** One-line hint shown under the type chips in the composer. */
@@ -140,7 +151,25 @@ export type Asset = {
   updated_at: string
 }
 
-export const ASSET_KINDS = ['logo', 'mascot', 'product', 'other'] as const
+export const ASSET_KINDS = [
+  'logo',
+  'logo_full',
+  'logo_icon',
+  'logo_transparent_name',
+  'mascot',
+  'product',
+  'other',
+] as const
+
+export const ASSET_KIND_LABEL: Record<string, string> = {
+  logo: 'Logo (legacy)',
+  logo_full: 'Full logo',
+  logo_icon: 'Icon / mark only',
+  logo_transparent_name: 'Transparent logo + name',
+  mascot: 'Mascot',
+  product: 'Product',
+  other: 'Other',
+}
 
 export const TILE_COLORS = ['bg-mint', 'bg-lilac', 'bg-cream', 'bg-peach', 'bg-sky', 'bg-rose-soft'] as const
 

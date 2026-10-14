@@ -1,5 +1,5 @@
 import type { Asset } from '../../lib/types'
-import { ASSET_KINDS } from '../../lib/types'
+import { ASSET_KIND_LABEL, ASSET_KINDS } from '../../lib/types'
 import { aspectLabel, formatBytes, useAssetUrl } from '../../lib/media'
 import { cn } from '../../lib/cn'
 import { Button, Select } from '../../components/ui'
@@ -74,7 +74,7 @@ export default function AssetThumb({
           >
             {ASSET_KINDS.map((k) => (
               <option key={k} value={k}>
-                {k}
+                {ASSET_KIND_LABEL[k] ?? k}
               </option>
             ))}
             {!ASSET_KINDS.includes(asset.kind as (typeof ASSET_KINDS)[number]) ? (

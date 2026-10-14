@@ -14,6 +14,7 @@ import PromptDetailSheet from '../features/prompts/PromptDetailSheet'
 import ReferenceMediaPicker from '../features/prompts/ReferenceMediaPicker'
 import RefThumb from '../features/prompts/RefThumb'
 import { ErrorBox, Spinner } from '../components/ui'
+import { useProjects } from '../features/projects/api'
 
 const EMPTY: ComposerForm = { name: '', prompt: '', notes: '' }
 
@@ -28,6 +29,10 @@ export default function PromptLibraryPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [form, setForm] = useState<ComposerForm>(EMPTY)
   const [refs, setRefs] = useState<string[]>([])
+  const [promptProjects, setPromptProjects] = useState<string[]>([])
+  const projects = useProjects()
+  const projectList = (projects.data ?? []).map((pr) => ({ id: pr.id, name: pr.name }))
+  const projectName = (id: string) => projectList.find((pr) => pr.id === id)?.name ?? 'Project'
   const [picking, setPicking] = useState(false)
   const [viewing, setViewing] = useState<ImagePrompt | null>(null)
 
@@ -37,6 +42,7 @@ export default function PromptLibraryPage() {
     setEditing(null)
     setForm(EMPTY)
     setRefs([])
+    setPromptProjects([])
     setSheetOpen(true)
   }
 
@@ -44,13 +50,14 @@ export default function PromptLibraryPage() {
     setEditing(p)
     setForm({ name: p.name, prompt: p.prompt, notes: p.notes })
     setRefs(p.reference_asset_ids ?? [])
+    setPromptProjects(p.project_ids ?? [])
     setViewing(null)
     setSheetOpen(true)
   }
 
   const save = async () => {
     if (!form.prompt.trim()) return
-    const payload = { ...form, referenceAssetIds: refs }
+    const payload = { ...form, referenceAssetIds: refs, projectIds: promptProjects }
     if (editing) {
       await updatePrompt.mutateAsync({ id: editing.id, ...payload })
     } else {
@@ -59,6 +66,7 @@ export default function PromptLibraryPage() {
     setEditing(null)
     setForm(EMPTY)
     setRefs([])
+    setPromptProjects([])
     closeSheet()
   }
 
@@ -140,7 +148,13 @@ export default function PromptLibraryPage() {
           ) : (
             <div className="grid grid-cols-2 gap-3.5">
               {list.map((p, i) => (
-                <PromptCard key={p.id} prompt={p} index={i} onOpen={() => setViewing(p)} />
+                <PromptCard
+                  key={p.id}
+                  prompt={p}
+                  index={i}
+                  projectNames={(p.project_ids ?? []).map(projectName)}
+                  onOpen={() => setViewing(p)}
+                />
               ))}
             </div>
           )}
@@ -151,6 +165,7 @@ export default function PromptLibraryPage() {
       {viewing ? (
         <PromptDetailSheet
           prompt={viewing}
+          projectNames={(viewing.project_ids ?? []).map(projectName)}
           deletePending={deletePrompt.isPending}
           onClose={() => setViewing(null)}
           onEdit={() => openEdit(viewing)}
@@ -164,10 +179,13 @@ export default function PromptLibraryPage() {
           editing={editing}
           form={form}
           refs={refs}
+          projects={projectList}
+          selectedProjectIds={promptProjects}
           busy={busy}
           error={sheetError}
           onChange={setForm}
           onRefs={setRefs}
+          onProjects={setPromptProjects}
           onSave={() => void save()}
           onClose={closeSheet}
           onPick={() => setPicking(true)}

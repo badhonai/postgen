@@ -480,9 +480,9 @@ async function main() {
   const tools = await rpc('tools/list', {}, 2)
   const toolNames = (tools.result?.tools ?? []).map((t) => t.name)
   check(
-    'tools/list (11 tools)',
-    toolNames.length === 11 &&
-      ['list_assets', 'list_image_prompts'].every((n) => toolNames.includes(n)),
+    'tools/list (12 tools)',
+    toolNames.length === 12 &&
+      ['list_assets', 'list_image_prompts', 'list_posts'].every((n) => toolNames.includes(n)),
     toolNames.join(','),
   )
 

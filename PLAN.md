@@ -118,6 +118,7 @@ post_media        post_tweet_id, asset_id, position
 tags / post_tags  user_id-scoped tags on posts
 
 image_prompts     user_id, name, prompt, notes,
+                  project_ids uuid[]           -- projects this prompt is for; {} = global
                   reference_asset_ids uuid[]  -- ordered, cross-project;
                   the reference media that teaches the style this prompt
                   produces. Single shared library, NOT per-project.
@@ -265,7 +266,7 @@ prompt ≤ 4000 chars, notes ≤ 1000.
 - intentional A/B variant → pass `"allow_similar": true` to save anyway
 Scope: the key owner's posts only (RLS) — never leaks across users. Agents get the 409 + similar list so they rewrite instead of repeating.
 
-### MCP tools (1:1 with REST) — **11 tools**
+### MCP tools (1:1 with REST) — **12 tools**
 ```
 list_projects · get_project · create_draft · update_draft
 append_to_thread · find_similar · list_assets
@@ -354,7 +355,7 @@ postgen/
 │     │  ├─ projects/…  posts/…  knowledge.ts
 │     │  ├─ assets.ts  assets/upload.ts
 │     │  └─ prompts.ts  prompts/[id].ts      # the prompt library
-│     ├─ mcp.ts                  # MCP server (Streamable HTTP) — 11 tools
+│     ├─ mcp.ts                  # MCP server (Streamable HTTP) — 12 tools
 │     ├─ media/…                 # upload · sign · [[key]] · delete
 │     ├─ xprofile.ts             # X identity for previews
 │     └─ _lib/                   # agentdb (writers + guardrails), env, jwt,
@@ -475,7 +476,7 @@ known agent-side gaps.
 1. ✅ **M0–M5 complete** — scaffold, schema+RLS+dedupe, auth, projects, posts/threads, R2 media, Agent API + MCP, polish (autosave + banner, ⌘K palette, accent themes, export/import, skeletons).
 2. ✅ **A→Z E2E green** via `scripts/e2e.mjs` against production (44 checks). It caught real bugs, now fixed: media URL signing had no configured secret (falls back to the service key), agent draft saves were rejected by the save RPC ('not authenticated' — service-role calls pass the actor via `p_user_id`), and the agent-side no-repeat guard never ran (same actor fix on `find_duplicate_post`/`find_similar_posts`).
 3. ✅ **Project profile** (2026-10-13) — logo + asset kinds, X username, website, official links, content pillars, sample posts, custom instructions, tone & voice, blacklist (agent 403 / web warning); full profile flows into agent context (REST + MCP resource).
-4. ✅ **Prompt library** (2026-10-14/15) — `image_prompts` + reference media, bento grid + detail sheet + **+**-opens-composer-sheet in the UI, full read/write over REST and MCP (11 tools). Every write audited with `surface` = `rest` | `mcp`.
+4. ✅ **Prompt library** (2026-10-14/15) — `image_prompts` + reference media, bento grid + detail sheet + **+**-opens-composer-sheet in the UI, full read/write over REST and MCP (12 tools). Every write audited with `surface` = `rest` | `mcp`.
 5. **Next: redesign the whole UI**, then resume real-world use (projects, threads, Claude/Gemini connections).
 6. **Known gaps to close (prompt library):**
    - the agent cannot drop a *single* reference it no longer needs — it can only

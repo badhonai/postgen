@@ -17,6 +17,7 @@ export function onRequestPatch(ctx: Ctx): Promise<Response> {
       prompt: body.prompt,
       notes: body.notes,
       referenceAssetIds: body.reference_asset_ids,
+      projectIds: body.project_ids,
     })
     return Response.json({ image_prompt: prompt })
   })

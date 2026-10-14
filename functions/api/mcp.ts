@@ -14,12 +14,12 @@ const SUPPORTED_PROTOCOLS = ['2025-03-26', '2025-06-18', '2024-11-05']
 const TOOLS = [
   {
     name: 'list_projects',
-    description: 'List the user’s web3 projects (id, name, slug, brand voice).',
+    description: 'List the user’s web3 projects — id, name, @handle and post count ONLY (lite). Call get_project for the full profile of the one project you will work on.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
     name: 'get_project',
-    description: 'Get one project with its description, brand voice, knowledge & sources.',
+    description: 'Get ONE project in full: description, brand voice & blacklist, pillars, samples, custom instructions, official links, knowledge, char_limit (280 or 25000 for X Premium) and brand_logo (use brand_logo.transparent_name for generated images unless custom_instructions say otherwise).',
     inputSchema: {
       type: 'object',
       properties: { project_id: { type: 'string', description: 'Project UUID' } },
@@ -32,7 +32,7 @@ const TOOLS = [
     description:
       'Create a DRAFT post (single tweet or thread) for a project. Runs the no-repeat ' +
       'guard — on 409 retry with allow_similar=true ONLY if this is an intentional variant. ' +
-      'Status is idea|draft; a human approves/publishes.',
+      'Status is idea|draft; a human approves/publishes. Respect the project char_limit from get_project (280, or 25000 if the account has X Premium); over-limit writes are rejected.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -151,6 +151,21 @@ const TOOLS = [
     },
   },
   {
+    name: 'list_posts',
+    description:
+      'List existing posts (id, project, type, status, title, content) — use BEFORE drafting a batch ' +
+      'so the new posts do not repeat topics already covered. Filter by project and/or status.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        status: { type: 'string', enum: ['idea', 'draft', 'approved', 'scheduled', 'published', 'archived'] },
+        type: { type: 'string', enum: ['post', 'thread', 'article', 'artwork', 'quote'] },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'list_assets',
     description:
       'List the user’s media (optionally for one project). Each asset has a short-lived ' +
@@ -160,6 +175,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         project_id: { type: 'string', description: 'Restrict to one project (optional).' },
+        kind: { type: 'string', description: 'Restrict to one asset kind, e.g. logo_transparent_name (optional).' },
       },
       additionalProperties: false,
     },
@@ -168,9 +184,15 @@ const TOOLS = [
     name: 'list_image_prompts',
     description:
       'List the user’s saved image prompts. Each has the prompt text, a note about the ' +
-      'output it tends to produce, and reference images (with signed URLs) that show the ' +
-      'style. Use the prompt AND the reference images together when generating art.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+      'output it tends to produce, project_ids (empty = global), and reference images ' +
+      '(with signed URLs) that show the style. Pass project_id to receive ONLY that ' +
+      'project’s prompts (project-tagged first) plus globals. Use the prompt AND the ' +
+      'reference images together when generating art.',
+    inputSchema: {
+      type: 'object',
+      properties: { project_id: { type: 'string', description: 'Only prompts for this project + globals.' } },
+      additionalProperties: false,
+    },
   },
   {
     name: 'create_image_prompt',
@@ -187,6 +209,11 @@ const TOOLS = [
           type: 'array',
           items: { type: 'string' },
           description: 'Asset ids showing the style. Must be the user’s own assets.',
+        },
+        project_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Projects this prompt is for. Empty/omitted = global (any project).',
         },
       },
       required: ['name', 'prompt'],
@@ -206,6 +233,7 @@ const TOOLS = [
         prompt: { type: 'string' },
         notes: { type: 'string' },
         reference_asset_ids: { type: 'array', items: { type: 'string' } },
+        project_ids: { type: 'array', items: { type: 'string' }, description: 'Projects this prompt is for; empty = global.' },
       },
       required: ['prompt_id', 'name', 'prompt'],
       additionalProperties: false,
@@ -252,7 +280,7 @@ async function callTool(
     case 'list_projects':
       return toolText({ projects: await agent.listProjects(env, auth.userId) })
     case 'get_project':
-      return toolText(await agent.getProject(env, auth.userId, String(args.project_id ?? '')))
+      return toolText(await agent.getProject(env, auth.userId, String(args.project_id ?? ''), origin))
     case 'create_draft':
       return toolText(
         { post: await agent.createDraft(env, auth, via, {
@@ -293,15 +321,24 @@ async function callTool(
           projectId: args.project_id as string | undefined,
         }),
       )
+    case 'list_posts':
+      return toolText({
+        posts: await agent.listPosts(env, auth.userId, {
+          projectId: args.project_id as string | undefined,
+          status: args.status as string | undefined,
+          type: args.type as string | undefined,
+        }),
+      })
     case 'list_assets':
       return toolText({
         assets: await agent.listAssets(env, auth.userId, {
           projectId: args.project_id as string | undefined,
+          kind: args.kind as string | undefined,
           origin,
         }),
       })
     case 'list_image_prompts':
-      return toolText({ image_prompts: await agent.listImagePrompts(env, auth.userId, origin) })
+      return toolText({ image_prompts: await agent.listImagePrompts(env, auth.userId, origin, { projectId: args.project_id as string | undefined }) })
     case 'create_image_prompt':
       return toolText({
         image_prompt: await agent.createImagePrompt(env, auth, via, {
@@ -309,6 +346,7 @@ async function callTool(
           prompt: args.prompt,
           notes: args.notes,
           referenceAssetIds: args.reference_asset_ids,
+          projectIds: args.project_ids,
         }),
       })
     case 'update_image_prompt':
@@ -318,6 +356,7 @@ async function callTool(
           prompt: args.prompt,
           notes: args.notes,
           referenceAssetIds: args.reference_asset_ids,
+          projectIds: args.project_ids,
         }),
       })
     case 'delete_image_prompt':
@@ -340,7 +379,7 @@ async function readResource(uri: string, env: Env, auth: agent.AgentAuth, origin
   }
   const m = uri.match(/^project:\/\/([^/]+)\/(context|knowledge|assets)$/)
   if (!m) throw new agent.AgentError(-32602, { error: `unknown resource: ${uri}` })
-  const project = await agent.getProject(env, auth.userId, m[1])
+  const project = await agent.getProject(env, auth.userId, m[1], origin)
   if (m[2] === 'knowledge') {
     return {
       contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ knowledge: project.knowledge }, null, 2) }],
@@ -414,8 +453,10 @@ export async function onRequestPost(context: {
             serverInfo: SERVER_INFO,
             instructions:
               'PostGen — draft posts for the user’s web3 projects. You can only create/update ' +
-              'drafts (a human approves & publishes). Always run find_similar before writing ' +
-              'repeated topics; the create/update tools also enforce a no-repeat guard.',
+              'drafts (a human approves & publishes). Workflow: list_projects (lite) → get_project ' +
+              'for the ONE chosen project → list_posts to see what exists → find_similar before ' +
+              'writing → create_draft (respect char_limit: 280, or 25000 for X Premium). For images ' +
+              'use list_image_prompts with project_id and brand_logo.transparent_name from get_project.',
           }),
         )
       }
@@ -437,7 +478,7 @@ export async function onRequestPost(context: {
       }
       case 'resources/list': {
         const projects = await agent.listProjects(env, auth.userId)
-        const resources = (projects as Array<{ id: string; name: string }>).flatMap((p) => [
+        const resources = (projects as unknown as Array<{ id: string; name: string }>).flatMap((p) => [
           {
             uri: `project://${p.id}/context`,
             name: `${p.name} — context`,

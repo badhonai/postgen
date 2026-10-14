@@ -1,6 +1,6 @@
 import { serviceClient } from './auth'
 import type { Env } from './env'
-import { sha256Hex, threadToContentText } from '../../src/lib/text'
+import { sha256Hex, threadToContentText, weightedLength } from '../../src/lib/text'
 import { blacklistHits } from '../../src/lib/blacklist'
 import { signAsset } from './signing'
 
@@ -103,17 +103,30 @@ export async function logActivity(
 
 // ────────────────────────────── projects ──────────────────────────────
 
+/**
+ * Lite project list — id, name, @handle and post count ONLY.
+ * The full profile (brand voice, samples, knowledge…) is getProject's job;
+ * dumping it for every project wastes the agent's context and invites it
+ * to draft for the wrong project before the user has even picked one.
+ */
 export async function listProjects(env: Env, userId: string) {
   const { data, error } = await db(env)
     .from('projects')
-    .select('*')
+    .select('id, name, slug, x_username, x_premium, logo_asset_id, created_at, posts(count)')
     .eq('user_id', userId)
     .order('created_at')
   if (error) fail(error)
-  return data
+  return (data ?? []).map((p) => {
+    const { posts, ...rest } = p as Record<string, unknown> & {
+      posts?: Array<{ count: number }>
+    }
+    return { ...rest, post_count: posts?.[0]?.count ?? 0 }
+  })
 }
 
-export async function getProject(env: Env, userId: string, id: string) {
+export const LOGO_KINDS = ['logo_full', 'logo_icon', 'logo_transparent_name', 'logo'] as const
+
+export async function getProject(env: Env, userId: string, id: string, origin?: string) {
   const client = db(env)
   const { data: project, error } = await client
     .from('projects')
@@ -132,7 +145,40 @@ export async function getProject(env: Env, userId: string, id: string) {
     .order('created_at')
   if (kErr) fail(kErr)
 
-  return { ...project, knowledge: knowledge ?? [] }
+  // Brand logos ONLY — never the whole asset library. The image-generation
+  // default is `transparent_name` (transparent PNG with the project name);
+  // the project's custom_instructions may name a different variant.
+  const { data: logoRows } = await client
+    .from('assets')
+    .select('id, project_id, filename, mime_type, size_bytes, width, height, alt_text, kind, r2_key, created_at')
+    .eq('project_id', id)
+    .eq('user_id', userId)
+    .in('kind', [...LOGO_KINDS])
+    .order('created_at', { ascending: false })
+  const logos: AssetSummary[] = await Promise.all(
+    ((logoRows ?? []) as Array<Omit<AssetSummary, 'url'> & { r2_key: string }>).map(
+      async ({ r2_key, ...rest }) => ({
+        ...rest,
+        url: origin ? await signedUrl(env, r2_key, origin) : null,
+      }),
+    ),
+  )
+  const byKind = (kind: string) => logos.find((a) => a.kind === kind) ?? null
+  const primary =
+    logos.find((a) => a.id === (project as { logo_asset_id?: string }).logo_asset_id) ?? null
+
+  return {
+    ...project,
+    knowledge: knowledge ?? [],
+    // 280 for free X accounts, 25,000 for Premium — the agent's char lint.
+    char_limit: (project as { x_premium?: boolean }).x_premium ? 25000 : 280,
+    brand_logo: {
+      transparent_name: byKind('logo_transparent_name'),
+      full: byKind('logo_full') ?? primary,
+      icon: byKind('logo_icon'),
+      primary,
+    },
+  }
 }
 
 export type ProjectWrite = {
@@ -140,6 +186,7 @@ export type ProjectWrite = {
   description?: string
   brand_voice?: unknown
   x_username?: string
+  x_premium?: boolean
   website_url?: string
   content_pillars?: string[]
   sample_posts?: string[]
@@ -150,6 +197,7 @@ export type ProjectWrite = {
 function projectProfileFields(input: ProjectWrite): Record<string, unknown> {
   const fields: Record<string, unknown> = {}
   if (input.x_username !== undefined) fields.x_username = input.x_username.trim().replace(/^@/, '') || null
+  if (input.x_premium !== undefined) fields.x_premium = input.x_premium === true
   if (input.website_url !== undefined) fields.website_url = input.website_url.trim() || null
   if (input.content_pillars !== undefined) fields.content_pillars = input.content_pillars.map((c) => c.trim()).filter(Boolean)
   if (input.sample_posts !== undefined) fields.sample_posts = input.sample_posts.map((c) => c.trim()).filter(Boolean)
@@ -303,6 +351,23 @@ async function assertOwnedAssets(env: Env, userId: string, media: Array<{ asset_
   }
 }
 
+/**
+ * X character lint (server-side): free accounts 280 weighted chars per
+ * post/tweet, Premium accounts 25,000. Articles are always long-form.
+ */
+export function assertCharLimit(xPremium: boolean, type: PostType, tweets: string[]): void {
+  const limit = type === 'article' || xPremium ? 25000 : 280
+  const over = tweets.map((t) => weightedLength(t)).filter((n) => n > limit)
+  if (over.length > 0) {
+    throw new AgentError(400, {
+      error: 'too_long',
+      message: `Post exceeds the ${limit}-character limit for this account${xPremium ? ' (X Premium)' : ''}; shorten it.`,
+      limit,
+      lengths: tweets.map((t) => weightedLength(t)),
+    })
+  }
+}
+
 function assertTweets(tweets: unknown): string[] {
   if (!Array.isArray(tweets) || tweets.length === 0) {
     throw new AgentError(400, { error: 'tweets must be a non-empty array of strings' })
@@ -451,12 +516,13 @@ export async function createDraft(
   const client = db(env)
   const { data: project } = await client
     .from('projects')
-    .select('id, brand_voice')
+    .select('id, brand_voice, x_premium')
     .eq('id', input.projectId)
     .eq('user_id', auth.userId)
     .maybeSingle()
   if (!project) throw new AgentError(404, { error: 'project not found' })
 
+  assertCharLimit((project as { x_premium?: boolean }).x_premium === true, type, tweets)
   assertBlacklist(project.brand_voice, [input.title ?? '', ...tweets, metaText(input.meta)].join('\n'))
   await assertDailyCap(env, auth.userId)
   const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {
@@ -507,9 +573,10 @@ export async function updateDraft(
 
   const { data: projectRow } = await db(env)
     .from('projects')
-    .select('brand_voice')
+    .select('brand_voice, x_premium')
     .eq('id', existing.project_id)
     .maybeSingle()
+  assertCharLimit((projectRow as { x_premium?: boolean } | null)?.x_premium === true, type, tweets)
   assertBlacklist(projectRow?.brand_voice, [patch.title ?? existing.title, ...tweets, metaText(meta)].join('\n'))
 
   const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {
@@ -653,7 +720,7 @@ export type AssetSummary = {
 export async function listAssets(
   env: Env,
   userId: string,
-  filters: { projectId?: string; origin: string },
+  filters: { projectId?: string; kind?: string; origin: string },
 ): Promise<AssetSummary[]> {
   let q = db(env)
     .from('assets')
@@ -662,6 +729,7 @@ export async function listAssets(
     .order('created_at', { ascending: false })
     .limit(200)
   if (filters.projectId) q = q.eq('project_id', filters.projectId)
+  if (filters.kind) q = q.eq('kind', filters.kind)
   const { data, error } = await q
   if (error) fail(error)
   const rows = (data ?? []) as Array<Omit<AssetSummary, 'url'> & { r2_key: string }>
@@ -678,6 +746,8 @@ export type ImagePromptRow = {
   prompt: string
   notes: string
   reference_asset_ids: string[]
+  /** Projects this prompt is for; empty = global (any project). */
+  project_ids: string[]
   created_at: string
   updated_at: string
 }
@@ -693,10 +763,11 @@ export async function listImagePrompts(
   env: Env,
   userId: string,
   origin: string,
+  opts: { projectId?: string } = {},
 ): Promise<ImagePromptWithRefs[]> {
   const { data, error } = await db(env)
     .from('image_prompts')
-    .select('id, name, prompt, notes, reference_asset_ids, created_at, updated_at')
+    .select('id, name, prompt, notes, reference_asset_ids, project_ids, created_at, updated_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
   // PGRST205 = table not in the schema cache yet (migration not applied).
@@ -705,7 +776,21 @@ export async function listImagePrompts(
     if (error.code === 'PGRST205' || /does not exist|schema cache/i.test(error.message)) return []
     fail(error)
   }
-  const prompts = (data ?? []) as ImagePromptRow[]
+  let prompts = (data ?? []) as ImagePromptRow[]
+
+  // Project filter: prompts tagged for this project first, then globals
+  // (project_ids = []). Prompts tagged for OTHER projects are excluded —
+  // visual style is project-specific unless the user says otherwise.
+  if (opts.projectId) {
+    const pid = opts.projectId
+    prompts = prompts
+      .filter((p) => (p.project_ids ?? []).length === 0 || (p.project_ids ?? []).includes(pid))
+      .sort((a, b) => {
+        const at = (a.project_ids ?? []).includes(pid) ? 0 : 1
+        const bt = (b.project_ids ?? []).includes(pid) ? 0 : 1
+        return at - bt
+      })
+  }
 
   // one pass over the union of referenced ids keeps this to two queries
   const wanted = [...new Set(prompts.flatMap((p) => p.reference_asset_ids ?? []))]
@@ -755,12 +840,26 @@ async function assertOwnedAssetIds(env: Env, userId: string, ids: string[]) {
   }
 }
 
+/** Every tagged project must exist and belong to this user. */
+async function assertOwnedProjectIds(env: Env, userId: string, ids: string[]) {
+  const unique = [...new Set(ids)]
+  if (unique.length === 0) return
+  const { data, error } = await db(env).from('projects').select('id').eq('user_id', userId).in('id', unique)
+  if (error) fail(error)
+  const owned = new Set((data ?? []).map((r: { id: string }) => r.id))
+  const missing = unique.filter((id) => !owned.has(id))
+  if (missing.length > 0) {
+    throw new AgentError(400, { error: 'unknown project_id', message: `not your projects: ${missing.join(', ')}` })
+  }
+}
+
 function cleanPromptInput(input: {
   name?: unknown
   prompt?: unknown
   notes?: unknown
   referenceAssetIds?: unknown
-}): { name: string; prompt: string; notes: string; reference_asset_ids: string[] } {
+  projectIds?: unknown
+}): { name: string; prompt: string; notes: string; reference_asset_ids: string[]; project_ids: string[] } {
   const name = String(input.name ?? '').trim()
   const prompt = String(input.prompt ?? '').trim()
   const notes = String(input.notes ?? '').trim()
@@ -774,17 +873,22 @@ function cleanPromptInput(input: {
   }
   const refs = Array.isArray(input.referenceAssetIds) ? input.referenceAssetIds.map(String) : []
   if (refs.some((r) => !r)) throw new AgentError(400, { error: 'reference_asset_ids must be non-empty strings' })
-  return { name, prompt, notes, reference_asset_ids: refs }
+  const projectIds = Array.isArray(input.projectIds) ? [...new Set(input.projectIds.map(String))] : []
+  if (projectIds.some((r) => !UUID_RE.test(r))) {
+    throw new AgentError(400, { error: 'project_ids must be project uuids' })
+  }
+  return { name, prompt, notes, reference_asset_ids: refs, project_ids: projectIds }
 }
 
 export async function createImagePrompt(
   env: Env,
   auth: AgentAuth,
   via: CreatedVia,
-  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown },
+  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown; projectIds?: unknown },
 ) {
   const row = cleanPromptInput(input)
   await assertOwnedAssetIds(env, auth.userId, row.reference_asset_ids)
+  await assertOwnedProjectIds(env, auth.userId, row.project_ids)
   const { data, error } = await db(env)
     .from('image_prompts')
     .insert({ user_id: auth.userId, ...row })
@@ -804,10 +908,11 @@ export async function updateImagePrompt(
   auth: AgentAuth,
   via: CreatedVia,
   id: string,
-  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown },
+  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown; projectIds?: unknown },
 ) {
   const row = cleanPromptInput(input)
   await assertOwnedAssetIds(env, auth.userId, row.reference_asset_ids)
+  await assertOwnedProjectIds(env, auth.userId, row.project_ids)
   const { data, error } = await db(env)
     .from('image_prompts')
     .update(row)

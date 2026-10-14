@@ -10,10 +10,14 @@ type Props = {
   editing: ImagePrompt | null
   form: ComposerForm
   refs: string[]
+  /** Projects this prompt is for; empty = global (any project). */
+  projects: Array<{ id: string; name: string }>
+  selectedProjectIds: string[]
   busy: boolean
   error: string | null
   onChange: (form: ComposerForm) => void
   onRefs: (ids: string[]) => void
+  onProjects: (ids: string[]) => void
   onSave: () => void
   onClose: () => void
   /** Opens the reference-media picker. */
@@ -31,10 +35,13 @@ export default function PromptComposerSheet({
   editing,
   form,
   refs,
+  projects,
+  selectedProjectIds,
   busy,
   error,
   onChange,
   onRefs,
+  onProjects,
   onSave,
   onClose,
   onPick,
@@ -100,6 +107,43 @@ export default function PromptComposerSheet({
             placeholder="Notes — what output this tends to give (optional)"
             className="min-h-[56px]"
           />
+
+          <div>
+            <span className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
+              For projects · {selectedProjectIds.length === 0 ? 'all (global)' : selectedProjectIds.length}
+            </span>
+            {projects.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {projects.map((proj) => {
+                  const on = selectedProjectIds.includes(proj.id)
+                  return (
+                    <button
+                      key={proj.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        onProjects(
+                          on
+                            ? selectedProjectIds.filter((x) => x !== proj.id)
+                            : [...selectedProjectIds, proj.id],
+                        )
+                      }
+                      className={`rounded-full px-2.5 py-1.5 text-xs font-extrabold transition active:scale-95 ${
+                        on ? 'bg-ink text-white' : 'bg-white/55 text-ink-soft hover:bg-white/75'
+                      }`}
+                    >
+                      {proj.name}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="mt-1.5 text-[11px] font-semibold text-ink-soft">No projects yet.</p>
+            )}
+            <p className="mt-1.5 text-[11px] font-semibold text-ink-soft">
+              The agent only gets prompts tagged for its project (plus globals). Leave all off = global.
+            </p>
+          </div>
 
           <div>
             <div className="flex items-center justify-between gap-2">

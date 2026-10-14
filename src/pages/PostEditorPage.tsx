@@ -7,6 +7,7 @@ import {
   useDeletePost,
   usePost,
   useSavePost,
+  useSetPostStatus,
   type SavePostInput,
 } from '../features/posts/api'
 import { useProject } from '../features/projects/api'
@@ -104,6 +105,7 @@ export default function PostEditorPage() {
   const post = usePost(editId)
   const savePost = useSavePost()
   const deletePost = useDeletePost()
+  const setPostStatus = useSetPostStatus()
 
   const [dupCheck, setDupCheck] = useState<DupCheck | null>(null)
   const [pendingInput, setPendingInput] = useState<SavePostInput | null>(null)
@@ -113,6 +115,8 @@ export default function PostEditorPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [similarBanner, setSimilarBanner] = useState<SimilarPost[] | null>(null)
+  const [postedAsk, setPostedAsk] = useState(false)
+  const [postedError, setPostedError] = useState<string | null>(null)
   const [autosavedAt, setAutosavedAt] = useState<number | null>(null)
 
   const latestRef = useRef<SavePostInput | null>(null)
@@ -352,6 +356,7 @@ export default function PostEditorPage() {
       if (files.length > 0 && typeof navigator.canShare === 'function' && navigator.canShare({ files })) {
         await navigator.share({ files, text: previewText })
         done = true
+        if (postData && postData.status !== 'published') setPostedAsk(true)
       }
     } catch (err) {
       // closing the sheet is not a failure — just stop
@@ -361,6 +366,9 @@ export default function PostEditorPage() {
     }
     if (done) return
     window.open(`https://x.com/intent/post?text=${encodeURIComponent(previewText)}`, '_blank', 'noopener')
+    // X opened in a new tab — when the user comes back, ask whether it
+    // actually went out so the board stays truthful.
+    if (postData && postData.status !== 'published') setPostedAsk(true)
   }
 
   return (
@@ -556,6 +564,50 @@ export default function PostEditorPage() {
                 </Button>
                 <Button variant="ghost" className="py-3 text-[15px]" onClick={() => setPreview(false)}>
                   Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {postedAsk && postData ? (
+          <div className="fixed inset-0 z-50 flex items-end bg-ink/45 px-3 pt-10 pb-6" onClick={() => setPostedAsk(false)}>
+            <div
+              className="pg-glass-strong mx-auto w-full max-w-[440px] rounded-[26px] p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="pg-title text-xl text-ink">Did you post it on X?</h2>
+              <p className="mt-1.5 text-sm leading-relaxed font-semibold text-ink-soft">
+                If it's live, I'll move this post to <strong className="text-ink">Published</strong> so your
+                board stays truthful. On desktop, X opens with text only — make sure you attached the
+                image there before posting.
+              </p>
+              {postedError ? (
+                <div className="mt-3">
+                  <ErrorBox message={postedError} />
+                </div>
+              ) : null}
+              <div className="mt-4 flex gap-2">
+                <Button
+                  variant="accent"
+                  className="flex-1 py-3"
+                  disabled={setPostStatus.isPending}
+                  onClick={() => {
+                    setPostedError(null)
+                    setPostStatus.mutate(
+                      { id: postData.id, status: 'published' },
+                      {
+                        onSuccess: () => setPostedAsk(false),
+                        onError: (e) =>
+                          setPostedError(e instanceof Error ? e.message : 'Could not mark as published'),
+                      },
+                    )
+                  }}
+                >
+                  {setPostStatus.isPending ? 'Saving…' : 'Yes — mark as Published'}
+                </Button>
+                <Button variant="ghost" className="py-3" onClick={() => setPostedAsk(false)}>
+                  Not yet
                 </Button>
               </div>
             </div>

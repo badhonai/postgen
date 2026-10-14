@@ -10,6 +10,8 @@ export type ImagePrompt = {
   prompt: string
   notes: string
   reference_asset_ids: string[]
+  /** Projects this prompt is for; empty = global (any project). */
+  project_ids: string[]
   created_at: string
   updated_at: string
 }
@@ -60,6 +62,7 @@ export type PromptInput = {
   prompt: string
   notes?: string
   referenceAssetIds?: string[]
+  projectIds?: string[]
 }
 
 export function useCreateImagePrompt() {
@@ -77,6 +80,7 @@ export function useCreateImagePrompt() {
           prompt: input.prompt.trim(),
           notes: input.notes?.trim() ?? '',
           reference_asset_ids: input.referenceAssetIds ?? [],
+          project_ids: input.projectIds ?? [],
         })
         .select()
         .single()
@@ -98,6 +102,7 @@ export function useUpdateImagePrompt() {
           prompt: input.prompt.trim(),
           notes: input.notes?.trim() ?? '',
           reference_asset_ids: input.referenceAssetIds ?? [],
+          project_ids: input.projectIds ?? [],
         })
         .eq('id', id)
       if (error) throw error

@@ -13,7 +13,11 @@ export function onRequestGet(ctx: Ctx): Promise<Response> {
   return agentRoute(ctx.request, ctx.env, async (auth) => {
     const url = new URL(ctx.request.url)
     const projectId = url.searchParams.get('project_id') ?? undefined
-    const assets = await agent.listAssets(ctx.env, auth.userId, { projectId, origin: url.origin })
+    const assets = await agent.listAssets(ctx.env, auth.userId, {
+      projectId,
+      kind: url.searchParams.get('kind') ?? undefined,
+      origin: url.origin,
+    })
     return Response.json({ assets })
   })
 }

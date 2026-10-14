@@ -5,7 +5,13 @@ import BrandVoiceEditor from './BrandVoiceEditor'
 import type { ProjectInput } from './api'
 import { EMPTY_PROJECT_INPUT, projectInputOf } from './api'
 
-type QueuedFile = { file: File; url: string }
+type QueuedFile = { file: File; url: string; kind: string }
+
+const LOGO_SLOTS = [
+  { kind: 'logo_full', label: 'Full logo', hint: 'Complete lockup' },
+  { kind: 'logo_icon', label: 'Icon / mark', hint: 'Symbol only' },
+  { kind: 'logo_transparent_name', label: 'Transparent + name', hint: 'Used in generated images' },
+] as const
 
 const STEPS = ['Identity', 'About', 'Content'] as const
 
@@ -69,8 +75,13 @@ function LogoAssetsField({
   onLogoIndex: (index: number | null) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const pendingKind = useRef('other')
   const effectiveLogo =
     logoIndex ?? queued.findIndex((q) => q.file.type.startsWith('image/'))
+  const pick = (kind: string) => {
+    pendingKind.current = kind
+    inputRef.current?.click()
+  }
 
   return (
     <div>
@@ -83,22 +94,57 @@ function LogoAssetsField({
         onChange={(e) => {
           const files = Array.from(e.target.files ?? [])
           if (files.length) {
-            onAdd(files.map((file) => ({ file, url: URL.createObjectURL(file) })))
+            onAdd(files.map((file) => ({ file, url: URL.createObjectURL(file), kind: pendingKind.current })))
           }
           if (inputRef.current) inputRef.current.value = ''
         }}
       />
-      <div className="flex items-start gap-3">
+
+      {/* three labelled logo slots — the agent's brand_logo variants */}
+      <div className="grid grid-cols-3 gap-2">
+        {LOGO_SLOTS.map((slot) => {
+          const idx = queued.findIndex((q) => q.kind === slot.kind)
+          const q = idx >= 0 ? queued[idx] : null
+          return (
+            <button
+              key={slot.kind}
+              type="button"
+              onClick={() => pick(slot.kind)}
+              aria-label={`Add ${slot.label}`}
+              className="flex min-h-[88px] flex-col items-center justify-center gap-1 overflow-hidden rounded-[18px] border-2 border-dashed border-white/80 bg-white/40 px-1.5 py-2 text-center transition hover:bg-white/60 active:scale-95"
+            >
+              {q ? (
+                <>
+                  <img src={q.url} alt={q.file.name} className="h-9 w-full rounded-[10px] object-contain" />
+                  <span className="text-[10px] leading-tight font-extrabold text-ink">{slot.label} ✓</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-lg leading-none font-extrabold text-ink-soft">+</span>
+                  <span className="text-[10px] leading-tight font-extrabold text-ink">{slot.label}</span>
+                  <span className="text-[9px] leading-tight font-bold text-ink-soft">{slot.hint}</span>
+                </>
+              )}
+            </button>
+          )
+        })}
+      </div>
+      <p className="mt-1.5 text-[11px] font-semibold text-ink-soft">
+        Tip: add <strong className="text-ink">Transparent + name</strong> (PNG) — your agent uses it in
+        generated images. No transparent logo? The agent will ask instead of inventing one.
+      </p>
+
+      <div className="mt-3 flex items-start gap-3">
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => pick('other')}
           aria-label="Add logo & assets"
-          className="flex h-[88px] w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded-full border-2 border-dashed border-white/80 bg-white/40 text-ink transition hover:bg-white/60 active:scale-95"
+          className="flex h-[72px] w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-full border-2 border-dashed border-white/80 bg-white/40 text-ink transition hover:bg-white/60 active:scale-95"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
             <path d="M12 5v14M5 12h14" />
           </svg>
-          <span className="text-[10px] font-extrabold text-ink-soft">Logo</span>
+          <span className="text-[9px] font-extrabold text-ink-soft">Assets</span>
         </button>
 
         {queued.length > 0 ? (
@@ -106,7 +152,7 @@ function LogoAssetsField({
             {queued.map((q, i) => (
               <div
                 key={q.url}
-                className={`group relative h-[88px] w-[88px] overflow-hidden rounded-[18px] border bg-white/70 ${
+                className={`group relative h-[72px] w-[72px] overflow-hidden rounded-[18px] border bg-white/70 ${
                   effectiveLogo === i
                     ? 'border-butter-deep ring-2 ring-butter-deep'
                     : 'border-white/80'
@@ -124,6 +170,9 @@ function LogoAssetsField({
                     <span className="flex h-full items-center justify-center text-3xl">🎬</span>
                   )}
                 </button>
+                <span className="absolute bottom-1 left-1 max-w-[62px] truncate rounded-full bg-ink/70 px-1.5 py-0.5 text-[8px] font-bold text-white">
+                  {q.kind === 'other' ? 'asset' : q.kind.replace('logo_', '').replaceAll('_', ' ')}
+                </span>
                 {effectiveLogo === i ? (
                   <span className="absolute top-1 left-1 rounded-full bg-butter px-1.5 py-0.5 text-[9px] font-bold text-ink">
                     Logo
@@ -197,7 +246,11 @@ export default function ProjectForm({
       ...draft,
       officialLinks: links,
       newAssets: queued.map((q) => q.file),
-      newLogoIndex: logoIndex,
+      newAssetKinds: queued.map((q) => q.kind),
+      newLogoIndex:
+        logoIndex ?? (queued.findIndex((q) => q.kind === 'logo_full') >= 0
+          ? queued.findIndex((q) => q.kind === 'logo_full')
+          : null),
     })
   }
 
@@ -266,8 +319,33 @@ export default function ProjectForm({
               />
             </Field>
           </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={draft.xPremium}
+            onClick={() => set({ xPremium: !draft.xPremium })}
+            className="flex w-full items-center gap-3 rounded-[18px] bg-white/45 px-4 py-3 text-left transition hover:bg-white/60"
+          >
+            <span
+              className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition ${
+                draft.xPremium ? 'justify-end bg-ink' : 'justify-start bg-ink/20'
+              }`}
+            >
+              <span className="h-5 w-5 rounded-full bg-white shadow" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-ink">X Premium account</span>
+              <span className="block text-[11px] font-semibold text-ink-soft">
+                {draft.xPremium
+                  ? 'Long posts allowed — up to 25,000 chars (composer + agent).'
+                  : 'Free account — posts capped at 280 chars. Turn on if @handle has Premium.'}
+              </span>
+            </span>
+          </button>
         </div>
       ) : null}
+
+      {/* X Premium lives with Identity in step 1, rendered there below */}
 
       {/* ── Step 2 · About ── */}
       {step === 1 ? (

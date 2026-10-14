@@ -225,6 +225,25 @@ export function useBulkSetStatus() {
   })
 }
 
+/** Move ONE post to a status (used by the "Did you post it?" confirm). */
+export function useSetPostStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: PostStatus }): Promise<void> => {
+      const patch =
+        status === 'published'
+          ? { status, published_at: new Date().toISOString() }
+          : { status, published_at: null }
+      const { error } = await supabase!.from('posts').update(patch).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_data, { id }) => {
+      void qc.invalidateQueries({ queryKey: ['posts'] })
+      void qc.invalidateQueries({ queryKey: ['posts', id] })
+    },
+  })
+}
+
 /** Delete several posts at once — post_tweets/post_media/post_tags cascade. */
 export function useBulkDeletePosts() {
   const qc = useQueryClient()

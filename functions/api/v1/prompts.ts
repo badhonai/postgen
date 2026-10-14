@@ -13,7 +13,10 @@ type Ctx = { request: Request; env: Env }
  */
 export function onRequestGet(ctx: Ctx): Promise<Response> {
   return agentRoute(ctx.request, ctx.env, async (auth) => {
-    const prompts = await agent.listImagePrompts(ctx.env, auth.userId, new URL(ctx.request.url).origin)
+    const url = new URL(ctx.request.url)
+    const prompts = await agent.listImagePrompts(ctx.env, auth.userId, url.origin, {
+      projectId: url.searchParams.get('project_id') ?? undefined,
+    })
     return Response.json({ image_prompts: prompts })
   })
 }
@@ -27,6 +30,7 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
       prompt: body.prompt,
       notes: body.notes,
       referenceAssetIds: body.reference_asset_ids,
+      projectIds: body.project_ids,
     })
     return Response.json({ image_prompt: prompt }, { status: 201 })
   })
