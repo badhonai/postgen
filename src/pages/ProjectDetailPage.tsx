@@ -125,7 +125,9 @@ export default function ProjectDetailPage() {
     if (targets.length === 0) return
     try {
       await bulkStatus.mutateAsync({ posts: targets, status })
-      setSelected(new Set())
+      // the selection is deliberately kept: approving a batch and then
+      // publishing the same batch should not need a second round of tapping.
+      // Rows that a status filter now hides prune themselves out.
     } catch {
       /* surfaced via bulkError */
     }
