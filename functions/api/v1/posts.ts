@@ -10,6 +10,7 @@ export function onRequestGet(ctx: Ctx): Promise<Response> {
     const posts = await agent.listPosts(ctx.env, auth.userId, {
       projectId: url.searchParams.get('project_id') ?? undefined,
       status: url.searchParams.get('status') ?? undefined,
+      type: url.searchParams.get('type') ?? undefined,
     })
     return Response.json({ posts })
   })
