@@ -14,6 +14,7 @@ export type PostListItem = Pick<
   | 'content_text'
   | 'created_at'
   | 'updated_at'
+  | 'published_at'
 > & {
   /** First image asset attached to the post, for the 16:9 list thumbnail. */
   cover?: { r2_key: string; mime_type: string; filename: string } | null
@@ -37,7 +38,7 @@ export function usePosts(filters: PostFilters = {}) {
       let q = supabase!
         .from('posts')
         .select(
-          'id, project_id, post_type, category, status, title, created_via, content_text, created_at, updated_at, meta,' +
+          'id, project_id, post_type, category, status, title, created_via, content_text, created_at, updated_at, published_at, meta,' +
             ' post_tweets(id, post_media(asset_id, assets(id, r2_key, mime_type, filename)))',
         )
         .order('updated_at', { ascending: false })
@@ -189,6 +190,51 @@ export function useSavePost() {
       void qc.invalidateQueries({ queryKey: ['posts'] })
       void qc.invalidateQueries({ queryKey: ['posts', postId] })
     },
+  })
+}
+
+/**
+ * Move several posts to one status at once. Mirrors `save_post_with_tweets`:
+ * publishing stamps `published_at` (only for posts never published), and any
+ * non-published status clears it.
+ */
+export function useBulkSetStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ posts, status }: { posts: PostListItem[]; status: PostStatus }): Promise<void> => {
+      const ids = posts.map((p) => p.id)
+      if (ids.length === 0) return
+      const now = new Date().toISOString()
+      if (status === 'published') {
+        const fresh = posts.filter((p) => !p.published_at).map((p) => p.id)
+        if (fresh.length > 0) {
+          const { error } = await supabase!.from('posts').update({ status, published_at: now }).in('id', fresh)
+          if (error) throw error
+        }
+        const rest = ids.filter((id) => !fresh.includes(id))
+        if (rest.length > 0) {
+          const { error } = await supabase!.from('posts').update({ status }).in('id', rest)
+          if (error) throw error
+        }
+        return
+      }
+      const { error } = await supabase!.from('posts').update({ status, published_at: null }).in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['posts'] }),
+  })
+}
+
+/** Delete several posts at once — post_tweets/post_media/post_tags cascade. */
+export function useBulkDeletePosts() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (ids: string[]): Promise<void> => {
+      if (ids.length === 0) return
+      const { error } = await supabase!.from('posts').delete().in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['posts'] }),
   })
 }
 

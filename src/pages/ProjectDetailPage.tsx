@@ -1,4 +1,4 @@
-import { useDeferredValue, useRef, useState, type ReactNode } from 'react'
+import { useDeferredValue, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { exportProject, importBundle, parseImportJson } from '../lib/export'
 import { findExactDuplicate } from '../lib/dedupe'
@@ -24,8 +24,15 @@ import {
 } from '../features/projects/api'
 import ProjectForm from '../features/projects/ProjectForm'
 import MediaLibrary from '../features/media/MediaLibrary'
-import { usePosts, useSavePost, type PostFilters } from '../features/posts/api'
+import {
+  useBulkDeletePosts,
+  useBulkSetStatus,
+  usePosts,
+  useSavePost,
+  type PostFilters,
+} from '../features/posts/api'
 import { Button, ErrorBox, Input, Select, Skeleton, Spinner } from '../components/ui'
+import { cn } from '../lib/cn'
 
 const STATUSES: Array<PostStatus | ''> = ['', 'idea', 'draft', 'approved', 'scheduled', 'published', 'archived']
 const CATEGORIES: Array<PostCategory | ''> = ['', ...(Object.keys(CATEGORY_LABELS) as PostCategory[])]
@@ -69,6 +76,9 @@ export default function ProjectDetailPage() {
   const [category, setCategory] = useState<PostCategory | ''>('')
   const [type, setType] = useState<PostType | ''>('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const bulkStatus = useBulkSetStatus()
+  const bulkDelete = useBulkDeletePosts()
 
   const filters: PostFilters = {
     projectId: id,
@@ -78,6 +88,58 @@ export default function ProjectDetailPage() {
     type,
   }
   const posts = usePosts(filters)
+
+  const visiblePosts = posts.data ?? []
+  const visibleIds = visiblePosts.map((p) => p.id)
+  const selectedPosts = visiblePosts.filter((p) => selected.has(p.id))
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id))
+  /** how many selected posts each action would actually change */
+  const approveCount = selectedPosts.filter((p) => p.status !== 'approved').length
+  const publishCount = selectedPosts.filter((p) => p.status !== 'published').length
+  const busyBulk = bulkStatus.isPending || bulkDelete.isPending
+  const bulkError = bulkStatus.error ?? bulkDelete.error
+
+  // keep the "N selected" count truthful: drop ids that left the current list
+  const visibleKey = visibleIds.join(',')
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev
+      const next = new Set([...prev].filter((id) => visibleIds.includes(id)))
+      return next.size === prev.size ? prev : next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleKey])
+
+  const toggleOne = (postId: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(postId)) next.delete(postId)
+      else next.add(postId)
+      return next
+    })
+
+  const runBulkStatus = async (status: PostStatus) => {
+    const targets = selectedPosts.filter((p) => p.status !== status)
+    if (targets.length === 0) return
+    try {
+      await bulkStatus.mutateAsync({ posts: targets, status })
+      setSelected(new Set())
+    } catch {
+      /* surfaced via bulkError */
+    }
+  }
+
+  const runBulkDelete = async () => {
+    if (selectedPosts.length === 0) return
+    const n = selectedPosts.length
+    if (!window.confirm(`Delete ${n} post${n === 1 ? '' : 's'}? This cannot be undone.`)) return
+    try {
+      await bulkDelete.mutateAsync(selectedPosts.map((p) => p.id))
+      setSelected(new Set())
+    } catch {
+      /* surfaced via bulkError */
+    }
+  }
 
   if (project.isPending) {
     return (
@@ -445,6 +507,70 @@ export default function ProjectDetailPage() {
               </div>
             </div>
 
+            {/* ── bulk actions (shown once posts are selected) ── */}
+            {selectedPosts.length > 0 ? (
+              <div className="pg-glass-strong space-y-2.5 rounded-[22px] p-3">
+                <div className="flex items-center gap-2">
+                  <span className="pl-1 text-[13px] font-extrabold text-ink">
+                    {selectedPosts.length} selected
+                  </span>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelected(allVisibleSelected ? new Set<string>() : new Set(visibleIds))}
+                      className="rounded-full border border-white/75 bg-white/55 px-3 py-1.5 text-[12px] font-bold text-ink transition hover:bg-white/75 active:scale-95"
+                    >
+                      {allVisibleSelected ? 'None' : 'All'}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Clear selection"
+                      onClick={() => setSelected(new Set())}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/75 bg-white/55 text-ink transition hover:bg-white/75 active:scale-95"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={busyBulk || approveCount === 0}
+                    onClick={() => void runBulkStatus('approved')}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-ink px-2 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    {busyBulk && bulkStatus.variables?.status === 'approved' ? <Spinner /> : null}
+                    {approveCount > 0 ? `Approve ${approveCount}` : 'Approve'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyBulk || publishCount === 0}
+                    onClick={() => void runBulkStatus('published')}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-butter px-2 py-2.5 text-[13px] font-bold text-ink shadow-[0_10px_24px_rgba(242,193,78,0.42)] transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    {busyBulk && bulkStatus.variables?.status === 'published' ? <Spinner /> : null}
+                    {publishCount > 0 ? `Publish ${publishCount}` : 'Publish'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyBulk}
+                    onClick={() => void runBulkDelete()}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-rose-300/70 bg-rose-soft/60 px-2 py-2.5 text-[13px] font-bold text-rose-700 transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    {bulkDelete.isPending ? <Spinner /> : null}
+                    {`Delete ${selectedPosts.length}`}
+                  </button>
+                </div>
+                {bulkError ? (
+                  <p className="px-1 text-[12px] font-bold text-rose-700">
+                    {bulkError instanceof Error ? bulkError.message : 'Bulk action failed'}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
             <input
               ref={importInputRef}
               type="file"
@@ -478,7 +604,13 @@ export default function ProjectDetailPage() {
             ) : (
               <div className="space-y-2.5">
                 {(posts.data ?? []).map((post) => (
-                  <PostRow key={post.id} post={post} logo={p.logo} />
+                  <PostRow
+                    key={post.id}
+                    post={post}
+                    logo={p.logo}
+                    selected={selected.has(post.id)}
+                    onToggle={() => toggleOne(post.id)}
+                  />
                 ))}
               </div>
             )}
@@ -542,31 +674,59 @@ export default function ProjectDetailPage() {
   )
 }
 
-function PostRow({ post, logo }: { post: PostListItem; logo?: { r2_key: string } | null }) {
+function PostRow({
+  post,
+  logo,
+  selected,
+  onToggle,
+}: {
+  post: PostListItem
+  logo?: { r2_key: string } | null
+  selected: boolean
+  onToggle: () => void
+}) {
+  const label = post.title || post.content_text.slice(0, 70) || 'Untitled post'
   return (
-    <Link
-      to={`/posts/${post.id}`}
-      className="pg-glass flex items-center gap-3 rounded-[20px] p-2.5 pr-3.5 transition active:scale-[0.98]"
+    <div
+      className={cn(
+        'pg-glass flex items-center gap-2.5 rounded-[20px] p-2.5 pr-3.5 transition active:scale-[0.98]',
+        selected && 'ring-2 ring-ink/20',
+      )}
     >
-      <PostCover cover={post.cover} logo={logo} />
-      <span
-        className="h-2.5 w-2.5 shrink-0 rounded-full"
-        style={{ background: STATUS_DOT[post.status] ?? '#a09cc4' }}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-bold text-ink">
-          {post.title || post.content_text.slice(0, 70) || 'Untitled post'}
-        </p>
-        <p className="mt-0.5 text-[11px] font-bold text-ink-soft">
-          <span className="text-ink">{POST_TYPE_LABEL[post.post_type] ?? 'Post'}</span>
-          {' · '}
-          {CATEGORY_LABELS[post.category]} · {STATUS_LABEL[post.status] ?? post.status} · via {post.created_via}
-        </p>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-soft">
-        <path d="M9 18l6-6-6-6" />
-      </svg>
-    </Link>
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={selected}
+        aria-label={`${selected ? 'Deselect' : 'Select'} ${label}`}
+        onClick={onToggle}
+        className={cn(
+          'flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border transition active:scale-90',
+          selected ? 'border-ink bg-ink text-white' : 'border-white/80 bg-white/60 text-transparent',
+        )}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      </button>
+      <Link to={`/posts/${post.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+        <PostCover cover={post.cover} logo={logo} />
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ background: STATUS_DOT[post.status] ?? '#a09cc4' }}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-bold text-ink">{label}</p>
+          <p className="mt-0.5 text-[11px] font-bold text-ink-soft">
+            <span className="text-ink">{POST_TYPE_LABEL[post.post_type] ?? 'Post'}</span>
+            {' · '}
+            {CATEGORY_LABELS[post.category]} · {STATUS_LABEL[post.status] ?? post.status} · via {post.created_via}
+          </p>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-soft">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </Link>
+    </div>
   )
 }
 
