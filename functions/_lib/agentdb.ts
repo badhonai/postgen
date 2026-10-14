@@ -707,3 +707,113 @@ export async function listImagePrompts(
       .filter((a): a is AssetSummary => !!a),
   }))
 }
+
+// ──────────────────── image prompt writes ────────────────────
+
+const MAX_PROMPT_CHARS = 4000
+const MAX_NOTES_CHARS = 1000
+
+/** Every referenced asset must exist and belong to this user. */
+async function assertOwnedAssetIds(env: Env, userId: string, ids: string[]) {
+  const unique = [...new Set(ids)]
+  if (unique.length === 0) return
+  const { data, error } = await db(env).from('assets').select('id').eq('user_id', userId).in('id', unique)
+  if (error) fail(error)
+  const owned = new Set((data ?? []).map((r: { id: string }) => r.id))
+  const missing = unique.filter((id) => !owned.has(id))
+  if (missing.length > 0) {
+    throw new AgentError(400, { error: 'unknown asset_id', message: `not your assets: ${missing.join(', ')}` })
+  }
+}
+
+function cleanPromptInput(input: {
+  name?: unknown
+  prompt?: unknown
+  notes?: unknown
+  referenceAssetIds?: unknown
+}): { name: string; prompt: string; notes: string; reference_asset_ids: string[] } {
+  const name = String(input.name ?? '').trim()
+  const prompt = String(input.prompt ?? '').trim()
+  const notes = String(input.notes ?? '').trim()
+  if (!name) throw new AgentError(400, { error: 'name is required' })
+  if (!prompt) throw new AgentError(400, { error: 'prompt is required' })
+  if (prompt.length > MAX_PROMPT_CHARS) {
+    throw new AgentError(400, { error: 'prompt too long', message: `max ${MAX_PROMPT_CHARS} characters` })
+  }
+  if (notes.length > MAX_NOTES_CHARS) {
+    throw new AgentError(400, { error: 'notes too long', message: `max ${MAX_NOTES_CHARS} characters` })
+  }
+  const refs = Array.isArray(input.referenceAssetIds) ? input.referenceAssetIds.map(String) : []
+  if (refs.some((r) => !r)) throw new AgentError(400, { error: 'reference_asset_ids must be non-empty strings' })
+  return { name, prompt, notes, reference_asset_ids: refs }
+}
+
+export async function createImagePrompt(
+  env: Env,
+  auth: AgentAuth,
+  via: CreatedVia,
+  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown },
+) {
+  const row = cleanPromptInput(input)
+  await assertOwnedAssetIds(env, auth.userId, row.reference_asset_ids)
+  const { data, error } = await db(env)
+    .from('image_prompts')
+    .insert({ user_id: auth.userId, ...row })
+    .select()
+    .single()
+  if (error) fail(error)
+  const created = data as ImagePromptRow
+  await logActivity(env, auth, 'image_prompt.create', { table: 'image_prompts', id: created.id }, {
+    name: created.name,
+    references: row.reference_asset_ids.length,
+  })
+  return created
+}
+
+export async function updateImagePrompt(
+  env: Env,
+  auth: AgentAuth,
+  via: CreatedVia,
+  id: string,
+  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown },
+) {
+  const row = cleanPromptInput(input)
+  await assertOwnedAssetIds(env, auth.userId, row.reference_asset_ids)
+  const { data, error } = await db(env)
+    .from('image_prompts')
+    .update(row)
+    .eq('id', id)
+    .eq('user_id', auth.userId)
+    .select()
+    .single()
+  // PGRST116 = no row matched the update
+  if (error) {
+    if (error.code === 'PGRST116') throw new AgentError(404, { error: 'image prompt not found' })
+    fail(error)
+  }
+  const updated = data as ImagePromptRow
+  await logActivity(env, auth, 'image_prompt.update', { table: 'image_prompts', id: updated.id }, {
+    name: updated.name,
+    references: row.reference_asset_ids.length,
+  })
+  return updated
+}
+
+export async function deleteImagePrompt(env: Env, auth: AgentAuth, via: CreatedVia, id: string) {
+  const { data, error } = await db(env)
+    .from('image_prompts')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', auth.userId)
+    .select()
+    .single()
+  if (error) {
+    if (error.code === 'PGRST116') throw new AgentError(404, { error: 'image prompt not found' })
+    fail(error)
+  }
+  const removed = data as ImagePromptRow
+  await logActivity(env, auth, 'image_prompt.delete', { table: 'image_prompts', id: removed.id }, {
+    name: removed.name,
+  })
+  return removed
+}

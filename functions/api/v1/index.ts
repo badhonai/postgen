@@ -141,6 +141,20 @@ const spec = {
         summary: 'Saved image prompts, each with its reference images and signed URLs',
         responses: { '200': { description: 'Image prompts' } },
       },
+      post: {
+        summary: 'Save a new image prompt (name, prompt, notes, reference_asset_ids)',
+        responses: { '201': { description: 'Created' } },
+      },
+    },
+    '/prompts/{id}': {
+      patch: {
+        summary: 'Replace an image prompt (whole-object write)',
+        responses: { '200': { description: 'Updated' } },
+      },
+      delete: {
+        summary: 'Remove an image prompt',
+        responses: { '200': { description: 'Deleted' } },
+      },
     },
   },
   components: {

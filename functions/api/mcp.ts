@@ -172,6 +172,55 @@ const TOOLS = [
       'style. Use the prompt AND the reference images together when generating art.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
+  {
+    name: 'create_image_prompt',
+    description:
+      'Save a new image prompt to the user’s library, optionally with reference images. ' +
+      'Use list_assets first to get asset ids you may reference.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Short label, e.g. "Neon poster"' },
+        prompt: { type: 'string', description: 'The image prompt itself (max 4000 chars)' },
+        notes: { type: 'string', description: 'What output this tends to produce (max 1000 chars)' },
+        reference_asset_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Asset ids showing the style. Must be the user’s own assets.',
+        },
+      },
+      required: ['name', 'prompt'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_image_prompt',
+    description:
+      'Replace an existing image prompt. Sends the whole prompt — name, prompt text, notes ' +
+      'and reference_asset_ids are all overwritten, so pass the full intended values.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt_id: { type: 'string' },
+        name: { type: 'string' },
+        prompt: { type: 'string' },
+        notes: { type: 'string' },
+        reference_asset_ids: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['prompt_id', 'name', 'prompt'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'delete_image_prompt',
+    description: 'Permanently remove an image prompt from the user’s library.',
+    inputSchema: {
+      type: 'object',
+      properties: { prompt_id: { type: 'string' } },
+      required: ['prompt_id'],
+      additionalProperties: false,
+    },
+  },
 ] as const
 
 type Rpc = { jsonrpc: '2.0'; id?: number | string | null; method: string; params?: Record<string, unknown> }
@@ -253,6 +302,28 @@ async function callTool(
       })
     case 'list_image_prompts':
       return toolText({ image_prompts: await agent.listImagePrompts(env, auth.userId, origin) })
+    case 'create_image_prompt':
+      return toolText({
+        image_prompt: await agent.createImagePrompt(env, auth, via, {
+          name: args.name,
+          prompt: args.prompt,
+          notes: args.notes,
+          referenceAssetIds: args.reference_asset_ids,
+        }),
+      })
+    case 'update_image_prompt':
+      return toolText({
+        image_prompt: await agent.updateImagePrompt(env, auth, via, String(args.prompt_id ?? ''), {
+          name: args.name,
+          prompt: args.prompt,
+          notes: args.notes,
+          referenceAssetIds: args.reference_asset_ids,
+        }),
+      })
+    case 'delete_image_prompt':
+      return toolText({
+        deleted: await agent.deleteImagePrompt(env, auth, via, String(args.prompt_id ?? '')),
+      })
     default:
       throw new agent.AgentError(-32602, { error: `unknown tool: ${name}` })
   }

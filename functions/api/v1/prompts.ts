@@ -1,5 +1,5 @@
 import * as agent from '../../_lib/agentdb'
-import { agentRoute } from '../../_lib/route'
+import { agentRoute, readJson } from '../../_lib/route'
 import type { Env } from '../../_lib/env'
 
 type Ctx = { request: Request; env: Env }
@@ -15,5 +15,19 @@ export function onRequestGet(ctx: Ctx): Promise<Response> {
   return agentRoute(ctx.request, ctx.env, async (auth) => {
     const prompts = await agent.listImagePrompts(ctx.env, auth.userId, new URL(ctx.request.url).origin)
     return Response.json({ image_prompts: prompts })
+  })
+}
+
+/** POST /api/v1/prompts — save a new prompt (optionally with reference assets). */
+export function onRequestPost(ctx: Ctx): Promise<Response> {
+  return agentRoute(ctx.request, ctx.env, async (auth) => {
+    const body = await readJson(ctx.request)
+    const prompt = await agent.createImagePrompt(ctx.env, auth, 'api', {
+      name: body.name,
+      prompt: body.prompt,
+      notes: body.notes,
+      referenceAssetIds: body.reference_asset_ids,
+    })
+    return Response.json({ image_prompt: prompt }, { status: 201 })
   })
 }

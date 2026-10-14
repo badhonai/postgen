@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  errorMessage,
   useAllAssetsByProject,
   useCreateImagePrompt,
   useDeleteImagePrompt,
@@ -171,13 +172,7 @@ export default function PromptLibraryPage() {
             </Button>
           </div>
           {createPrompt.error || updatePrompt.error ? (
-            <ErrorBox
-              message={
-                (createPrompt.error ?? updatePrompt.error) instanceof Error
-                  ? ((createPrompt.error ?? updatePrompt.error) as Error).message
-                  : 'Failed to save'
-              }
-            />
+            <ErrorBox message={errorMessage(createPrompt.error ?? updatePrompt.error, 'Failed to save')} />
           ) : null}
         </section>
 

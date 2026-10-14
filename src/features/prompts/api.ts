@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../auth/context'
 import type { Asset } from '../../lib/types'
 
 export type ImagePrompt = {
@@ -47,6 +48,13 @@ export function useImagePrompts() {
   })
 }
 
+/** PostgREST errors are plain objects, so `instanceof Error` is false for them. */
+export function errorMessage(e: unknown, fallback: string): string {
+  if (e instanceof Error) return e.message
+  const m = (e as { message?: string } | null)?.message
+  return typeof m === 'string' && m ? m : fallback
+}
+
 export type PromptInput = {
   name: string
   prompt: string
@@ -56,11 +64,15 @@ export type PromptInput = {
 
 export function useCreateImagePrompt() {
   const qc = useQueryClient()
+  const { user } = useAuth()
   return useMutation({
     mutationFn: async (input: PromptInput) => {
+      // user_id has no default and RLS checks it — it has to be sent explicitly
+      if (!user) throw new Error('not signed in')
       const { data, error } = await supabase!
         .from('image_prompts')
         .insert({
+          user_id: user.id,
           name: input.name.trim() || 'Untitled prompt',
           prompt: input.prompt.trim(),
           notes: input.notes?.trim() ?? '',
