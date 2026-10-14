@@ -100,7 +100,8 @@ export default function AssetThumb({
       {onDelete ? (
         <Button
           variant="ghost"
-          className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-white/70 p-0 text-xs opacity-0 group-hover:opacity-100"
+          aria-label={`Delete ${asset.filename}`}
+          className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-white/70 p-0 text-xs opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
           onClick={(e) => {
             e.stopPropagation()
             onDelete(asset)
