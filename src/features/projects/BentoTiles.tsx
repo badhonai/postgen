@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import type { Project } from '../../lib/types'
+import type { PostType, Project } from '../../lib/types'
 import { POST_TYPE_LABEL, STATUS_DOT, STATUS_LABEL, TILE_COLORS } from '../../lib/types'
 import { useAssetUrl } from '../../lib/media'
 
@@ -80,7 +80,7 @@ export function HeroTile({ project, posts }: { project: Project; posts: PostSumm
                 {post.title || 'Untitled post'}
               </span>
               <span className="shrink-0 text-[10px] font-bold tracking-wide text-ink-soft uppercase">
-                {post.post_type && post.post_type !== 'post' ? `${POST_TYPE_LABEL[post.post_type]} · ` : ''}
+                {post.post_type && post.post_type !== 'post' ? `${POST_TYPE_LABEL[post.post_type as PostType]} · ` : ''}
                 {STATUS_LABEL[post.status] ?? post.status}
               </span>
             </div>
