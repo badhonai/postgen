@@ -28,9 +28,10 @@ export const SIMILARITY_SHOW = 0.45
  */
 export async function checkDuplicates(
   tweets: string[],
-  opts: { excludePostId?: string; projectId?: string } = {},
+  opts: { excludePostId?: string; projectId?: string; extraText?: string } = {},
 ): Promise<DupCheck> {
-  const contentText = threadToContentText(tweets)
+  const base = threadToContentText(tweets)
+  const contentText = opts.extraText?.trim() ? `${base}\n\n${opts.extraText.trim()}` : base
   const contentHash = await sha256Hex(contentText)
   const { data: userData } = await supabase!.auth.getUser()
   const userId = userData.user?.id ?? null

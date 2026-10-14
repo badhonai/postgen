@@ -335,6 +335,51 @@ async function main() {
   check('POST /posts creates draft', r2.status === 201 && r2b.post?.status === 'draft')
   check('created_via = api', r2b.post?.created_via === 'api')
 
+  // ── post types ──
+  const stamp = Math.random().toString(36).slice(2, 8)
+  const typeCases = [
+    { name: 'thread', body: { type: 'thread', tweets: [`thread alpha ${stamp}`, `thread beta ${stamp}`] }, want: 'thread' },
+    { name: 'article', body: { type: 'article', title: `Article ${stamp}`, tweets: [`Long-form body ${stamp} — well past the 280 char cap for a single post, because articles have no per-tweet limit at all in this composer.`] }, want: 'article' },
+    { name: 'artwork', body: { type: 'artwork', tweets: [`artwork caption ${stamp}`] }, want: 'artwork' },
+    { name: 'quote', body: { type: 'quote', tweets: [`the quoted line ${stamp}`], meta: { source: 'Someone', comment: `my take ${stamp}` } }, want: 'quote' },
+  ]
+  for (const tc of typeCases) {
+    const rt = await api('/api/v1/posts', {
+      method: 'POST',
+      headers: agent,
+      body: JSON.stringify({ project_id: project.id, category: 'other', ...tc.body }),
+    })
+    const rtb = await rt.json()
+    check(`POST /posts type=${tc.name}`, rt.status === 201 && rtb.post?.post_type === tc.want, `HTTP ${rt.status} got ${rtb.post?.post_type}`)
+    if (tc.name === 'quote') {
+      check('quote meta round-trips', rtb.post?.meta?.source === 'Someone', JSON.stringify(rtb.post?.meta))
+    }
+  }
+  const rBadType = await api('/api/v1/posts', {
+    method: 'POST',
+    headers: agent,
+    body: JSON.stringify({ project_id: project.id, tweets: [`bad type probe ${stamp}`], type: 'carousel' }),
+  })
+  check('invalid type → 400', rBadType.status === 400, `HTTP ${rBadType.status}`)
+
+  // a re-quote of the same quote + source + take is still a repeat
+  await api('/api/v1/posts', {
+    method: 'POST',
+    headers: agent,
+    body: JSON.stringify({ project_id: project.id, tweets: [`repeat quote probe ${stamp}`], type: 'quote', meta: { source: 'A', comment: 'B' } }),
+  })
+  const qb = await api('/api/v1/posts', {
+    method: 'POST',
+    headers: agent,
+    body: JSON.stringify({ project_id: project.id, tweets: [`repeat quote probe ${stamp}`], type: 'quote', meta: { source: 'A', comment: 'B' } }),
+  })
+  check('no-repeat: identical quote + meta → 409', qb.status === 409 && qb.error === 'duplicate', `HTTP ${qb.status}`)
+
+  // type filter on the agent list
+  const rl = await api(`/api/v1/posts?project_id=${project.id}&type=article`, { headers: agent })
+  const rlb = await rl.json()
+  check('GET /posts?type=article filters', rl.status === 200 && (rlb.posts ?? []).every((x) => x.post_type === 'article') && (rlb.posts ?? []).length >= 1, `got ${(rlb.posts ?? []).length}`)
+
   const r3 = await api('/api/v1/posts', {
     method: 'POST',
     headers: agent,

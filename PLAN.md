@@ -98,9 +98,11 @@ assets            user_id, project_id,
                   width, height, alt_text
 
 posts             user_id, project_id,
+                  post_type: 'post' | 'thread' | 'article' | 'artwork' | 'quote',
                   category: 'promotional' | 'educational' | 'announcement' | 'other',
                   status:   'idea' | 'draft' | 'approved' | 'scheduled'
                             | 'published' | 'archived',
+                  meta jsonb                -- type extras (quote: {source, comment})
                   title text               -- internal label
                   created_via: 'web' | 'api' | 'mcp'   -- badge "drafted by Claude"
                   content_text text,       -- normalized thread text → dedupe + FTS
@@ -145,7 +147,7 @@ generations       (backlog) optional prompt/output audit
 - Dashboard: projects grid + recent posts + agent activity strip
 
 ### M2 — Posts CRUD
-- Post editor: category, status workflow `idea → draft → approved → scheduled → published → archived`
+- Post editor: type (post / thread / article / artwork / quote) with a tailored composer per type; category + status workflow `idea → draft → approved → scheduled → published → archived`
 - **Thread builder**: add/reorder/delete tweets, live `n/n` numbering
 - Live **X character counter** (280 weighted, links=23)
 - Tags, filters, full-text search
@@ -198,7 +200,7 @@ Any free AI tool becomes "the agent". PostGen is the system of record.
 GET    /api/v1/projects                      list my projects
 GET    /api/v1/projects/:id                  project + brand_voice
 GET    /api/v1/projects/:id/knowledge        knowledge & sources
-GET    /api/v1/posts                         ?project_id&status&category&tag&q
+GET    /api/v1/posts                         ?project_id&status&category&type&tag&q
 GET    /api/v1/posts/:id                     post + tweets + media
 GET    /api/v1/tags
 ```
@@ -206,8 +208,9 @@ GET    /api/v1/tags
 **Write (status hard-capped to `idea` / `draft`):**
 ```
 POST   /api/v1/posts                         create draft
-       { project_id, category, title, tweets: ["1/3 …", "2/3 …"], tag_names: [] }
-PATCH  /api/v1/posts/:id                     edit title / category / tags
+       { project_id, type, category, title, tweets: ["1/3 …", "2/3 …"],
+         tag_names: [], meta: { source, comment } }
+PATCH  /api/v1/posts/:id                     edit title / type / category / tags
 PUT    /api/v1/posts/:id/tweets              replace / reorder the thread
 POST   /api/v1/posts/:id/tweets              append one tweet
 DELETE /api/v1/posts/:id/tweets/:tweet_id    remove one tweet

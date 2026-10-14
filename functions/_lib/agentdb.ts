@@ -185,14 +185,38 @@ export async function updateProject(
 
 // ─────────────────────────────── posts ───────────────────────────────
 
+export type PostType = 'post' | 'thread' | 'article' | 'artwork' | 'quote'
+
+const POST_TYPES: PostType[] = ['post', 'thread', 'article', 'artwork', 'quote']
+
 export type PostWrite = {
   projectId?: string
   title?: string
   category?: 'promotional' | 'educational' | 'announcement' | 'other'
+  type?: PostType
   status?: 'idea' | 'draft'
   tweets: string[]
   tagNames?: string[]
+  /** Type-specific extras — quote: { source, comment }. */
+  meta?: Record<string, unknown>
   allowSimilar?: boolean
+}
+
+function assertPostType(type: unknown): PostType {
+  if (type === undefined) return 'post'
+  if (typeof type !== 'string' || !POST_TYPES.includes(type as PostType)) {
+    throw new AgentError(400, {
+      error: 'invalid_type',
+      message: `type must be one of: ${POST_TYPES.join(', ')}`,
+    })
+  }
+  return type as PostType
+}
+
+/** Extra text that must count toward the no-repeat check (quote source + take). */
+function metaText(meta?: Record<string, unknown>): string {
+  if (!meta) return ''
+  return [String(meta.source ?? ''), String(meta.comment ?? '')].filter(Boolean).join('\n')
 }
 
 function assertDraftsOnly(status?: string): 'idea' | 'draft' {
@@ -218,9 +242,10 @@ async function assertNoRepeat(
   env: Env,
   userId: string,
   tweets: string[],
-  opts: { excludePostId?: string; projectId?: string; allowSimilar?: boolean },
+  opts: { excludePostId?: string; projectId?: string; allowSimilar?: boolean; extraText?: string },
 ): Promise<{ contentText: string; contentHash: string }> {
-  const contentText = threadToContentText(tweets)
+  const base = threadToContentText(tweets)
+  const contentText = opts.extraText?.trim() ? `${base}\n\n${opts.extraText.trim()}` : base
   const contentHash = await sha256Hex(contentText)
   const client = db(env)
 
@@ -283,16 +308,17 @@ async function assertDailyCap(env: Env, userId: string): Promise<void> {
 export async function listPosts(
   env: Env,
   userId: string,
-  filters: { projectId?: string; status?: string },
+  filters: { projectId?: string; status?: string; type?: string },
 ) {
   let q = db(env)
     .from('posts')
-    .select('id, project_id, category, status, title, created_via, content_text, created_at, updated_at')
+    .select('id, project_id, post_type, category, status, title, created_via, content_text, meta, created_at, updated_at')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
     .limit(100)
   if (filters.projectId) q = q.eq('project_id', filters.projectId)
   if (filters.status) q = q.eq('status', filters.status)
+  if (filters.type) q = q.eq('post_type', filters.type)
   const { data, error } = await q
   if (error) fail(error)
   return data
@@ -326,6 +352,7 @@ export async function createDraft(
   input: PostWrite,
 ) {
   const status = assertDraftsOnly(input.status)
+  const type = assertPostType(input.type)
   const tweets = assertTweets(input.tweets)
   if (!input.projectId) throw new AgentError(400, { error: 'project_id is required' })
 
@@ -338,11 +365,12 @@ export async function createDraft(
     .maybeSingle()
   if (!project) throw new AgentError(404, { error: 'project not found' })
 
-  assertBlacklist(project.brand_voice, [input.title ?? '', ...tweets].join('\n'))
+  assertBlacklist(project.brand_voice, [input.title ?? '', ...tweets, metaText(input.meta)].join('\n'))
   await assertDailyCap(env, auth.userId)
   const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {
     projectId: input.projectId,
     allowSimilar: input.allowSimilar,
+    extraText: metaText(input.meta),
   })
 
   const { data: postId, error } = await client.rpc('save_post_with_tweets', {
@@ -357,6 +385,8 @@ export async function createDraft(
     p_tag_names: input.tagNames ?? [],
     p_media: [],
     p_created_via: via,
+    p_post_type: type,
+    p_meta: input.meta ?? {},
     p_user_id: auth.userId,
   })
   if (error) fail(error)
@@ -374,19 +404,22 @@ export async function updateDraft(
 ) {
   const existing = await getPost(env, auth.userId, id)
   const status = assertDraftsOnly(patch.status)
+  const type = assertPostType(patch.type)
   const tweets = patch.tweets ? assertTweets(patch.tweets) : (existing.tweets as string[])
+  const meta = patch.meta ?? ((existing.meta ?? {}) as Record<string, unknown>)
 
   const { data: projectRow } = await db(env)
     .from('projects')
     .select('brand_voice')
     .eq('id', existing.project_id)
     .maybeSingle()
-  assertBlacklist(projectRow?.brand_voice, [patch.title ?? existing.title, ...tweets].join('\n'))
+  assertBlacklist(projectRow?.brand_voice, [patch.title ?? existing.title, ...tweets, metaText(meta)].join('\n'))
 
   const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {
     excludePostId: id,
     projectId: patch.projectId ?? existing.project_id,
     allowSimilar: patch.allowSimilar,
+    extraText: metaText(meta),
   })
 
   const { error } = await db(env).rpc('save_post_with_tweets', {
@@ -401,6 +434,8 @@ export async function updateDraft(
     p_tag_names: patch.tagNames ?? [],
     p_media: [],
     p_created_via: via,
+    p_post_type: type,
+    p_meta: meta,
     p_user_id: auth.userId,
   })
   if (error) fail(error)

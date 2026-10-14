@@ -58,10 +58,41 @@ export type PostCategory = 'promotional' | 'educational' | 'announcement' | 'oth
 export type PostStatus = 'idea' | 'draft' | 'approved' | 'scheduled' | 'published' | 'archived'
 export type CreatedVia = 'web' | 'api' | 'mcp'
 
+/** What kind of post this is — drives the tailored composer. */
+export const POST_TYPES = ['post', 'thread', 'article', 'artwork', 'quote'] as const
+export type PostType = (typeof POST_TYPES)[number]
+
+export const POST_TYPE_LABEL: Record<PostType, string> = {
+  post: 'Post',
+  thread: 'Thread',
+  article: 'Article',
+  artwork: 'Artwork',
+  quote: 'Quote',
+}
+
+/** Character cap for the main content block (UI-only; the DB stores any length). */
+export const POST_TYPE_LIMIT: Record<PostType, number> = {
+  post: 280,
+  thread: 280,
+  article: 25000,
+  artwork: 280,
+  quote: 280,
+}
+
+/** One-line hint shown under the type chips in the composer. */
+export const POST_TYPE_HINT: Record<PostType, string> = {
+  post: 'A single post.',
+  thread: 'A thread of posts.',
+  article: 'Title + long-form body.',
+  artwork: 'Media first, then a caption.',
+  quote: 'A quote, who said it, your take.',
+}
+
 export type Post = {
   id: string
   user_id: string
   project_id: string
+  post_type: PostType
   category: PostCategory
   status: PostStatus
   title: string
@@ -70,6 +101,8 @@ export type Post = {
   content_hash: string
   scheduled_at: string | null
   published_at: string | null
+  /** Type-specific extras — quote: { source, comment }. */
+  meta: Record<string, unknown>
   created_at: string
   updated_at: string
 }

@@ -1,16 +1,18 @@
 import { supabase } from './supabase'
 import { sha256Hex, threadToContentText } from './text'
 import type { SavePostInput } from '../features/posts/api'
-import type { PostCategory, PostStatus } from './types'
+import type { PostCategory, PostStatus, PostType } from './types'
 
 export type ExportTweet = string[]
 export type ExportPost = {
   title: string
+  type?: PostType
   category: PostCategory
   status: PostStatus
   created_via: string
   tweets: string[]
   tags: string[]
+  meta?: Record<string, unknown>
   created_at: string
 }
 export type ExportBundle = {
@@ -45,7 +47,7 @@ async function fetchProjectBundle(projectId: string): Promise<ExportBundle> {
 
   const { data: rows, error } = await supa
     .from('posts')
-    .select('title, category, status, created_via, created_at, content_text, post_tweets(position, content), post_tags(tags(name))')
+    .select('title, post_type, meta, category, status, created_via, created_at, content_text, post_tweets(position, content), post_tags(tags(name))')
     .eq('project_id', projectId)
     .order('created_at')
   if (error) throw error
@@ -53,6 +55,8 @@ async function fetchProjectBundle(projectId: string): Promise<ExportBundle> {
   const posts: ExportPost[] = (rows ?? []).map((raw) => {
     const row = raw as unknown as {
       title: string
+      post_type: PostType
+      meta: Record<string, unknown> | null
       category: PostCategory
       status: PostStatus
       created_via: string
@@ -62,9 +66,11 @@ async function fetchProjectBundle(projectId: string): Promise<ExportBundle> {
     }
     return {
       title: row.title,
+      type: row.post_type ?? 'post',
       category: row.category,
       status: row.status,
       created_via: row.created_via,
+      meta: row.meta ?? {},
       tweets: [...row.post_tweets]
         .sort((a, b) => a.position - b.position)
         .map((t) => t.content),
@@ -115,7 +121,7 @@ export function bundleToMarkdown(bundle: ExportBundle): string {
   for (const post of bundle.posts) {
     lines.push(`## ${post.title || 'Untitled post'}`)
     lines.push('')
-    lines.push(`*${post.status} · ${post.category}${post.tags.length ? ` · ${post.tags.map((t) => '#' + t).join(' ')}` : ''} · via ${post.created_via}*`)
+    lines.push(`*${post.type ?? 'post'} · ${post.status} · ${post.category}${post.tags.length ? ` · ${post.tags.map((t) => '#' + t).join(' ')}` : ''} · via ${post.created_via}*`)
     lines.push('')
     const n = post.tweets.length
     post.tweets.forEach((t, i) => {
@@ -193,6 +199,7 @@ export async function importBundle(
     try {
       await save({
         projectId,
+        type: post.type ?? 'post',
         category: post.category,
         status: post.status,
         title: post.title,
@@ -201,6 +208,7 @@ export async function importBundle(
         contentText,
         contentHash,
         media: [],
+        meta: post.meta ?? {},
         createdVia: (post.created_via as 'web' | 'api' | 'mcp') ?? 'web',
       })
       result.imported += 1

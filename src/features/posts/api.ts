@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import type { Asset, Post, PostCategory, PostStatus, PostTweet } from '../../lib/types'
+import type { Asset, Post, PostCategory, PostStatus, PostTweet, PostType } from '../../lib/types'
 
 export type PostListItem = Pick<
   Post,
   | 'id'
   | 'project_id'
+  | 'post_type'
   | 'category'
   | 'status'
   | 'title'
@@ -23,19 +24,20 @@ export type PostFilters = {
   search?: string
   status?: PostStatus | ''
   category?: PostCategory | ''
+  type?: PostType | ''
   tag?: string
 }
 
 export function usePosts(filters: PostFilters = {}) {
-  const { projectId, search, status, category, tag } = filters
+  const { projectId, search, status, category, type, tag } = filters
   return useQuery({
-    queryKey: ['posts', { projectId, search, status, category, tag }],
+    queryKey: ['posts', { projectId, search, status, category, type, tag }],
     enabled: !!supabase,
     queryFn: async (): Promise<PostListItem[]> => {
       let q = supabase!
         .from('posts')
         .select(
-          'id, project_id, category, status, title, created_via, content_text, created_at, updated_at,' +
+          'id, project_id, post_type, category, status, title, created_via, content_text, created_at, updated_at, meta,' +
             ' post_tweets(id, post_media(asset_id, assets(id, r2_key, mime_type, filename)))',
         )
         .order('updated_at', { ascending: false })
@@ -43,6 +45,7 @@ export function usePosts(filters: PostFilters = {}) {
       if (projectId) q = q.eq('project_id', projectId)
       if (status) q = q.eq('status', status)
       if (category) q = q.eq('category', category)
+      if (type) q = q.eq('post_type', type)
       if (tag) {
         const { data: tagRow, error: tagErr } = await supabase!
           .from('tags')
@@ -135,6 +138,7 @@ export function usePost(id: string) {
 export type SavePostInput = {
   postId?: string
   projectId: string
+  type: PostType
   category: PostCategory
   status: PostStatus
   title: string
@@ -144,6 +148,8 @@ export type SavePostInput = {
   contentHash: string
   /** Attachments keyed by tweet index (0-based) in the `tweets` array. */
   media: Array<{ tweetIndex: number; asset: Asset }>
+  /** Type-specific extras — quote: { source, comment }. */
+  meta?: Record<string, unknown>
   /** Preserved on import; otherwise defaults to 'web'. */
   createdVia?: 'web' | 'api' | 'mcp'
 }
@@ -173,6 +179,8 @@ export function useSavePost() {
         p_tag_names: input.tagNames,
         p_media: p_media,
         p_created_via: input.createdVia ?? 'web',
+        p_post_type: input.type ?? 'post',
+        p_meta: input.meta ?? {},
       })
       if (error) throw error
       return data as string

@@ -4,7 +4,16 @@ import { exportProject, importBundle, parseImportJson } from '../lib/export'
 import { findExactDuplicate } from '../lib/dedupe'
 import { projectBlacklist } from '../lib/blacklist'
 import { useAssetUrl } from '../lib/media'
-import { STATUS_DOT, STATUS_LABEL, CATEGORY_LABELS, type PostCategory, type PostStatus } from '../lib/types'
+import {
+  STATUS_DOT,
+  STATUS_LABEL,
+  CATEGORY_LABELS,
+  POST_TYPES,
+  POST_TYPE_LABEL,
+  type PostCategory,
+  type PostStatus,
+  type PostType,
+} from '../lib/types'
 import type { PostListItem } from '../features/posts/api'
 import {
   applyNewAssets,
@@ -58,6 +67,7 @@ export default function ProjectDetailPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<PostStatus | ''>('')
   const [category, setCategory] = useState<PostCategory | ''>('')
+  const [type, setType] = useState<PostType | ''>('')
   const [menuOpen, setMenuOpen] = useState(false)
 
   const filters: PostFilters = {
@@ -65,6 +75,7 @@ export default function ProjectDetailPage() {
     search: useDeferredValue(search) || undefined,
     status,
     category,
+    type,
   }
   const posts = usePosts(filters)
 
@@ -423,6 +434,15 @@ export default function ProjectDetailPage() {
                   ))}
                 </Select>
               </div>
+              <div className="min-w-0 flex-1">
+                <Select value={type} onChange={(e) => setType(e.target.value as PostType | '')}>
+                  {(['', ...POST_TYPES] as Array<PostType | ''>).map((t) => (
+                    <option key={t || 'any'} value={t}>
+                      {t ? POST_TYPE_LABEL[t] : 'Any type'}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
 
             <input
@@ -447,9 +467,9 @@ export default function ProjectDetailPage() {
             ) : (posts.data ?? []).length === 0 ? (
               <div className="pg-glass rounded-[24px] p-7 text-center">
                 <p className="text-sm font-semibold text-ink-soft">
-                  {search || status || category ? 'No posts match these filters.' : 'No posts yet.'}
+                  {search || status || category || type ? 'No posts match these filters.' : 'No posts yet.'}
                 </p>
-                {!search && !status && !category ? (
+                {!search && !status && !category && !type ? (
                   <Button className="mt-4" onClick={() => navigate(`/projects/${p.id}/posts/new`)}>
                     + New post
                   </Button>
@@ -538,6 +558,8 @@ function PostRow({ post, logo }: { post: PostListItem; logo?: { r2_key: string }
           {post.title || post.content_text.slice(0, 70) || 'Untitled post'}
         </p>
         <p className="mt-0.5 text-[11px] font-bold text-ink-soft">
+          <span className="text-ink">{POST_TYPE_LABEL[post.post_type] ?? 'Post'}</span>
+          {' · '}
           {CATEGORY_LABELS[post.category]} · {STATUS_LABEL[post.status] ?? post.status} · via {post.created_via}
         </p>
       </div>

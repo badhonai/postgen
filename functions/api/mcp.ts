@@ -43,6 +43,19 @@ const TOOLS = [
           enum: ['promotional', 'educational', 'announcement', 'other'],
         },
         status: { type: 'string', enum: ['idea', 'draft'] },
+        type: {
+          type: 'string',
+          enum: ['post', 'thread', 'article', 'artwork', 'quote'],
+          description: 'post = one post, thread = the tweets array, article = long-form body, artwork = media + caption, quote = quote + source + comment',
+        },
+        meta: {
+          type: 'object',
+          description: 'Type-specific extras. quote: { source, comment }',
+          properties: {
+            source: { type: 'string' },
+            comment: { type: 'string' },
+          },
+        },
         tweets: {
           type: 'array',
           items: { type: 'string' },
@@ -64,6 +77,18 @@ const TOOLS = [
         post_id: { type: 'string' },
         title: { type: 'string' },
         status: { type: 'string', enum: ['idea', 'draft'] },
+        type: {
+          type: 'string',
+          enum: ['post', 'thread', 'article', 'artwork', 'quote'],
+        },
+        meta: {
+          type: 'object',
+          description: 'Type-specific extras. quote: { source, comment }',
+          properties: {
+            source: { type: 'string' },
+            comment: { type: 'string' },
+          },
+        },
         tweets: { type: 'array', items: { type: 'string' } },
         tag_names: { type: 'array', items: { type: 'string' } },
         allow_similar: { type: 'boolean', default: false },
@@ -138,9 +163,11 @@ async function callTool(
             projectId: args.project_id as string | undefined,
             title: args.title as string | undefined,
             category: args.category as 'promotional' | undefined,
+            type: args.type as agent.PostType | undefined,
             status: args.status as 'idea' | 'draft' | undefined,
             tweets: args.tweets as string[],
             tagNames: args.tag_names as string[] | undefined,
+            meta: (args.meta as Record<string, unknown> | undefined) ?? undefined,
             allowSimilar: args.allow_similar === true,
           }) },
       )
@@ -148,9 +175,11 @@ async function callTool(
       return toolText(
         { post: await agent.updateDraft(env, auth, via, String(args.post_id ?? ''), {
             title: args.title as string | undefined,
+            type: args.type as agent.PostType | undefined,
             status: args.status as 'idea' | 'draft' | undefined,
             tweets: args.tweets as string[] | undefined,
             tagNames: args.tag_names as string[] | undefined,
+            meta: (args.meta as Record<string, unknown> | undefined) ?? undefined,
             allowSimilar: args.allow_similar === true,
           }) },
       )

@@ -22,9 +22,11 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
       projectId: body.project_id as string | undefined,
       title: body.title as string | undefined,
       category: body.category as 'promotional' | undefined,
+      type: body.type as agent.PostType | undefined,
       status: body.status as 'idea' | 'draft' | undefined,
       tweets: body.tweets as string[],
       tagNames: body.tag_names as string[] | undefined,
+      meta: (body.meta as Record<string, unknown> | undefined) ?? undefined,
       allowSimilar: body.allow_similar === true,
     })
     return Response.json({ post }, { status: 201 })

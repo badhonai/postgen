@@ -68,6 +68,12 @@ export default function PostEditorPage() {
       const check = await checkDuplicates(tweets, {
         excludePostId: snap.postId,
         projectId: snap.projectId,
+        extraText:
+          snap.type === 'quote'
+            ? [String(snap.meta?.source ?? ''), String(snap.meta?.comment ?? '')]
+                .filter(Boolean)
+                .join('\n')
+            : undefined,
       })
       setSimilarBanner(hasBlockingDuplicates(check) ? check.similar : null)
       await savePost.mutateAsync({ ...snap, tweets, contentText: check.contentText, contentHash: check.contentHash })
@@ -142,6 +148,7 @@ export default function PostEditorPage() {
       ? {
           postId: postData.id,
           projectId: postData.project_id,
+          type: postData.post_type ?? 'post',
           category: postData.category,
           status: postData.status,
           title: postData.title,
@@ -152,11 +159,13 @@ export default function PostEditorPage() {
           media: postData.post_tweets.flatMap((t, i) =>
             (postData.mediaByTweet[t.id] ?? []).map((asset) => ({ tweetIndex: i, asset })),
           ),
+          meta: (postData.meta ?? {}) as Record<string, unknown>,
         }
       : projectId
         ? {
             postId: undefined,
             projectId,
+            type: 'post',
             category: 'promotional',
             status: 'draft',
             title: '',
@@ -165,6 +174,7 @@ export default function PostEditorPage() {
             contentText: '',
             contentHash: '',
             media: [],
+            meta: {},
           }
         : undefined
 
@@ -201,6 +211,13 @@ export default function PostEditorPage() {
       const check = await checkDuplicates(tweets, {
         excludePostId: input.postId,
         projectId: input.projectId,
+        // a quote is the quote + source + take — dedupe must see all of it
+        extraText:
+          input.type === 'quote'
+            ? [String(input.meta?.source ?? ''), String(input.meta?.comment ?? '')]
+                .filter(Boolean)
+                .join('\n')
+            : undefined,
       })
       if (hasBlockingDuplicates(check)) {
         setDupCheck(check)
