@@ -815,6 +815,8 @@ function PostRow({
     <SwipeRow left={swipeRight} right={swipeLeft}>
       <Link
         to={`/posts/${post.id}`}
+        draggable={false}
+        onDragStart={(e) => e.preventDefault()}
         className="pg-glass-strong flex items-center gap-3 rounded-[20px] p-2.5 pr-3.5 transition active:scale-[0.98]"
       >
         {cover}

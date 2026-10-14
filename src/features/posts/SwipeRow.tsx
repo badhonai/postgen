@@ -1,9 +1,11 @@
-import { useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 
 /** How far the card must travel before the action fires. */
 const THRESHOLD = 84
 /** Hard cap on the drag, with a rubber-band feel past it. */
 const MAX = 170
+/** Movement before the gesture commits to an axis. */
+const AXIS_SLOP = 6
 
 export type SwipeTone = 'approve' | 'publish' | 'delete'
 
@@ -54,13 +56,24 @@ function ToneIcon({ tone }: { tone: SwipeTone }) {
   )
 }
 
+type Drag = {
+  id: number
+  x0: number
+  y0: number
+  axis: 'none' | 'x' | 'y'
+  armed: boolean
+  last: number
+}
+
 /**
  * A card that answers to horizontal swipes: drag it right to expose `left`,
  * left to expose `right`. Past the threshold the action fires on release —
  * there is no half-open state to get stuck in.
  *
- * Vertical scrolling still works (`touch-action: pan-y`), and a horizontal
- * drag suppresses the click so the card doesn't also open.
+ * The drag is tracked on `window` rather than with pointer capture: capture
+ * retargets the follow-up click to the capturing element, which would stop a
+ * plain tap from opening the post. Vertical scrolling still works
+ * (`touch-action: pan-y`), and a horizontal drag suppresses the click.
  */
 export default function SwipeRow({
   left,
@@ -77,63 +90,71 @@ export default function SwipeRow({
 }) {
   const [dx, setDx] = useState(0)
   const [live, setLive] = useState(false)
-  const origin = useRef<{ x: number; y: number } | null>(null)
-  const axis = useRef<'none' | 'x' | 'y'>('none')
-  const dxRef = useRef(0)
-  const armedRef = useRef(false)
+  const drag = useRef<Drag | null>(null)
   const movedRef = useRef(false)
 
-  const write = (v: number) => {
-    dxRef.current = v
-    setDx(v)
-  }
+  // latest callbacks, so the window listeners below never need re-binding
+  const actions = useRef<{ left?: SwipeAction; right?: SwipeAction }>({})
+  useEffect(() => {
+    actions.current = { left, right }
+  }, [left, right])
+
+  const enabled = !disabled && (!!left || !!right)
+
+  useEffect(() => {
+    if (!enabled) return
+
+    const onMove = (e: PointerEvent) => {
+      const d = drag.current
+      if (!d || e.pointerId !== d.id) return
+      const ddx = e.clientX - d.x0
+      const ddy = e.clientY - d.y0
+      if (d.axis === 'none') {
+        if (Math.abs(ddx) > AXIS_SLOP && Math.abs(ddx) > Math.abs(ddy)) {
+          d.axis = 'x'
+          setLive(true)
+        } else if (Math.abs(ddy) > AXIS_SLOP) {
+          d.axis = 'y'
+          return
+        } else return
+      }
+      if (d.axis !== 'x') return
+      const raw = Math.max(-MAX, Math.min(MAX, ddx))
+      d.armed = Math.abs(raw) > THRESHOLD
+      d.last = raw
+      movedRef.current = Math.abs(raw) > 10
+      setDx(raw)
+    }
+
+    const settle = (commit: boolean) => (e: PointerEvent) => {
+      const d = drag.current
+      if (!d || e.pointerId !== d.id) return
+      const { armed, last } = d
+      drag.current = null
+      setLive(false)
+      setDx(0)
+      if (!commit || !armed) return
+      if (last < 0) actions.current.right?.onRun()
+      else actions.current.left?.onRun()
+    }
+
+    const onUp = settle(true)
+    const onCancel = settle(false)
+
+    window.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onCancel)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onCancel)
+    }
+  }, [enabled])
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (disabled || (!left && !right)) return
-    origin.current = { x: e.clientX, y: e.clientY }
-    axis.current = 'none'
-    armedRef.current = false
+    if (!enabled) return
+    drag.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, axis: 'none', armed: false, last: 0 }
     movedRef.current = false
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId)
-    } catch {
-      /* capture is best-effort */
-    }
-  }
-
-  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    const o = origin.current
-    if (!o) return
-    const ddx = e.clientX - o.x
-    const ddy = e.clientY - o.y
-    if (axis.current === 'none') {
-      if (Math.abs(ddx) > 6 && Math.abs(ddx) > Math.abs(ddy)) {
-        axis.current = 'x'
-        setLive(true)
-      } else if (Math.abs(ddy) > 6) {
-        axis.current = 'y'
-        return
-      } else return
-    }
-    if (axis.current !== 'x') return
-    const raw = Math.max(-MAX, Math.min(MAX, ddx))
-    movedRef.current = Math.abs(raw) > 10
-    armedRef.current = Math.abs(raw) > THRESHOLD
-    write(raw)
-  }
-
-  const onPointerUp = () => {
-    const o = origin.current
-    origin.current = null
-    axis.current = 'none'
-    setLive(false)
-    if (!o) return
-    const offset = dxRef.current
-    const armed = armedRef.current
-    write(0)
-    if (!armed) return
-    if (offset < 0) right?.onRun()
-    else left?.onRun()
   }
 
   /** A finished drag must not fall through and open the post. */
@@ -149,7 +170,9 @@ export default function SwipeRow({
       aria-hidden="true"
       className={`absolute inset-y-0 flex ${side === 'left' ? 'left-0' : 'right-0'}`}
     >
-      <div className={`flex h-full w-[92px] flex-col items-center justify-center gap-1 text-[11px] font-extrabold ${TONE_CLASS[action.tone]}`}>
+      <div
+        className={`flex h-full w-[92px] flex-col items-center justify-center gap-1 text-[11px] font-extrabold ${TONE_CLASS[action.tone]}`}
+      >
         <ToneIcon tone={action.tone} />
         {action.label}
       </div>
@@ -162,9 +185,7 @@ export default function SwipeRow({
       {right ? layer(right, 'right') : null}
       <div
         onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onDragStart={(e) => e.preventDefault()}
         className="relative touch-pan-y select-none"
         style={{
           transform: `translate3d(${dx}px,0,0)`,
