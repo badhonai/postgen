@@ -466,7 +466,10 @@ export async function updateDraft(
 ) {
   const existing = await getPost(env, auth.userId, id)
   const status = assertDraftsOnly(patch.status)
-  const type = assertPostType(patch.type)
+  // a patch that omits `type` must keep the post's current type — otherwise
+  // append_to_thread (which only sends tweets) silently turned every
+  // article/artwork/quote into a plain post.
+  const type = assertPostType(patch.type ?? (existing as { post_type?: string }).post_type ?? 'post')
   const tweets = patch.tweets ? assertTweets(patch.tweets) : (existing.tweets as string[])
   const meta = patch.meta ?? ((existing.meta ?? {}) as Record<string, unknown>)
   const media = assertMedia(patch.media)

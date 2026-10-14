@@ -411,6 +411,34 @@ async function main() {
   })
   check('PATCH /posts/:id', r5.status === 200)
 
+  // a typed post must keep its type through patches that don't mention it
+  const stamp2 = Math.random().toString(36).slice(2, 8)
+  const typed = await api('/api/v1/posts', {
+    method: 'POST',
+    headers: agent,
+    body: JSON.stringify({
+      project_id: project.id,
+      type: 'article',
+      title: `Typed ${stamp2}`,
+      tweets: [`typed body ${stamp2}`],
+    }),
+  })
+  const typedId = (await typed.json()).post?.id
+  const barePatch = await api(`/api/v1/posts/${typedId}`, {
+    method: 'PATCH',
+    headers: agent,
+    body: JSON.stringify({ title: `Renamed ${stamp2}` }),
+  })
+  const bare = await barePatch.json()
+  check('PATCH without type keeps post_type', barePatch.status === 200 && bare.post?.post_type === 'article', `got ${bare.post?.post_type}`)
+  const append = await api(`/api/v1/posts/${typedId}/tweets`, {
+    method: 'POST',
+    headers: agent,
+    body: JSON.stringify({ tweets: [`appended ${stamp2}`] }),
+  })
+  const appended = await append.json()
+  check('append_to_thread keeps post_type', append.status === 200 && appended.post?.post_type === 'article', `got ${appended.post?.post_type}`)
+
   const r6 = await api(`/api/v1/posts/${postIdAgent}/append`, {
     method: 'POST',
     headers: agent,
