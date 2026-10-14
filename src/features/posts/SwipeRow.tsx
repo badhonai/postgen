@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
 
 /** How far the card must travel before the action fires. */
 const THRESHOLD = 84
@@ -151,14 +158,14 @@ export default function SwipeRow({
     }
   }, [enabled])
 
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!enabled) return
     drag.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, axis: 'none', armed: false, last: 0 }
     movedRef.current = false
   }
 
   /** A finished drag must not fall through and open the post. */
-  const onClickCapture = (e: MouseEvent) => {
+  const onClickCapture = (e: ReactMouseEvent) => {
     if (!movedRef.current) return
     e.preventDefault()
     e.stopPropagation()
