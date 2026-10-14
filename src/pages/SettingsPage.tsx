@@ -8,6 +8,7 @@ import {
   useRevokeApiKey,
 } from '../features/agents/keys'
 import { Button, ErrorBox, Input, Spinner } from '../components/ui'
+import { buildAgentSetupText, buildMcpConfig } from '../features/agents/agentSetup'
 import { ACCENTS, applyAccent, getAccent, type AccentId } from '../lib/theme'
 
 const SWATCH: Record<AccentId, string> = {
@@ -140,11 +141,55 @@ export default function SettingsPage() {
 
   const [keyName, setKeyName] = useState('')
   const [freshKey, setFreshKey] = useState<string | null>(null)
+  const [agentPack, setAgentPack] = useState<string | null>(null)
+  const [agentKey, setAgentKey] = useState<string | null>(null)
+  const [agentCopied, setAgentCopied] = useState(false)
   const [accent, setAccent] = useState<AccentId>(getAccent)
-  const [open, setOpen] = useState<'keys' | 'mcp' | 'rest' | null>(null)
+  const [open, setOpen] = useState<'agent' | 'keys' | 'mcp' | 'rest' | null>(null)
 
   const origin = window.location.origin
-  const toggle = (id: 'keys' | 'mcp' | 'rest') => setOpen((o) => (o === id ? null : id))
+  const toggle = (id: 'agent' | 'keys' | 'mcp' | 'rest') => setOpen((o) => (o === id ? null : id))
+
+  async function copyText(text: string): Promise<boolean> {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /** Build the paste-pack from a key we already hold (no new key created). */
+  async function applyKeyToAgentPack(key: string) {
+    const text = buildAgentSetupText(origin, key)
+    setAgentKey(key)
+    setAgentPack(text)
+    setOpen('agent')
+    if (await copyText(text)) {
+      setAgentCopied(true)
+      window.setTimeout(() => setAgentCopied(false), 2000)
+    }
+  }
+
+  /** One click: mint a fresh key, embed it in the pack, and copy the pack. */
+  function createAgentPack() {
+    if (!user) return
+    if (agentPack) {
+      void copyText(agentPack).then((ok) => {
+        if (ok) {
+          setAgentCopied(true)
+          window.setTimeout(() => setAgentCopied(false), 2000)
+        }
+      })
+      return
+    }
+    createKey.mutate(
+      { name: 'Agent (one-paste)', userId: user.id },
+      { onSuccess: ({ key }) => void applyKeyToAgentPack(key) },
+    )
+  }
+
+  const displayKey = agentKey ?? freshKey ?? 'pgk_live_…'
 
   return (
     <main className="pg-shell">
@@ -220,6 +265,78 @@ export default function SettingsPage() {
           <div className="pg-glass divide-y divide-white/50 overflow-hidden rounded-[22px]">
             <GroupTitle>AI</GroupTitle>
             <Row
+              label="Copy for your agent"
+              value="One paste"
+              chevron
+              onClick={() => toggle('agent')}
+              icon={
+                <RowIcon tint="bg-mint/70">
+                  <svg {...ROW_ICON}>
+                    <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
+                    <circle cx="12" cy="12" r="3.2" />
+                  </svg>
+                </RowIcon>
+              }
+            />
+            {open === 'agent' ? (
+              <div className="space-y-3 px-4 pt-1 pb-4">
+                <p className="text-xs leading-relaxed font-semibold text-ink-soft">
+                  One click creates a fresh API key and copies a ready-made brief for your AI:
+                  the MCP link, the REST API, every tool, and the rules (drafts only, no repeats,
+                  use my brand voice). Paste it into any agent chat — it connects, shows you your
+                  projects, and waits for you to say what to write.{' '}
+                  <strong className="text-ink">No explaining PostGen in chat.</strong>
+                </p>
+                <Button
+                  className="w-full"
+                  disabled={createKey.isPending || !user}
+                  onClick={createAgentPack}
+                >
+                  {createKey.isPending
+                    ? 'Creating key…'
+                    : agentCopied
+                      ? 'Copied ✓ — now paste it to your agent'
+                      : agentPack
+                        ? 'Copy again'
+                        : 'Create key & copy for my agent'}
+                </Button>
+                {createKey.error ? (
+                  <ErrorBox
+                    message={createKey.error instanceof Error ? createKey.error.message : 'Failed to create key'}
+                  />
+                ) : null}
+                {agentPack ? (
+                  <>
+                    <CopyBlock title="Paste this into your agent chat" text={agentPack} />
+                    <p className="text-[11px] leading-relaxed font-semibold text-ink-soft">
+                      ⚠️ This text contains a live API key — paste it only into your own agent,
+                      never share it publicly. Revoke it anytime under API keys below.
+                    </p>
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-ink underline underline-offset-2 disabled:opacity-50"
+                      disabled={createKey.isPending || !user}
+                      onClick={() => {
+                        if (!user) return
+                        createKey.mutate(
+                          { name: 'Agent (one-paste)', userId: user.id },
+                          { onSuccess: ({ key }) => void applyKeyToAgentPack(key) },
+                        )
+                      }}
+                    >
+                      Make a new one (new key)
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-[11px] font-semibold text-ink-soft">
+                    Each copy uses its own key named “Agent (one-paste)”, so you can revoke just
+                    that agent later without touching your other keys.
+                  </p>
+                )}
+              </div>
+            ) : null}
+
+            <Row
               label="API keys"
               badge={(keys.data ?? []).filter((k) => !k.revoked_at).length}
               chevron
@@ -282,9 +399,18 @@ export default function SettingsPage() {
                     <code className="mt-1 block text-xs font-semibold break-all text-emerald-900">
                       {freshKey}
                     </code>
-                    <Button variant="ghost" className="mt-2 px-2.5 py-1 text-xs" onClick={() => setFreshKey(null)}>
-                      I saved it — hide
-                    </Button>
+                    <span className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        variant="ghost"
+                        className="px-2.5 py-1 text-xs"
+                        onClick={() => void applyKeyToAgentPack(freshKey)}
+                      >
+                        Copy agent setup with this key
+                      </Button>
+                      <Button variant="ghost" className="px-2.5 py-1 text-xs" onClick={() => setFreshKey(null)}>
+                        I saved it — hide
+                      </Button>
+                    </span>
                   </div>
                 ) : null}
 
@@ -372,13 +498,19 @@ export default function SettingsPage() {
             />
             {open === 'mcp' ? (
               <div className="space-y-3 px-4 pt-1 pb-4">
+                {!agentKey && !freshKey ? (
+                  <p className="text-[11px] font-semibold text-ink-soft">
+                    Tip: “Copy for your agent” above creates a key and fills it in here automatically.
+                    Existing keys can't be shown again — only their hash is stored.
+                  </p>
+                ) : null}
                 <CopyBlock
                   title="Claude Desktop / Claude Code (via mcp-remote)"
-                  text={`npx mcp-remote ${origin}/api/mcp \\\n  --header "Authorization: Bearer pgk_live_…"`}
+                  text={`npx mcp-remote ${origin}/api/mcp \\\n  --header "Authorization: Bearer ${displayKey}"`}
                 />
                 <CopyBlock
                   title="Generic client config (Streamable HTTP)"
-                  text={`{\n  "mcpServers": {\n    "postgen": {\n      "type": "http",\n      "url": "${origin}/api/mcp",\n      "headers": {\n        "Authorization": "Bearer pgk_live_…"\n      }\n    }\n  }\n}`}
+                  text={buildMcpConfig(origin, displayKey)}
                 />
               </div>
             ) : null}
@@ -400,7 +532,7 @@ export default function SettingsPage() {
               <div className="space-y-3 px-4 pt-1 pb-4">
                 <CopyBlock
                   title="Quick test (curl)"
-                  text={`curl ${origin}/api/v1/projects \\\n  -H "Authorization: Bearer pgk_live_…"`}
+                  text={`curl ${origin}/api/v1/projects \\\n  -H "Authorization: Bearer ${displayKey}"`}
                 />
                 <CopyBlock title="OpenAPI spec (connectors / codegen)" text={`${origin}/api/v1`} />
                 <p className="text-[11px] font-semibold text-ink-soft">

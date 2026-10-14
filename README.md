@@ -240,6 +240,14 @@ Media lives in **R2** (free tier) and is never public. Flow:
 
 External AI tools connect **into** PostGen and draft posts (drafts-only — you approve/publish).
 
+- **Copy for your agent (Settings → AI)** — one click creates a fresh API key
+  (`Agent (one-paste)`) and copies a ready-made brief to paste into any agent
+  chat: the MCP link + REST/OpenAPI URLs, the key, all 11 tools, and the rules
+  (drafts-only, no-repeat, brand voice/blacklist, official links only). The agent
+  connects, lists your projects, and waits — no explaining PostGen in chat. The
+  pack text lives in `src/features/agents/agentSetup.ts`; re-copying reuses the
+  same key, “Make a new one” mints another. Existing keys can never be embedded
+  (only their hash is stored), which is why the pack always uses a fresh key.
 - **REST**: `https://postgen.pages.dev/api/v1` — OpenAPI 3.1 spec at the same URL.
   Auth: `Authorization: Bearer pgk_live_…` (create keys in **Settings → AI connections**).
 - **MCP** (Streamable HTTP): `https://postgen.pages.dev/api/mcp` — 11 tools:
