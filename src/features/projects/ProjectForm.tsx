@@ -345,19 +345,23 @@ export default function ProjectForm({
           <Field label="Official links">
             <div className="space-y-2">
               {links.map((link, i) => (
-                <div key={i} className="flex gap-2">
+                <div key={i} className="flex items-center gap-2">
                   <Input
-                    className="w-32 shrink-0"
+                    className="w-[84px] shrink-0"
                     value={link.label}
                     onChange={(e) => {
                       const next = [...links]
                       next[i] = { ...next[i], label: e.target.value }
                       setLinks(next)
                     }}
-                    placeholder="Discord"
+                    placeholder="Label"
                   />
                   <Input
-                    type="url"
+                    className="min-w-0 flex-1"
+                    inputMode="url"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     value={link.url}
                     onChange={(e) => {
                       const next = [...links]
@@ -366,13 +370,14 @@ export default function ProjectForm({
                     }}
                     placeholder="https://…"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
+                    aria-label="Remove link"
                     onClick={() => setLinks(links.filter((_, j) => j !== i))}
+                    className="pg-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-ink-soft transition active:scale-95"
                   >
                     ✕
-                  </Button>
+                  </button>
                 </div>
               ))}
               <Button

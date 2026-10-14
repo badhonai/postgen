@@ -13,7 +13,10 @@ export type PostListItem = Pick<
   | 'content_text'
   | 'created_at'
   | 'updated_at'
->
+> & {
+  /** First image asset attached to the post, for the 16:9 list thumbnail. */
+  cover?: { r2_key: string; mime_type: string; filename: string } | null
+}
 
 export type PostFilters = {
   projectId?: string
@@ -32,7 +35,8 @@ export function usePosts(filters: PostFilters = {}) {
       let q = supabase!
         .from('posts')
         .select(
-          'id, project_id, category, status, title, created_via, content_text, created_at, updated_at',
+          'id, project_id, category, status, title, created_via, content_text, created_at, updated_at,' +
+            ' post_tweets(id, post_media(asset_id, assets(id, r2_key, mime_type, filename)))',
         )
         .order('updated_at', { ascending: false })
 
@@ -60,7 +64,18 @@ export function usePosts(filters: PostFilters = {}) {
 
       const { data, error } = await q
       if (error) throw error
-      return data as unknown as PostListItem[]
+      // Pick the first image asset attached anywhere in the thread as the list thumbnail.
+      const rows = ((data ?? []) as unknown as Array<PostListItem & {
+        post_tweets?: Array<{ post_media?: Array<{ assets?: PostListItem['cover'] | null } | null> | null }> | null
+      }>).map((row) => {
+        const cover = (row.post_tweets ?? [])
+          .flatMap((t) => t.post_media ?? [])
+          .map((m) => m?.assets ?? null)
+          .find((a) => a && a.mime_type?.startsWith('image/'))
+        const { post_tweets: _drop, ...rest } = row
+        return { ...rest, cover: cover ?? null }
+      })
+      return rows
     },
   })
 }

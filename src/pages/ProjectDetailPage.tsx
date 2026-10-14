@@ -58,6 +58,7 @@ export default function ProjectDetailPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<PostStatus | ''>('')
   const [category, setCategory] = useState<PostCategory | ''>('')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const filters: PostFilters = {
     projectId: id,
@@ -346,7 +347,65 @@ export default function ProjectDetailPage() {
                 placeholder="Search posts…"
                 className="min-w-0 flex-1"
               />
-              <div className="w-[122px] shrink-0">
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  aria-label="Post actions"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  className="pg-glass-strong flex h-11 w-11 items-center justify-center rounded-2xl text-lg font-bold text-ink transition active:scale-95"
+                >
+                  ⋯
+                  </button>
+                {menuOpen ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close menu"
+                      className="fixed inset-0 z-30 cursor-default"
+                      onClick={() => setMenuOpen(false)}
+                    />
+                    <div className="pg-glass-strong absolute right-0 z-40 mt-2 w-46 overflow-hidden rounded-2xl p-1.5 shadow-[0_18px_40px_rgba(70,60,130,0.22)]">
+                      <button
+                        type="button"
+                        disabled={busyTransfer}
+                        onClick={() => {
+                          setMenuOpen(false)
+                          void handleExport('md')
+                        }}
+                        className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-bold text-ink transition hover:bg-white/70 disabled:opacity-50"
+                      >
+                        Export .md
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyTransfer}
+                        onClick={() => {
+                          setMenuOpen(false)
+                          void handleExport('json')
+                        }}
+                        className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-bold text-ink transition hover:bg-white/70 disabled:opacity-50"
+                      >
+                        Export .json
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyTransfer}
+                        onClick={() => {
+                          setMenuOpen(false)
+                          importInputRef.current?.click()
+                        }}
+                        className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-bold text-ink transition hover:bg-white/70 disabled:opacity-50"
+                      >
+                        Import
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
                 <Select value={category} onChange={(e) => setCategory(e.target.value as PostCategory | '')}>
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -355,42 +414,27 @@ export default function ProjectDetailPage() {
                   ))}
                 </Select>
               </div>
+              <div className="min-w-0 flex-1">
+                <Select value={status} onChange={(e) => setStatus(e.target.value as PostStatus | '')}>
+                  {STATUSES.map((s) => (
+                    <option key={s || 'any'} value={s}>
+                      {s ? STATUS_LABEL[s] : 'Any status'}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {STATUSES.map((s) => (
-                <button
-                  key={s || 'any'}
-                  type="button"
-                  className={`pg-chip text-xs ${status === s ? 'pg-chip-active' : ''}`}
-                  onClick={() => setStatus(s)}
-                >
-                  {s ? STATUS_LABEL[s] : 'Any status'}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button variant="ghost" className="px-3.5 py-1.5 text-xs" disabled={busyTransfer} onClick={() => void handleExport('md')}>
-                Export .md
-              </Button>
-              <Button variant="ghost" className="px-3.5 py-1.5 text-xs" disabled={busyTransfer} onClick={() => void handleExport('json')}>
-                Export .json
-              </Button>
-              <Button variant="ghost" className="px-3.5 py-1.5 text-xs" disabled={busyTransfer} onClick={() => importInputRef.current?.click()}>
-                Import
-              </Button>
-              <input
-                ref={importInputRef}
-                type="file"
-                accept="application/json"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) void handleImport(file)
-                }}
-              />
-            </div>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) void handleImport(file)
+              }}
+            />
 
             {posts.isPending ? (
               <div className="space-y-2.5">
@@ -414,7 +458,7 @@ export default function ProjectDetailPage() {
             ) : (
               <div className="space-y-2.5">
                 {(posts.data ?? []).map((post) => (
-                  <PostRow key={post.id} post={post} />
+                  <PostRow key={post.id} post={post} logo={p.logo} />
                 ))}
               </div>
             )}
@@ -478,12 +522,13 @@ export default function ProjectDetailPage() {
   )
 }
 
-function PostRow({ post }: { post: PostListItem }) {
+function PostRow({ post, logo }: { post: PostListItem; logo?: { r2_key: string } | null }) {
   return (
     <Link
       to={`/posts/${post.id}`}
-      className="pg-glass flex items-center gap-3 rounded-[20px] px-4 py-3.5 transition active:scale-[0.98]"
+      className="pg-glass flex items-center gap-3 rounded-[20px] p-2.5 pr-3.5 transition active:scale-[0.98]"
     >
+      <PostCover cover={post.cover} logo={logo} />
       <span
         className="h-2.5 w-2.5 shrink-0 rounded-full"
         style={{ background: STATUS_DOT[post.status] ?? '#a09cc4' }}
@@ -500,6 +545,39 @@ function PostRow({ post }: { post: PostListItem }) {
         <path d="M9 18l6-6-6-6" />
       </svg>
     </Link>
+  )
+}
+
+/** 16:9 thumbnail for a post row: the post's own first image, else the project logo. */
+function PostCover({
+  cover,
+  logo,
+}: {
+  cover?: PostListItem['cover']
+  logo?: { r2_key: string } | null
+}) {
+  const key = cover?.r2_key ?? logo?.r2_key ?? null
+  const url = useAssetUrl(key)
+  const [broken, setBroken] = useState(false)
+  return (
+    <div className="relative aspect-video w-[104px] shrink-0 overflow-hidden rounded-[14px] bg-white/50">
+      {url.data && !broken ? (
+        <img
+          src={url.data}
+          alt=""
+          onError={() => setBroken(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/70 to-white/25">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-ink-soft/50">
+            <rect x="3" y="4" width="18" height="16" rx="3" />
+            <circle cx="8.5" cy="9.5" r="1.8" />
+            <path d="M21 16l-5.5-5L7 20" />
+          </svg>
+        </div>
+      )}
+    </div>
   )
 }
 
