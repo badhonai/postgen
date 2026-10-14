@@ -230,6 +230,17 @@ export default function PostEditorPage() {
     }
   }
 
+  /** X's web composer, prefilled. (X has no URL param for media, so the
+   *  attached images are offered full-size to attach by hand.) */
+  const postToX = () => {
+    if (!postData) return
+    const text =
+      postData.post_tweets.length === 1
+        ? postData.post_tweets[0].content
+        : numberedTweets(postData.post_tweets.map((t) => t.content))
+    window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
+  }
+
   const copy = async (text: string, key: string) => {
     await navigator.clipboard.writeText(text)
     setCopied(key)
@@ -265,6 +276,14 @@ export default function PostEditorPage() {
           </div>
           {!isNew && postData ? (
             <>
+              <Button
+                variant="accent"
+                className="px-3.5 py-2 text-xs"
+                onClick={postToX}
+                title="Open X with this post's text ready to send"
+              >
+                Post on X
+              </Button>
               <Button
                 variant="ghost"
                 className="px-3.5 py-2 text-xs"

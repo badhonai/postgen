@@ -34,11 +34,19 @@ function Logo({ r2Key, size }: { r2Key?: string | null; size: number }) {
 }
 
 /** Big mint hero tile — most recent project, with its posts as a mini checklist. */
-export function HeroTile({ project, posts }: { project: Project; posts: PostSummary[] }) {
+export function HeroTile({
+  project,
+  posts,
+  statusTab,
+}: {
+  project: Project
+  posts: PostSummary[]
+  statusTab: string
+}) {
   const shown = posts.slice(0, 3)
   const more = posts.length - shown.length
   return (
-    <Link to={`/projects/${project.id}`} className="pg-tile relative block bg-mint p-5">
+    <Link to={`/projects/${project.id}?status=${statusTab}`} className="pg-tile relative block bg-mint p-5">
       <span className="absolute top-4 right-4 rounded-full bg-white/55 px-2.5 py-1 text-[10px] font-bold text-ink">
         {posts.length} post{posts.length === 1 ? '' : 's'}
       </span>
@@ -101,13 +109,18 @@ export function SmallTile({
   project,
   color,
   postCount,
+  statusTab,
 }: {
   project: Project
   color: (typeof TILE_COLORS)[number]
   postCount: number
+  statusTab: string
 }) {
   return (
-    <Link to={`/projects/${project.id}`} className={`pg-tile flex min-h-[150px] flex-col justify-between ${color} p-4`}>
+    <Link
+      to={`/projects/${project.id}?status=${statusTab}`}
+      className={`pg-tile flex min-h-[150px] flex-col justify-between ${color} p-4`}
+    >
       <div className="flex items-start justify-between gap-2">
         <Logo r2Key={project.logo?.r2_key} size={42} />
         <span className="rounded-full bg-white/55 px-2.5 py-1 text-[10px] font-bold text-ink">

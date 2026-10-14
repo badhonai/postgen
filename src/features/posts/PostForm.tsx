@@ -552,7 +552,15 @@ function AttachedImage({ asset, onRemove }: { asset: Asset; onRemove: () => void
   return (
     <div className="relative aspect-video w-full overflow-hidden rounded-[18px] bg-white/50">
       {url.data ? (
-        <img src={url.data} alt={asset.alt_text ?? asset.filename} className="h-full w-full object-cover" />
+        <a
+          href={url.data}
+          target="_blank"
+          rel="noreferrer"
+          title="Open full size to attach on X"
+          className="block h-full w-full"
+        >
+          <img src={url.data} alt={asset.alt_text ?? asset.filename} className="h-full w-full object-cover" />
+        </a>
       ) : (
         <div className="flex h-full w-full items-center justify-center text-3xl">🎨</div>
       )}

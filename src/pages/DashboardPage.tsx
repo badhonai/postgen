@@ -185,7 +185,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              <HeroTile project={hero} posts={postsByProject.get(hero.id) ?? []} />
+              <HeroTile project={hero} posts={postsByProject.get(hero.id) ?? []} statusTab={filter === 'all' ? 'approved' : filter} />
               {rest.length > 0 ? (
                 <div className="grid grid-cols-2 gap-3.5">
                   {rest.map((p, i) => (
@@ -194,6 +194,7 @@ export default function DashboardPage() {
                       project={p}
                       color={TILE_COLORS[(i + 1) % TILE_COLORS.length]}
                       postCount={(postsByProject.get(p.id) ?? []).length}
+                      statusTab={filter === 'all' ? 'approved' : filter}
                     />
                   ))}
                 </div>

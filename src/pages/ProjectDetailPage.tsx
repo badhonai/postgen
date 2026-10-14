@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { exportProject, importBundle, parseImportJson } from '../lib/export'
 import { findExactDuplicate } from '../lib/dedupe'
 import { projectBlacklist } from '../lib/blacklist'
@@ -35,8 +35,23 @@ import SwipeRow, { type SwipeAction } from '../features/posts/SwipeRow'
 import { Button, ErrorBox, Input, Select, Skeleton, Spinner } from '../components/ui'
 import { cn } from '../lib/cn'
 
-const STATUSES: Array<PostStatus | ''> = ['', 'idea', 'draft', 'approved', 'scheduled', 'published', 'archived']
 const CATEGORIES: Array<PostCategory | ''> = ['', ...(Object.keys(CATEGORY_LABELS) as PostCategory[])]
+
+/**
+ * Status tabs across the top of the posts list. Approved leads on purpose:
+ * the common flow is open a project, pick an approved post, and send it out,
+ * so that is the tab a project opens on.
+ */
+const STATUS_TABS = [
+  { id: 'all', label: 'All' },
+  { id: 'draft', label: 'Draft' },
+  { id: 'approved', label: 'Approved' },
+  { id: 'published', label: 'Published' },
+] as const
+type StatusTab = (typeof STATUS_TABS)[number]['id']
+
+const DEFAULT_STATUS_TAB: StatusTab = 'approved'
+const isStatusTab = (v: string | null): v is StatusTab => STATUS_TABS.some((t) => t.id === v)
 
 function SectionTitle({ icon, title, tint }: { icon: ReactNode; title: string; tint: string }) {
   return (
@@ -73,7 +88,14 @@ export default function ProjectDetailPage() {
   const importInputRef = useRef<HTMLInputElement>(null)
 
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<PostStatus | ''>('')
+  const [params, setParams] = useSearchParams()
+  const statusTab: StatusTab = isStatusTab(params.get('status')) ? (params.get('status') as StatusTab) : DEFAULT_STATUS_TAB
+  const setStatusTab = (next: StatusTab) => {
+    const q = new URLSearchParams(params)
+    if (next === DEFAULT_STATUS_TAB) q.delete('status')
+    else q.set('status', next)
+    setParams(q, { replace: true })
+  }
   const [category, setCategory] = useState<PostCategory | ''>('')
   const [type, setType] = useState<PostType | ''>('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -85,7 +107,7 @@ export default function ProjectDetailPage() {
   const filters: PostFilters = {
     projectId: id,
     search: useDeferredValue(search) || undefined,
-    status,
+    status: statusTab === 'all' ? '' : statusTab,
     category,
     type,
   }
@@ -526,21 +548,35 @@ export default function ProjectDetailPage() {
               </div>
             </div>
 
+            <div
+              role="tablist"
+              aria-label="Post status"
+              className="pg-glass flex gap-1 rounded-full p-1"
+            >
+              {STATUS_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={statusTab === t.id}
+                  onClick={() => setStatusTab(t.id)}
+                  className={`flex-1 rounded-full px-1 py-2 text-[13px] font-extrabold transition ${
+                    statusTab === t.id
+                      ? 'bg-butter text-ink shadow-[0_2px_10px_rgba(251,193,60,0.45)]'
+                      : 'text-ink-soft'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
             <div className="flex gap-2">
               <div className="min-w-0 flex-1">
                 <Select value={category} onChange={(e) => setCategory(e.target.value as PostCategory | '')}>
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
                       {c ? CATEGORY_LABELS[c] : 'Category'}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="min-w-0 flex-1">
-                <Select value={status} onChange={(e) => setStatus(e.target.value as PostStatus | '')}>
-                  {STATUSES.map((s) => (
-                    <option key={s || 'any'} value={s}>
-                      {s ? STATUS_LABEL[s] : 'Any status'}
                     </option>
                   ))}
                 </Select>
@@ -643,9 +679,9 @@ export default function ProjectDetailPage() {
             ) : (posts.data ?? []).length === 0 ? (
               <div className="pg-glass rounded-[24px] p-7 text-center">
                 <p className="text-sm font-semibold text-ink-soft">
-                  {search || status || category || type ? 'No posts match these filters.' : 'No posts yet.'}
+                  {search || statusTab !== 'all' || category || type ? 'No posts match these filters.' : 'No posts yet.'}
                 </p>
-                {!search && !status && !category && !type ? (
+                {!search && statusTab === 'all' && !category && !type ? (
                   <Button className="mt-4" onClick={() => navigate(`/projects/${p.id}/posts/new`)}>
                     + New post
                   </Button>
