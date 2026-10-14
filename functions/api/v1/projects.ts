@@ -24,7 +24,7 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
       custom_instructions: body.custom_instructions as string | undefined,
       official_links: body.official_links,
     })
-    await agent.logActivity(ctx.env, auth, 'project.create', { table: 'projects', id: project.id }, {
+    await agent.logActivity(ctx.env, auth, 'rest', 'project.create', { table: 'projects', id: project.id }, {
       name: project.name,
     })
     return Response.json({ project }, { status: 201 })

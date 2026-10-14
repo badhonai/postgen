@@ -26,7 +26,7 @@ export function onRequestPatch(ctx: Ctx): Promise<Response> {
       custom_instructions: body.custom_instructions as string | undefined,
       official_links: body.official_links,
     })
-    await agent.logActivity(ctx.env, auth, 'project.update', { table: 'projects', id }, undefined)
+    await agent.logActivity(ctx.env, auth, 'rest', 'project.update', { table: 'projects', id }, undefined)
     return Response.json({ project })
   })
 }

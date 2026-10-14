@@ -71,6 +71,7 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
     await agent.logActivity(
       ctx.env,
       auth,
+      'rest',
       'asset.upload',
       { table: 'assets', id: asset.id },
       { filename: asset.filename },

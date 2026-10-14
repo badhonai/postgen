@@ -55,21 +55,50 @@ function assertBlacklist(brandVoice: unknown, text: string): void {
 
 // ────────────────────────────── activity ──────────────────────────────
 
+export type AgentSurface = 'rest' | 'mcp'
+
+/** CreatedVia says 'api'; the audit enum calls the same thing 'rest'. */
+export function surfaceOf(via: CreatedVia): AgentSurface {
+  return via === 'mcp' ? 'mcp' : 'rest'
+}
+
+/**
+ * One row in the agent audit feed.
+ *
+ * The table is deliberately post-centric — surface, action, and an optional
+ * target_post_id — with everything else carried in a jsonb `request` blob, so
+ * non-post targets (projects, prompts, keys) ride along there rather than in
+ * columns that do not exist.
+ *
+ * This used to insert `key_id`, `target_table`, `target_id` and `metadata`,
+ * none of which are columns of agent_activity, and it ignored the error — so
+ * the insert failed on every single call and the feed was silently empty.
+ * Errors are still swallowed (the audit trail must never break the caller's
+ * request) but they are now logged.
+ */
 export async function logActivity(
   env: Env,
   auth: AgentAuth,
+  surface: AgentSurface,
   action: string,
-  target: { table?: string; id?: string },
+  target: { table?: string; id?: string } = {},
   metadata?: unknown,
 ): Promise<void> {
-  await db(env).from('agent_activity').insert({
+  const request: Record<string, unknown> = {
+    ...(target.table ? { table: target.table } : {}),
+    ...(target.id ? { id: target.id } : {}),
+    ...(metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>) : {}),
+  }
+  const { error } = await db(env).from('agent_activity').insert({
     user_id: auth.userId,
-    key_id: auth.keyId,
+    api_key_id: auth.keyId,
+    surface,
     action,
-    target_table: target.table ?? null,
-    target_id: target.id ?? null,
-    metadata: metadata ?? null,
+    // only a real post id can satisfy the FK
+    target_post_id: target.table === 'posts' ? target.id ?? null : null,
+    request,
   })
+  if (error) console.error('agent_activity insert failed:', error.message)
 }
 
 // ────────────────────────────── projects ──────────────────────────────
@@ -454,7 +483,7 @@ export async function createDraft(
   })
   if (error) fail(error)
 
-  await logActivity(env, auth, 'post.create', { table: 'posts', id: postId as string }, { via, title: input.title ?? '' })
+  await logActivity(env, auth, surfaceOf(via), 'post.create', { table: 'posts', id: postId as string }, { via, title: input.title ?? '' })
   return getPost(env, auth.userId, postId as string)
 }
 
@@ -508,7 +537,7 @@ export async function updateDraft(
   })
   if (error) fail(error)
 
-  await logActivity(env, auth, 'post.update', { table: 'posts', id }, { via })
+  await logActivity(env, auth, surfaceOf(via), 'post.update', { table: 'posts', id }, { via })
   return getPost(env, auth.userId, id)
 }
 
@@ -561,7 +590,7 @@ export async function addKnowledge(
     .single()
   if (error) fail(error)
 
-  await logActivity(env, auth, 'knowledge.create', { table: 'knowledge', id: data.id }, { title })
+  await logActivity(env, auth, 'rest', 'knowledge.create', { table: 'knowledge', id: data.id }, { title })
   return data
 }
 
@@ -763,8 +792,7 @@ export async function createImagePrompt(
     .single()
   if (error) fail(error)
   const created = data as ImagePromptRow
-  await logActivity(env, auth, 'image_prompt.create', { table: 'image_prompts', id: created.id }, {
-    via,
+  await logActivity(env, auth, surfaceOf(via), 'image_prompt.create', { table: 'image_prompts', id: created.id }, {
     name: created.name,
     references: row.reference_asset_ids.length,
   })
@@ -793,8 +821,7 @@ export async function updateImagePrompt(
     fail(error)
   }
   const updated = data as ImagePromptRow
-  await logActivity(env, auth, 'image_prompt.update', { table: 'image_prompts', id: updated.id }, {
-    via,
+  await logActivity(env, auth, surfaceOf(via), 'image_prompt.update', { table: 'image_prompts', id: updated.id }, {
     name: updated.name,
     references: row.reference_asset_ids.length,
   })
@@ -814,8 +841,7 @@ export async function deleteImagePrompt(env: Env, auth: AgentAuth, via: CreatedV
     fail(error)
   }
   const removed = data as ImagePromptRow
-  await logActivity(env, auth, 'image_prompt.delete', { table: 'image_prompts', id: removed.id }, {
-    via,
+  await logActivity(env, auth, surfaceOf(via), 'image_prompt.delete', { table: 'image_prompts', id: removed.id }, {
     name: removed.name,
   })
   return removed
