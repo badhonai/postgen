@@ -43,7 +43,7 @@ export default function ReferenceMediaPicker({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/25 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-ink/25 backdrop-blur-sm sm:items-center">
       <Card className="pg-glass-strong max-h-[92dvh] w-full max-w-[440px] overflow-y-auto rounded-t-[32px] p-5 pb-10 sm:rounded-[28px]">
         <div className="flex items-center justify-between gap-3">
           <h2 className="pg-title text-xl text-ink">Reference media</h2>
