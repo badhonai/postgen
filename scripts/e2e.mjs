@@ -431,7 +431,7 @@ async function main() {
   })
   const bare = await barePatch.json()
   check('PATCH without type keeps post_type', barePatch.status === 200 && bare.post?.post_type === 'article', `got ${bare.post?.post_type}`)
-  const append = await api(`/api/v1/posts/${typedId}/tweets`, {
+  const append = await api(`/api/v1/posts/${typedId}/append`, {
     method: 'POST',
     headers: agent,
     body: JSON.stringify({ tweets: [`appended ${stamp2}`] }),
