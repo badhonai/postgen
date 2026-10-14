@@ -31,6 +31,7 @@ import {
   useSavePost,
   type PostFilters,
 } from '../features/posts/api'
+import SwipeRow, { type SwipeAction } from '../features/posts/SwipeRow'
 import { Button, ErrorBox, Input, Select, Skeleton, Spinner } from '../components/ui'
 import { cn } from '../lib/cn'
 
@@ -76,6 +77,7 @@ export default function ProjectDetailPage() {
   const [category, setCategory] = useState<PostCategory | ''>('')
   const [type, setType] = useState<PostType | ''>('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const bulkStatus = useBulkSetStatus()
   const bulkDelete = useBulkDeletePosts()
@@ -124,6 +126,30 @@ export default function ProjectDetailPage() {
     try {
       await bulkStatus.mutateAsync({ posts: targets, status })
       setSelected(new Set())
+    } catch {
+      /* surfaced via bulkError */
+    }
+  }
+
+  /** One post forward through the workflow: idea/draft → approved → published. */
+  const nextStatus = (status: PostStatus): PostStatus | undefined =>
+    status === 'idea' || status === 'draft' ? 'approved' : status === 'approved' ? 'published' : undefined
+
+  const runSwipeNext = async (post: PostListItem) => {
+    const next = nextStatus(post.status)
+    if (!next) return
+    try {
+      await bulkStatus.mutateAsync({ posts: [post], status: next })
+    } catch {
+      /* surfaced via bulkError */
+    }
+  }
+
+  const runSwipeDelete = async (post: PostListItem) => {
+    const label = post.title || post.content_text.slice(0, 70) || 'Untitled post'
+    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return
+    try {
+      await bulkDelete.mutateAsync([post.id])
     } catch {
       /* surfaced via bulkError */
     }
@@ -420,6 +446,27 @@ export default function ProjectDetailPage() {
                 placeholder="Search posts…"
                 className="min-w-0 flex-1"
               />
+              <button
+                type="button"
+                aria-pressed={selectMode}
+                onClick={() => {
+                  setSelectMode((v) => !v)
+                  setSelected(new Set())
+                  setMenuOpen(false)
+                }}
+                className={cn(
+                  'flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-[13px] font-bold text-ink transition active:scale-95',
+                  selectMode
+                    ? 'bg-butter shadow-[0_8px_20px_rgba(242,193,78,0.45)]'
+                    : 'pg-glass-strong',
+                )}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="5.5" />
+                  <path d="M8.2 12.4l2.6 2.6 5-5.4" />
+                </svg>
+                {selectMode ? 'Done' : 'Select'}
+              </button>
               <div className="relative shrink-0">
                 <button
                   type="button"
@@ -508,11 +555,11 @@ export default function ProjectDetailPage() {
             </div>
 
             {/* ── bulk actions (shown once posts are selected) ── */}
-            {selectedPosts.length > 0 ? (
+            {selectMode ? (
               <div className="pg-glass-strong space-y-2.5 rounded-[22px] p-3">
                 <div className="flex items-center gap-2">
                   <span className="pl-1 text-[13px] font-extrabold text-ink">
-                    {selectedPosts.length} selected
+                    {selectedPosts.length > 0 ? `${selectedPosts.length} selected` : 'Tap posts to select'}
                   </span>
                   <div className="ml-auto flex items-center gap-1.5">
                     <button
@@ -526,6 +573,7 @@ export default function ProjectDetailPage() {
                       type="button"
                       aria-label="Clear selection"
                       onClick={() => setSelected(new Set())}
+                      disabled={selectedPosts.length === 0}
                       className="flex h-8 w-8 items-center justify-center rounded-full border border-white/75 bg-white/55 text-ink transition hover:bg-white/75 active:scale-95"
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -555,7 +603,7 @@ export default function ProjectDetailPage() {
                   </button>
                   <button
                     type="button"
-                    disabled={busyBulk}
+                    disabled={busyBulk || selectedPosts.length === 0}
                     onClick={() => void runBulkDelete()}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-rose-300/70 bg-rose-soft/60 px-2 py-2.5 text-[13px] font-bold text-rose-700 transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
                   >
@@ -603,15 +651,29 @@ export default function ProjectDetailPage() {
               </div>
             ) : (
               <div className="space-y-2.5">
-                {(posts.data ?? []).map((post) => (
-                  <PostRow
-                    key={post.id}
-                    post={post}
-                    logo={p.logo}
-                    selected={selected.has(post.id)}
-                    onToggle={() => toggleOne(post.id)}
-                  />
-                ))}
+                {(posts.data ?? []).map((post) => {
+                  const next = nextStatus(post.status)
+                  return (
+                    <PostRow
+                      key={post.id}
+                      post={post}
+                      logo={p.logo}
+                      selectMode={selectMode}
+                      selected={selected.has(post.id)}
+                      onToggle={() => toggleOne(post.id)}
+                      swipeLeft={
+                        next
+                          ? {
+                              label: STATUS_LABEL[next],
+                              tone: next === 'approved' ? 'approve' : 'publish',
+                              onRun: () => void runSwipeNext(post),
+                            }
+                          : undefined
+                      }
+                      swipeRight={{ label: 'Delete', tone: 'delete', onRun: () => void runSwipeDelete(post) }}
+                    />
+                  )
+                })}
               </div>
             )}
           </div>
@@ -674,25 +736,62 @@ export default function ProjectDetailPage() {
   )
 }
 
+function PostCheck({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border transition',
+        checked ? 'border-ink bg-ink text-white' : 'border-white/80 bg-white/60 text-transparent',
+      )}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+    </span>
+  )
+}
+
 function PostRow({
   post,
   logo,
+  selectMode,
   selected,
   onToggle,
+  swipeLeft,
+  swipeRight,
 }: {
   post: PostListItem
   logo?: { r2_key: string } | null
+  selectMode: boolean
   selected: boolean
   onToggle: () => void
+  swipeLeft?: SwipeAction
+  swipeRight?: SwipeAction
 }) {
   const label = post.title || post.content_text.slice(0, 70) || 'Untitled post'
-  return (
-    <div
-      className={cn(
-        'pg-glass flex items-center gap-2.5 rounded-[20px] p-2.5 pr-3.5 transition active:scale-[0.98]',
-        selected && 'ring-2 ring-ink/20',
-      )}
-    >
+
+  const cover = (
+    <>
+      <PostCover cover={post.cover} logo={logo} />
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ background: STATUS_DOT[post.status] ?? '#a09cc4' }}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] font-bold text-ink">{label}</p>
+        <p className="mt-0.5 text-[11px] font-bold text-ink-soft">
+          <span className="text-ink">{POST_TYPE_LABEL[post.post_type] ?? 'Post'}</span>
+          {' · '}
+          {CATEGORY_LABELS[post.category]} · {STATUS_LABEL[post.status] ?? post.status} · via {post.created_via}
+        </p>
+      </div>
+    </>
+  )
+
+  // select mode: the whole card is a toggle, no navigation and no swiping
+  if (selectMode) {
+    return (
       <button
         type="button"
         role="checkbox"
@@ -700,33 +799,28 @@ function PostRow({
         aria-label={`${selected ? 'Deselect' : 'Select'} ${label}`}
         onClick={onToggle}
         className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border transition active:scale-90',
-          selected ? 'border-ink bg-ink text-white' : 'border-white/80 bg-white/60 text-transparent',
+          'pg-glass-strong flex w-full items-center gap-2.5 rounded-[20px] p-2.5 pr-3.5 text-left transition active:scale-[0.98]',
+          selected && 'ring-2 ring-ink/20',
         )}
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 6L9 17l-5-5" />
-        </svg>
+        <PostCheck checked={selected} />
+        {cover}
       </button>
-      <Link to={`/posts/${post.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-        <PostCover cover={post.cover} logo={logo} />
-        <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ background: STATUS_DOT[post.status] ?? '#a09cc4' }}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-bold text-ink">{label}</p>
-          <p className="mt-0.5 text-[11px] font-bold text-ink-soft">
-            <span className="text-ink">{POST_TYPE_LABEL[post.post_type] ?? 'Post'}</span>
-            {' · '}
-            {CATEGORY_LABELS[post.category]} · {STATUS_LABEL[post.status] ?? post.status} · via {post.created_via}
-          </p>
-        </div>
+    )
+  }
+
+  return (
+    <SwipeRow left={swipeRight} right={swipeLeft}>
+      <Link
+        to={`/posts/${post.id}`}
+        className="pg-glass-strong flex items-center gap-3 rounded-[20px] p-2.5 pr-3.5 transition active:scale-[0.98]"
+      >
+        {cover}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-soft">
           <path d="M9 18l6-6-6-6" />
         </svg>
       </Link>
-    </div>
+    </SwipeRow>
   )
 }
 
