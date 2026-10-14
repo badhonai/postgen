@@ -764,6 +764,7 @@ export async function createImagePrompt(
   if (error) fail(error)
   const created = data as ImagePromptRow
   await logActivity(env, auth, 'image_prompt.create', { table: 'image_prompts', id: created.id }, {
+    via,
     name: created.name,
     references: row.reference_asset_ids.length,
   })
@@ -793,6 +794,7 @@ export async function updateImagePrompt(
   }
   const updated = data as ImagePromptRow
   await logActivity(env, auth, 'image_prompt.update', { table: 'image_prompts', id: updated.id }, {
+    via,
     name: updated.name,
     references: row.reference_asset_ids.length,
   })
@@ -813,6 +815,7 @@ export async function deleteImagePrompt(env: Env, auth: AgentAuth, via: CreatedV
   }
   const removed = data as ImagePromptRow
   await logActivity(env, auth, 'image_prompt.delete', { table: 'image_prompts', id: removed.id }, {
+    via,
     name: removed.name,
   })
   return removed

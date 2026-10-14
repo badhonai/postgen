@@ -347,7 +347,7 @@ async function readResource(uri: string, env: Env, auth: agent.AgentAuth, origin
     }
   }
   if (m[2] === 'assets') {
-    const assets = await agent.listAssets(env, auth.userId, { projectId: m[1] })
+    const assets = await agent.listAssets(env, auth.userId, { projectId: m[1], origin })
     return {
       contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ assets }, null, 2) }],
     }

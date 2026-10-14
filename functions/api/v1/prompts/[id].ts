@@ -1,6 +1,6 @@
-import * as agent from '../../_lib/agentdb'
-import { agentRoute, readJson } from '../../_lib/route'
-import type { Env } from '../../_lib/env'
+import * as agent from '../../../_lib/agentdb'
+import { agentRoute, readJson } from '../../../_lib/route'
+import type { Env } from '../../../_lib/env'
 
 type Ctx = { request: Request; env: Env; params: { id?: string } }
 
@@ -25,7 +25,7 @@ export function onRequestPatch(ctx: Ctx): Promise<Response> {
 /** DELETE /api/v1/prompts/:id */
 export function onRequestDelete(ctx: Ctx): Promise<Response> {
   return agentRoute(ctx.request, ctx.env, async (auth) => {
-    const removed = await agent.deleteImagePrompt(ctx.env, auth, 'api', ctx.params.id)
+    const removed = await agent.deleteImagePrompt(ctx.env, auth, 'api', ctx.params.id ?? '')
     return Response.json({ deleted: removed })
   })
 }

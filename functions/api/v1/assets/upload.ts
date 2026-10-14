@@ -1,3 +1,4 @@
+import * as agent from '../../../_lib/agentdb'
 import { serviceClient } from '../../../_lib/auth'
 import { agentRoute } from '../../../_lib/route'
 import { jsonError, type Env } from '../../../_lib/env'
