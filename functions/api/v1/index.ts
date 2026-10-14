@@ -130,6 +130,18 @@ const spec = {
         responses: { '201': { description: 'Asset created' } },
       },
     },
+    '/assets': {
+      get: {
+        summary: 'List my media (optionally ?project_id=…) with short-lived signed URLs',
+        responses: { '200': { description: 'Assets' } },
+      },
+    },
+    '/prompts': {
+      get: {
+        summary: 'Saved image prompts, each with its reference images and signed URLs',
+        responses: { '200': { description: 'Image prompts' } },
+      },
+    },
   },
   components: {
     securitySchemes: {

@@ -2,6 +2,7 @@ import { serviceClient } from './auth'
 import type { Env } from './env'
 import { sha256Hex, threadToContentText } from '../../src/lib/text'
 import { blacklistHits } from '../../src/lib/blacklist'
+import { signAsset } from './signing'
 
 export class AgentError extends Error {
   status: number
@@ -582,4 +583,127 @@ export async function findSimilar(
   })
   if (error) fail(error)
   return { similar: (data ?? []) as Array<{ id: string; title: string; project_id: string; similarity: number }> }
+}
+
+// ────────────────────────────── assets ──────────────────────────────
+
+/**
+ * Short-lived signed URL for an R2 key. Absolute, because the caller is
+ * often an external agent with no page origin to resolve a relative path
+ * against. Falls back to null if media signing isn't configured.
+ */
+async function signedUrl(env: Env, key: string, origin: string): Promise<string | null> {
+  try {
+    const exp = Math.floor(Date.now() / 1000) + 900 // 15 min
+    const sig = await signAsset(key, exp, env)
+    return `${origin}/api/media/${key}?exp=${exp}&sig=${sig}`
+  } catch {
+    return null
+  }
+}
+
+export type AssetSummary = {
+  id: string
+  project_id: string
+  filename: string
+  mime_type: string
+  size_bytes: number
+  width: number | null
+  height: number | null
+  alt_text: string | null
+  kind: string
+  created_at: string
+  url: string | null
+}
+
+/**
+ * Lists the user's media, optionally for one project.
+ * Each asset comes back with a signed URL so the caller can actually
+ * fetch and look at the image — an opaque UUID is useless for choosing art.
+ */
+export async function listAssets(
+  env: Env,
+  userId: string,
+  filters: { projectId?: string; origin: string },
+): Promise<AssetSummary[]> {
+  let q = db(env)
+    .from('assets')
+    .select('id, project_id, filename, mime_type, size_bytes, width, height, alt_text, kind, r2_key, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (filters.projectId) q = q.eq('project_id', filters.projectId)
+  const { data, error } = await q
+  if (error) fail(error)
+  const rows = (data ?? []) as Array<Omit<AssetSummary, 'url'> & { r2_key: string }>
+  return Promise.all(
+    rows.map(async ({ r2_key, ...rest }) => ({ ...rest, url: await signedUrl(env, r2_key, filters.origin) })),
+  )
+}
+
+// ────────────────────────── image prompts ──────────────────────────
+
+export type ImagePromptRow = {
+  id: string
+  name: string
+  prompt: string
+  notes: string
+  reference_asset_ids: string[]
+  created_at: string
+  updated_at: string
+}
+
+export type ImagePromptWithRefs = ImagePromptRow & { reference_assets: AssetSummary[] }
+
+/**
+ * Saved image prompts with their reference images resolved.
+ * References are the point: the prompt says what to make, the images
+ * show what it should look like, so both travel together.
+ */
+export async function listImagePrompts(
+  env: Env,
+  userId: string,
+  origin: string,
+): Promise<ImagePromptWithRefs[]> {
+  const { data, error } = await db(env)
+    .from('image_prompts')
+    .select('id, name, prompt, notes, reference_asset_ids, created_at, updated_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  // PGRST205 = table not in the schema cache yet (migration not applied).
+  // Answer with an empty library rather than failing the agent's whole turn.
+  if (error) {
+    if (error.code === 'PGRST205' || /does not exist|schema cache/i.test(error.message)) return []
+    fail(error)
+  }
+  const prompts = (data ?? []) as ImagePromptRow[]
+
+  // one pass over the union of referenced ids keeps this to two queries
+  const wanted = [...new Set(prompts.flatMap((p) => p.reference_asset_ids ?? []))]
+  let byId = new Map<string, AssetSummary>()
+  if (wanted.length > 0) {
+    const { data: assets, error: aErr } = await db(env)
+      .from('assets')
+      .select('id, project_id, filename, mime_type, size_bytes, width, height, alt_text, kind, r2_key, created_at')
+      .eq('user_id', userId)
+      .in('id', wanted)
+    if (aErr) fail(aErr)
+    const rows = (assets ?? []) as Array<Omit<AssetSummary, 'url'> & { r2_key: string }>
+    byId = new Map(
+      await Promise.all(
+        rows.map(async (row) => {
+          const { r2_key, ...rest } = row
+          return [row.id, { ...rest, url: await signedUrl(env, r2_key, origin) }] as const
+        }),
+      ),
+    )
+  }
+
+  return prompts.map((p) => ({
+    ...p,
+    // keep the stored order, and drop anything deleted since
+    reference_assets: (p.reference_asset_ids ?? [])
+      .map((id) => byId.get(id))
+      .filter((a): a is AssetSummary => !!a),
+  }))
 }

@@ -7,6 +7,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage'
 import PostEditorPage from './pages/PostEditorPage'
 import SettingsPage from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
+import PromptLibraryPage from './pages/PromptLibraryPage'
 import CommandPalette from './components/CommandPalette'
 
 export default function App() {
@@ -45,6 +46,14 @@ export default function App() {
         element={
           <RequireAuth>
             <PostEditorPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/prompts"
+        element={
+          <RequireAuth>
+            <PromptLibraryPage />
           </RequireAuth>
         }
       />

@@ -150,6 +150,28 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'list_assets',
+    description:
+      'List the user’s media (optionally for one project). Each asset has a short-lived ' +
+      'signed URL you can fetch to SEE the image, plus filename, mime, size, dimensions, ' +
+      'alt text and kind. Use this to pick images for a draft — you cannot guess asset ids.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string', description: 'Restrict to one project (optional).' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_image_prompts',
+    description:
+      'List the user’s saved image prompts. Each has the prompt text, a note about the ' +
+      'output it tends to produce, and reference images (with signed URLs) that show the ' +
+      'style. Use the prompt AND the reference images together when generating art.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
 ] as const
 
 type Rpc = { jsonrpc: '2.0'; id?: number | string | null; method: string; params?: Record<string, unknown> }
@@ -174,6 +196,7 @@ async function callTool(
   args: Record<string, unknown>,
   env: Env,
   auth: agent.AgentAuth,
+  origin: string,
 ) {
   const via = 'mcp' as const
   switch (name) {
@@ -221,38 +244,63 @@ async function callTool(
           projectId: args.project_id as string | undefined,
         }),
       )
+    case 'list_assets':
+      return toolText({
+        assets: await agent.listAssets(env, auth.userId, {
+          projectId: args.project_id as string | undefined,
+          origin,
+        }),
+      })
+    case 'list_image_prompts':
+      return toolText({ image_prompts: await agent.listImagePrompts(env, auth.userId, origin) })
     default:
       throw new agent.AgentError(-32602, { error: `unknown tool: ${name}` })
   }
 }
 
-async function readResource(uri: string, env: Env, auth: agent.AgentAuth) {
-  const m = uri.match(/^project:\/\/([^/]+)\/(context|knowledge)$/)
+async function readResource(uri: string, env: Env, auth: agent.AgentAuth, origin: string) {
+  if (uri === 'prompts://image') {
+    const prompts = await agent.listImagePrompts(env, auth.userId, origin)
+    return {
+      contents: [
+        { uri, mimeType: 'application/json', text: JSON.stringify({ image_prompts: prompts }, null, 2) },
+      ],
+    }
+  }
+  const m = uri.match(/^project:\/\/([^/]+)\/(context|knowledge|assets)$/)
   if (!m) throw new agent.AgentError(-32602, { error: `unknown resource: ${uri}` })
   const project = await agent.getProject(env, auth.userId, m[1])
-  const text =
-    m[2] === 'knowledge'
-      ? JSON.stringify({ knowledge: project.knowledge }, null, 2)
-      : JSON.stringify(
-          {
-            project: {
-              id: project.id,
-              name: project.name,
-              description: project.description,
-              brand_voice: project.brand_voice,
-              x_username: project.x_username,
-              website_url: project.website_url,
-              content_pillars: project.content_pillars,
-              sample_posts: project.sample_posts,
-              custom_instructions: project.custom_instructions,
-              official_links: project.official_links,
-              logo_asset_id: project.logo_asset_id,
-            },
-            knowledge_titles: (project.knowledge as Array<{ title: string }>).map((k) => k.title),
-          },
-          null,
-          2,
-        )
+  if (m[2] === 'knowledge') {
+    return {
+      contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ knowledge: project.knowledge }, null, 2) }],
+    }
+  }
+  if (m[2] === 'assets') {
+    const assets = await agent.listAssets(env, auth.userId, { projectId: m[1] })
+    return {
+      contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ assets }, null, 2) }],
+    }
+  }
+  const text = JSON.stringify(
+    {
+      project: {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        brand_voice: project.brand_voice,
+        x_username: project.x_username,
+        website_url: project.website_url,
+        content_pillars: project.content_pillars,
+        sample_posts: project.sample_posts,
+        custom_instructions: project.custom_instructions,
+        official_links: project.official_links,
+        logo_asset_id: project.logo_asset_id,
+      },
+      knowledge_titles: (project.knowledge as Array<{ title: string }>).map((k) => k.title),
+    },
+    null,
+    2,
+  )
   return { contents: [{ uri, mimeType: 'application/json', text }] }
 }
 
@@ -261,6 +309,8 @@ export async function onRequestPost(context: {
   env: Env
 }): Promise<Response> {
   const { request, env } = context
+  // absolute URLs for signed media — external agents can't resolve a relative path
+  const origin = new URL(request.url).origin
 
   const gate = await requireApiKey(request, env)
   if (!gate.ok) return gate.response
@@ -306,7 +356,7 @@ export async function onRequestPost(context: {
         const params = (msg.params ?? {}) as { name?: string; arguments?: Record<string, unknown> }
         if (!params.name) return Response.json(rpcError(msg.id, -32602, 'missing tool name'))
         try {
-          return Response.json(rpcResult(msg.id, await callTool(params.name, params.arguments ?? {}, env, auth)))
+          return Response.json(rpcResult(msg.id, await callTool(params.name, params.arguments ?? {}, env, auth, origin)))
         } catch (e) {
           const body = e instanceof agent.AgentError ? e.body : { error: 'tool failed' }
           return Response.json(
@@ -327,12 +377,22 @@ export async function onRequestPost(context: {
             name: `${p.name} — knowledge & sources`,
             mimeType: 'application/json',
           },
+          {
+            uri: `project://${p.id}/assets`,
+            name: `${p.name} — media & signed URLs`,
+            mimeType: 'application/json',
+          },
         ])
+        resources.push({
+          uri: 'prompts://image',
+          name: 'Saved image prompts & reference media',
+          mimeType: 'application/json',
+        })
         return Response.json(rpcResult(msg.id, { resources }))
       }
       case 'resources/read': {
         const uri = String((msg.params as { uri?: string })?.uri ?? '')
-        return Response.json(rpcResult(msg.id, await readResource(uri, env, auth)))
+        return Response.json(rpcResult(msg.id, await readResource(uri, env, auth, origin)))
       }
       default:
         if (isNotification) return new Response(null, { status: 202 })

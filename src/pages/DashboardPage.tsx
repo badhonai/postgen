@@ -10,9 +10,10 @@ import {
   useProjects,
   type ProjectInput,
 } from '../features/projects/api'
-import { HeroTile, SmallTile, type PostSummary } from '../features/projects/BentoTiles'
+import { HeroTile, PromptLibraryTile, SmallTile, type PostSummary } from '../features/projects/BentoTiles'
 import { TILE_COLORS } from '../lib/types'
 import ProjectForm from '../features/projects/ProjectForm'
+import { useImagePrompts } from '../features/prompts/api'
 import TabBar from '../components/TabBar'
 import { Button, ErrorBox, Skeleton, SparkleLogo } from '../components/ui'
 
@@ -59,6 +60,7 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const projects = useProjects()
   const createProject = useCreateProject()
+  const prompts = useImagePrompts()
   const [creating, setCreating] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
 
@@ -87,6 +89,7 @@ export default function DashboardPage() {
     filter === 'all' ? all : all.filter((p) => (postsByProject.get(p.id) ?? []).some((s) => matchesFilter(s.status, filter)))
 
   const [hero, ...rest] = visible
+  const promptCount = prompts.data?.prompts.length ?? 0
 
   const handleCreate = (input: ProjectInput) => {
     createProject.mutate(input, {
@@ -186,19 +189,18 @@ export default function DashboardPage() {
           ) : (
             <>
               <HeroTile project={hero} posts={postsByProject.get(hero.id) ?? []} statusTab={filter === 'all' ? 'approved' : filter} />
-              {rest.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3.5">
-                  {rest.map((p, i) => (
-                    <SmallTile
-                      key={p.id}
-                      project={p}
-                      color={TILE_COLORS[(i + 1) % TILE_COLORS.length]}
-                      postCount={(postsByProject.get(p.id) ?? []).length}
-                      statusTab={filter === 'all' ? 'approved' : filter}
-                    />
-                  ))}
-                </div>
-              ) : null}
+              <div className="grid grid-cols-2 gap-3.5">
+                <PromptLibraryTile promptCount={promptCount} />
+                {rest.map((p, i) => (
+                  <SmallTile
+                    key={p.id}
+                    project={p}
+                    color={TILE_COLORS[(i + 1) % TILE_COLORS.length]}
+                    postCount={(postsByProject.get(p.id) ?? []).length}
+                    statusTab={filter === 'all' ? 'approved' : filter}
+                  />
+                ))}
+              </div>
             </>
           )}
         </section>

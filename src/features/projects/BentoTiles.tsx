@@ -136,3 +136,30 @@ export function SmallTile({
     </Link>
   )
 }
+
+/**
+ * Sits in the bento grid in place of a project tile and opens the prompt
+ * library. Same tile language as the project cards so it reads as a peer,
+ * not a bolt-on.
+ */
+export function PromptLibraryTile({ promptCount }: { promptCount: number }) {
+  return (
+    <Link to="/prompts" className="pg-tile flex min-h-[150px] flex-col justify-between bg-cream p-4">
+      <div className="flex items-start justify-between gap-2">
+        <span className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-white/60 text-ink">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+        </span>
+        <span className="rounded-full bg-white/55 px-2.5 py-1 text-[10px] font-bold text-ink">
+          {promptCount === 0 ? 'empty' : `${promptCount} prompt${promptCount === 1 ? '' : 's'}`}
+        </span>
+      </div>
+      <div>
+        <h3 className="pg-title text-[15px] leading-tight text-ink">Prompt library</h3>
+        <p className="mt-0.5 text-[11px] font-bold text-ink-soft">Art recipes & references</p>
+      </div>
+    </Link>
+  )
+}
