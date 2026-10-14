@@ -346,16 +346,17 @@ export default function ProjectForm({
             <div className="space-y-2">
               {links.map((link, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Input
-                    className="w-[84px] shrink-0"
-                    value={link.label}
-                    onChange={(e) => {
-                      const next = [...links]
-                      next[i] = { ...next[i], label: e.target.value }
-                      setLinks(next)
-                    }}
-                    placeholder="Label"
-                  />
+                  <div className="w-[84px] shrink-0">
+                    <Input
+                      value={link.label}
+                      onChange={(e) => {
+                        const next = [...links]
+                        next[i] = { ...next[i], label: e.target.value }
+                        setLinks(next)
+                      }}
+                      placeholder="Label"
+                    />
+                  </div>
                   <Input
                     className="min-w-0 flex-1"
                     inputMode="url"
