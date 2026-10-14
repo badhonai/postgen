@@ -93,6 +93,23 @@ export function useRevokeApiKey() {
   })
 }
 
+/**
+ * Permanently removes the key row. Revoke only flips a flag and keeps the
+ * row (and its place in the list) around; delete is the real removal.
+ * agent_activity.api_key_id is `on delete set null`, so the audit feed
+ * survives and simply loses the link to this key.
+ */
+export function useDeleteApiKey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase!.from('api_keys').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['api-keys'] }),
+  })
+}
+
 export function useAgentActivity() {
   return useQuery({
     queryKey: ['agent-activity'],

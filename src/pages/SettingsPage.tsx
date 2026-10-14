@@ -4,6 +4,7 @@ import {
   useAgentActivity,
   useApiKeys,
   useCreateApiKey,
+  useDeleteApiKey,
   useRevokeApiKey,
 } from '../features/agents/keys'
 import { Button, ErrorBox, Input, Spinner } from '../components/ui'
@@ -134,6 +135,7 @@ export default function SettingsPage() {
   const keys = useApiKeys()
   const createKey = useCreateApiKey()
   const revokeKey = useRevokeApiKey()
+  const deleteKey = useDeleteApiKey()
   const activity = useAgentActivity()
 
   const [keyName, setKeyName] = useState('')
@@ -324,6 +326,28 @@ export default function SettingsPage() {
                             Revoke
                           </Button>
                         )}
+                        <button
+                          type="button"
+                          aria-label={`Delete ${k.name}`}
+                          title={`Delete ${k.name}`}
+                          disabled={deleteKey.isPending}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Delete “${k.name}” for good? This removes the key entirely` +
+                                  `${k.revoked_at ? '' : ' and it stops working right away'} — it cannot be undone.` +
+                                  ' Past agent activity stays in the log.',
+                              )
+                            ) {
+                              deleteKey.mutate(k.id)
+                            }
+                          }}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/75 bg-white/55 text-ink-soft transition hover:bg-white/80 hover:text-rose-600 active:scale-95 disabled:opacity-50"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v7M14 10v7" />
+                          </svg>
+                        </button>
                       </li>
                     ))}
                   </ul>
