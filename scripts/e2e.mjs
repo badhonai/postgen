@@ -373,7 +373,8 @@ async function main() {
     headers: agent,
     body: JSON.stringify({ project_id: project.id, tweets: [`repeat quote probe ${stamp}`], type: 'quote', meta: { source: 'A', comment: 'B' } }),
   })
-  check('no-repeat: identical quote + meta → 409', qb.status === 409 && qb.error === 'duplicate', `HTTP ${qb.status}`)
+  const qbb = await qb.json()
+  check('no-repeat: identical quote + meta → 409', qb.status === 409 && qbb.error === 'duplicate', `HTTP ${qb.status} ${qbb.error ?? ''}`)
 
   // type filter on the agent list
   const rl = await api(`/api/v1/posts?project_id=${project.id}&type=article`, { headers: agent })
