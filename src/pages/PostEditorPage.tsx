@@ -11,6 +11,7 @@ import {
 } from '../features/posts/api'
 import { useProject } from '../features/projects/api'
 import { getSignedUrl } from '../lib/media'
+import type { Asset } from '../lib/types'
 import { useAssetUrl } from '../lib/media'
 import PostForm from '../features/posts/PostForm'
 import DuplicateDialog from '../features/posts/DuplicateDialog'
@@ -272,7 +273,11 @@ export default function PostEditorPage() {
   const previewTweets = draft?.tweets?.length ? draft.tweets : (postData?.post_tweets ?? []).map((t) => t.content)
   const previewText =
     previewTweets.length === 1 ? previewTweets[0] : numberedTweets(previewTweets)
-  const previewMedia = draft?.media ?? []
+  // the form snapshot only exists once you touch a field, so fall back to the
+  // saved post's attachments — otherwise a freshly opened post previews bare
+  const savedMedia = Object.values(postData?.mediaByTweet ?? {}).flat()
+  const previewMedia: Array<{ asset: Asset }> =
+    draft?.media ?? savedMedia.map((asset) => ({ asset }))
 
   /**
    * Send the post to X. X's intent URL carries text only, so on phones we use
