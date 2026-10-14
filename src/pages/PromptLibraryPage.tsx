@@ -87,7 +87,10 @@ export default function PromptLibraryPage() {
   const busy = createPrompt.isPending || updatePrompt.isPending
   const list = prompts.data?.prompts ?? []
   const missingTable = prompts.data?.missing === true
-  const sheetError = errorMessage(createPrompt.error ?? updatePrompt.error, 'Failed to save')
+  // only stringify once a write has actually failed — errorMessage() falls back
+  // to its default, which would otherwise render an empty error box on open
+  const writeError = createPrompt.error ?? updatePrompt.error
+  const sheetError = writeError ? errorMessage(writeError, 'Failed to save') : null
 
   return (
     <div className="pg-shell">
