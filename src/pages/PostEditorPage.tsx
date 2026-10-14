@@ -10,9 +10,37 @@ import {
   type SavePostInput,
 } from '../features/posts/api'
 import { useProject } from '../features/projects/api'
+import { getSignedUrl } from '../lib/media'
+import { useAssetUrl } from '../lib/media'
 import PostForm from '../features/posts/PostForm'
 import DuplicateDialog from '../features/posts/DuplicateDialog'
 import { Button, ErrorBox, Spinner } from '../components/ui'
+
+/** Project avatar for the preview sheet — logo if there is one, else initial. */
+function PreviewAvatar({ project }: { project?: { name?: string; logo?: { r2_key: string } | null } | null }) {
+  const url = useAssetUrl(project?.logo?.r2_key)
+  if (url.data) {
+    return <img src={url.data} alt="" className="h-11 w-11 rounded-full object-cover ring-1 ring-white/70" />
+  }
+  return (
+    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-mint font-display text-lg font-semibold text-ink">
+      {(project?.name ?? 'P').slice(0, 1).toUpperCase()}
+    </div>
+  )
+}
+
+/** One attached image inside the preview sheet. */
+function PreviewImage({ asset }: { asset: { r2_key: string; mime_type: string; filename: string } }) {
+  const url = useAssetUrl(asset.r2_key)
+  if (!url.data) return <div className="aspect-video w-full rounded-[16px] bg-white/60" />
+  return (
+    <img
+      src={url.data}
+      alt=""
+      className="aspect-video w-full rounded-[16px] object-cover"
+    />
+  )
+}
 
 export default function PostEditorPage() {
   const { id } = useParams()
@@ -33,6 +61,9 @@ export default function PostEditorPage() {
   const [pendingInput, setPendingInput] = useState<SavePostInput | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [preview, setPreview] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const [similarBanner, setSimilarBanner] = useState<SimilarPost[] | null>(null)
   const [autosavedAt, setAutosavedAt] = useState<number | null>(null)
 
@@ -230,91 +261,156 @@ export default function PostEditorPage() {
     }
   }
 
-  /** X's web composer, prefilled. (X has no URL param for media, so the
-   *  attached images are offered full-size to attach by hand.) */
-  const postToX = () => {
-    if (!postData) return
-    const text =
-      postData.post_tweets.length === 1
-        ? postData.post_tweets[0].content
-        : numberedTweets(postData.post_tweets.map((t) => t.content))
-    window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
-  }
-
   const copy = async (text: string, key: string) => {
     await navigator.clipboard.writeText(text)
     setCopied(key)
     window.setTimeout(() => setCopied(null), 1500)
   }
 
+  /** Live form snapshot when there is one, else the saved post. */
+  const draft = latestRef.current
+  const previewTweets = draft?.tweets?.length ? draft.tweets : (postData?.post_tweets ?? []).map((t) => t.content)
+  const previewText =
+    previewTweets.length === 1 ? previewTweets[0] : numberedTweets(previewTweets)
+  const previewMedia = draft?.media ?? []
+
+  /**
+   * Send the post to X. X's intent URL carries text only, so on phones we use
+   * the share sheet instead: it accepts the image files alongside the text, so
+   * the picture really does travel with the words. The web intent is the
+   * fallback for desktop, where the image is attached by hand.
+   */
+  const shareToX = async () => {
+    setMenuOpen(false)
+    setPreview(false)
+    setSharing(true)
+    let done = false
+    try {
+      const files: File[] = []
+      for (const m of previewMedia.slice(0, 4)) {
+        if (!m.asset.mime_type.startsWith('image/')) continue
+        try {
+          const url = await getSignedUrl(m.asset.r2_key)
+          const blob = await (await fetch(url)).blob()
+          files.push(new File([blob], m.asset.filename || 'image.png', { type: m.asset.mime_type }))
+        } catch {
+          /* one unreadable asset shouldn't sink the whole share */
+        }
+      }
+      if (files.length > 0 && typeof navigator.canShare === 'function' && navigator.canShare({ files })) {
+        await navigator.share({ files, text: previewText })
+        done = true
+      }
+    } catch (err) {
+      // closing the sheet is not a failure — just stop
+      if ((err as DOMException | undefined)?.name === 'AbortError') done = true
+    } finally {
+      setSharing(false)
+    }
+    if (done) return
+    window.open(`https://x.com/intent/post?text=${encodeURIComponent(previewText)}`, '_blank', 'noopener')
+  }
+
   return (
     <main className="pg-shell">
       <div className="mx-auto max-w-[440px] px-5 pt-6 pb-16">
-        {/* ── header ── */}
-        <header className="flex items-center gap-3">
-          <button
-            type="button"
-            aria-label="Back"
-            onClick={() => navigate(projectId ? `/projects/${projectId}` : '/dashboard')}
-            className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="pg-title truncate text-2xl text-ink">
-              {isNew ? 'New post' : 'Edit post'}
-            </h1>
-            <p className="truncate text-xs font-bold text-ink-soft">
-              {isNew
-                ? 'Repeats are blocked — every save is checked.'
-                : postData
-                  ? `${postData.post_tweets.length} tweet${postData.post_tweets.length > 1 ? 's' : ''} · via ${postData.created_via}${autosavedAt ? ` · autosaved ${new Date(autosavedAt).toLocaleTimeString()}` : ''}`
-                  : ''}
-            </p>
+        {/* ── header: title on its own line, actions on a row beneath it ── */}
+        <header className="space-y-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Back"
+              onClick={() => navigate(projectId ? `/projects/${projectId}` : '/dashboard')}
+              className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <div className="min-w-0 flex-1">
+              <h1 className="pg-title truncate text-2xl text-ink">
+                {isNew ? 'New post' : 'Edit post'}
+              </h1>
+              <p className="truncate text-xs font-bold text-ink-soft">
+                {isNew
+                  ? 'Repeats are blocked — every save is checked.'
+                  : postData
+                    ? `${postData.post_tweets.length} tweet${postData.post_tweets.length > 1 ? 's' : ''} · via ${postData.created_via}${autosavedAt ? ` · autosaved ${new Date(autosavedAt).toLocaleTimeString()}` : ''}`
+                    : ''}
+              </p>
+            </div>
+            {!isNew && postData ? (
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  aria-label="More actions"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  className="pg-glass flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold text-ink transition active:scale-95"
+                >
+                  ⋯
+                </button>
+                {menuOpen ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close menu"
+                      className="fixed inset-0 z-30 cursor-default"
+                      onClick={() => setMenuOpen(false)}
+                    />
+                    <div className="pg-glass-strong absolute right-0 z-40 mt-2 w-40 overflow-hidden rounded-2xl p-1.5 shadow-[0_18px_40px_rgba(70,60,130,0.22)]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false)
+                          void copy(
+                            postData.post_tweets.length === 1
+                              ? postData.post_tweets[0].content
+                              : numberedTweets(postData.post_tweets.map((t) => t.content)),
+                            'copy',
+                          )
+                        }}
+                        className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-bold text-ink transition hover:bg-white/70"
+                      >
+                        {copied === 'copy' ? 'Copied ✓' : 'Copy text'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deletePost.isPending}
+                        onClick={() => {
+                          setMenuOpen(false)
+                          if (!window.confirm('Delete this post? This cannot be undone.')) return
+                          deletePost.mutate(postData.id, {
+                            onSuccess: () =>
+                              navigate(projectId ? `/projects/${projectId}` : '/dashboard', {
+                                replace: true,
+                              }),
+                          })
+                        }}
+                        className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-bold text-rose-700 transition hover:bg-white/70 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
           </div>
+
           {!isNew && postData ? (
-            <>
+            <div className="flex gap-2">
               <Button
                 variant="accent"
-                className="px-3.5 py-2 text-xs"
-                onClick={postToX}
-                title="Open X with this post's text ready to send"
+                className="flex-1 py-3 text-[15px]"
+                disabled={sharing}
+                onClick={() => void shareToX()}
               >
-                Post on X
+                {sharing ? 'Opening…' : 'Post on X'}
               </Button>
-              <Button
-                variant="ghost"
-                className="px-3.5 py-2 text-xs"
-                onClick={() =>
-                  void copy(
-                    postData.post_tweets.length === 1
-                      ? postData.post_tweets[0].content
-                      : numberedTweets(postData.post_tweets.map((t) => t.content)),
-                    'copy',
-                  )
-                }
-              >
-                {copied === 'copy' ? 'Copied ✓' : 'Copy'}
+              <Button variant="ghost" className="py-3 text-[15px]" onClick={() => setPreview(true)}>
+                Preview
               </Button>
-              <Button
-                variant="danger"
-                className="px-3.5 py-2 text-xs"
-                disabled={deletePost.isPending}
-                onClick={() => {
-                  if (!window.confirm('Delete this post? This cannot be undone.')) return
-                  deletePost.mutate(postData.id, {
-                    onSuccess: () =>
-                      navigate(projectId ? `/projects/${projectId}` : '/dashboard', {
-                        replace: true,
-                      }),
-                  })
-                }}
-              >
-                Delete
-              </Button>
-            </>
+            </div>
           ) : null}
         </header>
 
@@ -358,6 +454,71 @@ export default function PostEditorPage() {
             onChange={onFormChange}
           />
         </div>
+
+        {/* ── preview: how this post will read once it is live ── */}
+        {preview && !isNew ? (
+          <div
+            className="fixed inset-0 z-50 flex items-end bg-ink/45 px-3 pt-10 pb-6"
+            onClick={() => setPreview(false)}
+          >
+            <div
+              className="pg-glass-strong mx-auto w-full max-w-[440px] rounded-[26px] p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="pg-title text-lg text-ink">Preview</h2>
+                <button
+                  type="button"
+                  aria-label="Close preview"
+                  onClick={() => setPreview(false)}
+                  className="pg-glass flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-ink transition active:scale-95"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="rounded-[20px] bg-white p-4">
+                <div className="flex items-center gap-3">
+                  <PreviewAvatar project={project.data} />
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-extrabold text-ink">
+                      {project.data?.name ?? 'Your project'}
+                    </p>
+                    <p className="truncate text-[12px] font-bold text-ink-soft">
+                      @{project.data?.x_username ?? 'handle'}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-[15px] leading-relaxed font-semibold whitespace-pre-wrap text-ink">
+                  {previewText || 'Nothing to preview yet.'}
+                </p>
+
+                {previewMedia.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    {previewMedia.slice(0, 4).map((m) => (
+                      <PreviewImage key={m.asset.id} asset={m.asset} />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <Button
+                  variant="accent"
+                  className="flex-1 py-3 text-[15px]"
+                  disabled={sharing}
+                  onClick={() => void shareToX()}
+                >
+                  {sharing ? 'Opening…' : 'Post on X'}
+                </Button>
+                <Button variant="ghost" className="py-3 text-[15px]" onClick={() => setPreview(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {dupCheck && pendingInput ? (
           <DuplicateDialog
