@@ -36,7 +36,13 @@ export async function checkDuplicates(
   const userId = userData.user?.id ?? null
 
   const [exact, similar] = await Promise.all([
-    supabase!.rpc('find_duplicate_post', { p_content_hash: contentHash, p_user_id: userId }),
+    supabase!.rpc('find_duplicate_post', {
+      p_content_hash: contentHash,
+      p_user_id: userId,
+      // Exclude the post being edited — otherwise an edit matches ITSELF
+      // (identical hash) and every save of an existing post is blocked.
+      p_exclude_post_id: opts.excludePostId ?? null,
+    }),
     supabase!.rpc('find_similar_posts', {
       p_content_text: contentText,
       p_exclude_post_id: opts.excludePostId ?? null,

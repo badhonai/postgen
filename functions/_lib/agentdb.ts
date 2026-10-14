@@ -227,6 +227,7 @@ async function assertNoRepeat(
   const { data: dup, error: dupErr } = await client.rpc('find_duplicate_post', {
     p_content_hash: contentHash,
     p_user_id: userId,
+    p_exclude_post_id: opts.excludePostId ?? null,
   })
   if (dupErr) fail(dupErr)
 
