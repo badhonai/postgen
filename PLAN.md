@@ -117,12 +117,19 @@ post_media        post_tweet_id, asset_id, position
 
 tags / post_tags  user_id-scoped tags on posts
 
+image_prompts     user_id, name, prompt, notes,
+                  reference_asset_ids uuid[]  -- ordered, cross-project;
+                  the reference media that teaches the style this prompt
+                  produces. Single shared library, NOT per-project.
+
 api_keys          user_id, name,           -- e.g. "Claude", "gemini-cli"
                   key_hash, prefix,        -- pgk_live_a1b2… (prefix shown, secret hashed)
                   last_used_at, expires_at, revoked_at
+                  -- hard delete supported: DELETE removes the row
 
 agent_activity    user_id, api_key_id, surface: 'rest' | 'mcp',
                   action, target_post_id, request jsonb   -- audit feed in app
+                  -- NOTE: there is no `metadata` column — select action + request
 
 generations       (backlog) optional prompt/output audit
 ```
@@ -165,13 +172,35 @@ generations       (backlog) optional prompt/output audit
 ### M4 — Agent API (the core AI feature)
 One service layer, three surfaces — see §6:
 - **M4a — REST API** `/api/v1/*` + **API key management** UI (create/revoke, shown once, last-used)
-- **M4b — MCP server** `/api/mcp` (Streamable HTTP, bearer auth): `list_projects`, `get_project_knowledge`, `list_posts`, `get_post`, `search_posts`, `create_post`, `update_post`, `set_thread`, `add_tweet`, `delete_tweet`
+- **M4b — MCP server** `/api/mcp` (Streamable HTTP, bearer auth): `list_projects`, `get_project`, `create_draft`, `update_draft`, `append_to_thread`, `find_similar`, `list_assets`, `list_image_prompts`, `create_image_prompt`, `update_image_prompt`, `delete_image_prompt`
 - **M4c — "Connect your AI" page**: copy-paste configs for **Claude Desktop (free)**, **Gemini CLI (free)**, **local Ollama (free)**, **self-hosted n8n (free)**; OpenAPI spec link
 - **Guardrails**: zod validation, rate limit, **drafts-only write policy** (403 on approve/publish/archive attempts), full `agent_activity` audit feed
 
 ### M5 — Polish
 - ⌘K command palette, dark/light theme, empty states, toasts
 - JSON/CSV **export** (backup of all data)
+
+### M6 — Prompt library ✅
+One shared library of image prompts, reached from the dashboard bento grid
+(it replaces a project tile slot — see the constraint in §12).
+- `image_prompts` table (migration `20261014000003`) with `reference_asset_ids uuid[]`
+- **UI**: bento grid of small cards → tap opens a detail sheet with the full
+  prompt; writing happens in a bottom sheet behind a small **+** in the header
+  (the library page itself stays a plain list of cards)
+- **Reference media picker**: bottom sheet over the account's assets, grouped by
+  project; picked images become removable thumbnails
+- **Agent surfaces**: `GET/POST /api/v1/prompts`, `GET/PATCH/DELETE /api/v1/prompts/:id`,
+  and MCP `list_image_prompts` / `create_image_prompt` / `update_image_prompt` /
+  `delete_image_prompt`
+- **Guardrails**: `reference_asset_ids` must be the caller's own assets;
+  prompt ≤ 4000 chars, notes ≤ 1000; update is a **whole-object write**
+  (every field is overwritten, so send the complete object)
+- Every write is recorded in `agent_activity` with `surface` = `rest` | `mcp`
+- API keys also gained **hard delete** (row removed, not just revoked)
+
+**Known gaps in M6 (see README §Current state):** the agent cannot drop a single
+reference it no longer needs without rewriting the whole list, and cannot tell
+which prompt produced which past image — reference thumbnails are UI-only.
 
 ---
 
@@ -184,7 +213,7 @@ Any free AI tool becomes "the agent". PostGen is the system of record.
 | Surface | Who uses it | Auth |
 |---|---|---|
 | REST `postgen.pages.dev/api/v1/*` | self-hosted n8n, Make (free tier), curl, scripts | `Authorization: Bearer pgk_live_…` |
-| OpenAPI `/api/v1/openapi.json` | any OpenAPI-compatible tool | API key |
+| OpenAPI `/api/v1` | any OpenAPI-compatible tool (the spec is served at the index) | API key |
 | MCP `postgen.pages.dev/api/mcp` | Claude Desktop, Gemini CLI, Cline/Roo, Ollama clients | bearer key in headers |
 
 ### API keys
@@ -203,9 +232,12 @@ GET    /api/v1/projects/:id/knowledge        knowledge & sources
 GET    /api/v1/posts                         ?project_id&status&category&type&tag&q
 GET    /api/v1/posts/:id                     post + tweets + media
 GET    /api/v1/tags
+GET    /api/v1/assets                        my media, with signed read URLs
+GET    /api/v1/prompts                       my prompt library
+GET    /api/v1/prompts/:id                   one prompt
 ```
 
-**Write (status hard-capped to `idea` / `draft`):**
+**Write (posts are hard-capped to `idea` / `draft`):**
 ```
 POST   /api/v1/posts                         create draft
        { project_id, type, category, title, tweets: ["1/3 …", "2/3 …"],
@@ -216,6 +248,15 @@ POST   /api/v1/posts/:id/tweets              append one tweet
 DELETE /api/v1/posts/:id/tweets/:tweet_id    remove one tweet
 ```
 
+**Write (prompt library — no status cap, the whole library is user-owned):**
+```
+POST   /api/v1/prompts                       { name, prompt, notes?, referenceAssetIds? }
+PATCH  /api/v1/prompts/:id                   whole-object update — every field overwritten
+DELETE /api/v1/prompts/:id
+```
+`reference_asset_ids` is validated against the caller's **own** assets (400 otherwise);
+prompt ≤ 4000 chars, notes ≤ 1000.
+
 **Forbidden via API** (human-only in the web app): `approved` / `scheduled` / `published` / `archived` → **403**. Updating a non-draft post → **403**.
 
 **No repeat posts (dedupe on every write):** posts store `content_hash` (normalized text) + `content_text` (for pg_trgm similarity). `POST /posts`, `PUT /posts/:id/tweets`, and `POST /posts/:id/tweets` run the check first:
@@ -224,11 +265,11 @@ DELETE /api/v1/posts/:id/tweets/:tweet_id    remove one tweet
 - intentional A/B variant → pass `"allow_similar": true` to save anyway
 Scope: the key owner's posts only (RLS) — never leaks across users. Agents get the 409 + similar list so they rewrite instead of repeating.
 
-### MCP tools (1:1 with REST)
+### MCP tools (1:1 with REST) — **11 tools**
 ```
-list_projects · get_project · get_project_knowledge
-list_posts · get_post · search_posts
-create_post · update_post · set_thread · add_tweet · delete_tweet
+list_projects · get_project · create_draft · update_draft
+append_to_thread · find_similar · list_assets
+list_image_prompts · create_image_prompt · update_image_prompt · delete_image_prompt
 ```
 Plus MCP resources: `postgen://projects`, `postgen://project/{id}/knowledge`.
 
@@ -270,8 +311,11 @@ Plus MCP resources: `postgen://projects`, `postgen://project/{id}/knowledge`.
 
 ### Guardrails & audit
 - zod validation on every body; max 25 tweets/thread; weighted char limits
-- Rate limit: 60 req/min per key (plenty; keeps free tiers safe)
+- Prompt-library writes: `reference_asset_ids` must be the caller's own assets,
+  prompt ≤ 4000 chars, notes ≤ 1000; update is a whole-object write
+- Rate limit: 250 req/min per key (plenty; keeps free tiers safe)
 - Every call logged to `agent_activity` → in-app **Agent activity** feed
+  (columns: `action`, `request` — there is **no `metadata` column**, don't select it)
 - `posts.created_via` = `'api' | 'mcp'` → UI badge "drafted by Claude"
 - Recipes tell the agent: write drafts only; humans approve
 
@@ -306,21 +350,27 @@ Plus MCP resources: `postgen://projects`, `postgen://project/{id}/knowledge`.
 postgen/
 ├─ functions/
 │  └─ api/
-│     ├─ v1/                     # REST API
-│     │  ├─ projects/…
-│     │  ├─ posts/…
-│     │  ├─ openapi.json.ts
-│     ├─ mcp.ts                  # MCP server (Streamable HTTP)
-│     ├─ media/…                 # upload + signed read
-│     └─ _lib/                   # auth (API key→JWT), repos, zod, audit
+│     ├─ v1/                     # REST API + index.ts (OpenAPI 3.1 spec)
+│     │  ├─ projects/…  posts/…  knowledge.ts
+│     │  ├─ assets.ts  assets/upload.ts
+│     │  └─ prompts.ts  prompts/[id].ts      # the prompt library
+│     ├─ mcp.ts                  # MCP server (Streamable HTTP) — 11 tools
+│     ├─ media/…                 # upload · sign · [[key]] · delete
+│     ├─ xprofile.ts             # X identity for previews
+│     └─ _lib/                   # agentdb (writers + guardrails), env, jwt,
+│                                # apikey (hash + rate limit), ratelimit, audit
 ├─ src/
-│  ├─ components/
+│  ├─ components/                # ui.tsx, CommandPalette, TabBar
 │  ├─ features/
-│  │  ├─ auth/  projects/  posts/  media/  knowledge/  connections/
-│  ├─ lib/                       # supabase client, api, x-counter, format
+│  │  ├─ auth/  projects/  posts/  media/  agents/
+│  │  └─ prompts/               # PromptCard, PromptDetailSheet,
+│                                # PromptComposerSheet, ReferenceMediaPicker
+│  ├─ lib/                       # supabase client, api, x-counter, format, cn
 │  ├─ pages/                     # Dashboard, ProjectDetail, PostEditor,
-│  │                             # Settings, ConnectAI
+│  │                             # Settings, PromptLibraryPage, …
 │  ├─ App.tsx  main.tsx
+├─ scripts/e2e.mjs               # live A→Z smoke test (44 checks)
+├─ tsconfig.functions.json       # typechecks functions/ (npm run typecheck)
 ├─ .github/workflows/keepalive.yml   # free Supabase keep-alive cron
 ├─ .github/workflows/db-push.yml     # opt-in free migration fallback
 ├─ supabase/
@@ -356,7 +406,7 @@ postgen/
 2. 🅰️ **A/B variants** — agent writes 3 takes in one draft; you keep the best.
 3. 📋 **Post templates** — exposed to agents as `postgen://templates`.
 4. 📥 **Idea inbox** — dump raw ideas/alpha links; agent turns them into drafts (`GET /api/v1/inbox`).
-5. ✍️ **Style learning** — `brand_voice` + example approved posts in `get_project_knowledge`.
+5. ✍️ **Style learning** — `brand_voice` + example approved posts in the project context.
 6. 🎨 **Promo images with Workers AI** (SDXL/flux — free 10k neurons/day) — only if it stays inside the free tier.
 
 **Workflow**
@@ -393,6 +443,7 @@ postgen/
 | **M4a** ✅ done | REST Agent API + API-key management + OpenAPI spec | medium |
 | **M4b** ✅ done | MCP server + Connect-your-AI page + guardrails + audit feed | large |
 | **M5** ✅ done | Polish: shortcuts, themes, export | medium |
+| **M6** ✅ done | Prompt library: `image_prompts` + bento UI + REST/MCP read-write | large |
 
 We build milestone by milestone, testing each before moving on.
 
@@ -418,10 +469,25 @@ We build milestone by milestone, testing each before moving on.
 
 ## 13. Next Steps
 
-**All milestones are built and live.** What remains is real-world use:
+**All milestones are built and live.** What remains is real-world use plus two
+known agent-side gaps.
 
 1. ✅ **M0–M5 complete** — scaffold, schema+RLS+dedupe, auth, projects, posts/threads, R2 media, Agent API + MCP, polish (autosave + banner, ⌘K palette, accent themes, export/import, skeletons).
-2. ✅ **A→Z E2E green (2026-10-13): 31/31** via `scripts/e2e.mjs` against production. It caught 3 real bugs, now fixed: media URL signing had no configured secret (falls back to the service key), agent draft saves were rejected by the save RPC ('not authenticated' — service-role calls pass the actor via `p_user_id`), and the agent-side no-repeat guard never ran (same actor fix on `find_duplicate_post`/`find_similar_posts`).
-3. ✅ **Project profile** (2026-10-13) — logo + asset kinds, X username, website, official links, content pillars, sample posts, custom instructions, tone & voice, blacklist (agent 403 / web warning); logo & assets upload lives in the project form; full profile flows into agent context (REST + MCP resource).
-4. **Next: redesign the whole UI**, then resume real-world use (projects, threads, Claude/Gemini connections).
-5. **Optional future ideas** (not in scope): scheduled posting to X, light theme, per-key scopes, webhooks.
+2. ✅ **A→Z E2E green** via `scripts/e2e.mjs` against production (44 checks). It caught real bugs, now fixed: media URL signing had no configured secret (falls back to the service key), agent draft saves were rejected by the save RPC ('not authenticated' — service-role calls pass the actor via `p_user_id`), and the agent-side no-repeat guard never ran (same actor fix on `find_duplicate_post`/`find_similar_posts`).
+3. ✅ **Project profile** (2026-10-13) — logo + asset kinds, X username, website, official links, content pillars, sample posts, custom instructions, tone & voice, blacklist (agent 403 / web warning); full profile flows into agent context (REST + MCP resource).
+4. ✅ **Prompt library** (2026-10-14/15) — `image_prompts` + reference media, bento grid + detail sheet + **+**-opens-composer-sheet in the UI, full read/write over REST and MCP (11 tools). Every write audited with `surface` = `rest` | `mcp`.
+5. **Next: redesign the whole UI**, then resume real-world use (projects, threads, Claude/Gemini connections).
+6. **Known gaps to close (prompt library):**
+   - the agent cannot drop a *single* reference it no longer needs — it can only
+     replace the whole `reference_asset_ids` list, and cannot discover which
+     reference is which without guessing an asset id
+   - the agent cannot tell which prompt produced which past image — reference
+     thumbnails are UI-only, nothing in the API returns generated-image provenance
+7. **Optional future ideas** (not in scope): scheduled posting to X, light theme, per-key scopes, webhooks.
+
+### Housekeeping before handing the project on
+- Delete the leftover probe API key `pgk_live_ou5jbw_…` on the `agent@postgen.com`
+  account (Settings → AI → API keys → trash).
+- The Playwright suites in `/home/user/shots/` are **not** in the repo (they run
+  against production and hold live credentials) — `scripts/e2e.mjs` is the only
+  in-repo smoke test.

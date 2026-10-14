@@ -42,16 +42,32 @@ No feature branches, no preview environments — **real tests on real production
 
 ```
 postgen/
-├─ functions/api/          # Pages Functions (health now; agent API in M4)
+├─ functions/api/          # Pages Functions
+│  ├─ mcp.ts               # MCP server (Streamable HTTP) — 11 tools
+│  ├─ media/               # upload · sign · [[key]] · delete  (R2, private)
+│  ├─ v1/                  # REST agent API (+ index.ts = OpenAPI 3.1 spec)
+│  │  ├─ projects.ts · projects/[id].ts · knowledge.ts
+│  │  ├─ posts.ts · posts/[id].ts · posts/[id]/append.ts
+│  │  ├─ assets.ts · assets/upload.ts
+│  │  └─ prompts.ts · prompts/[id].ts     # the prompt library
+│  └─ xprofile.ts          # X identity for previews
+├─ functions/_lib/         # agentdb.ts (writers + guardrails), env, jwt, ratelimit…
 ├─ src/                    # React app
+│  ├─ features/prompts/    # bento card, detail sheet, composer sheet, picker
+│  ├─ features/{agents,auth,media,posts,projects}/
+│  └─ pages/               # PromptLibraryPage.tsx = /prompts
 ├─ supabase/               # watched by the Supabase GitHub integration
 │  ├─ config.toml          # supabase CLI config (project_id = "postgen")
 │  ├─ migrations/          # auto-applied on push to main
 │  │  ├─ 20261012000001_init.sql    (schema + RLS)
-│  │  └─ 20261012000002_dedupe.sql  (no-repeat posts engine)
+│  │  ├─ 20261012000002_dedupe.sql  (no-repeat posts engine)
+│  │  ├─ 2026101300000{4..7}_*.sql  (post saver, post_media, created_via, profile)
+│  │  └─ 20261014000003_image_prompts.sql  (the prompt library)
 │  └─ seed.sql             # preview-branch / local seed only
+├─ scripts/e2e.mjs         # live smoke test (auth → CRUD → dedupe → media → agent API → MCP)
 ├─ .github/workflows/      # keepalive.yml — keeps Supabase free tier awake
 │                          # db-push.yml  — opt-in migration fallback
+├─ tsconfig.functions.json # the ONLY thing that typechecks functions/ — `npm run typecheck`
 ├─ wrangler.toml           # Pages config + R2 binding (MEDIA)
 └─ PLAN.md                 # full plan & roadmap
 ```
@@ -171,6 +187,43 @@ project every Monday & Thursday (free on GitHub Actions).
 
 ---
 
+## Prompt library 📚
+
+A **single shared library** of image prompts, reached from the dashboard bento grid
+(it takes the slot of a project tile) at `/prompts`. Not per-project — one recipe
+book for the whole account.
+
+The page is a **bento grid of small cards** (same tile language as the project
+tiles). A card shows only the prompt's name, a reference-count pill, its first
+reference image as the cover, and one truncated line of notes — **never the full
+prompt**. Tapping a card opens a detail sheet with the whole prompt, the notes,
+the references, and Delete / Edit.
+
+Writing happens in a **bottom sheet behind a small + in the header**:
+
+- **+** → New prompt (name, the prompt itself, notes, reference media)
+- **Edit** on a card → the same sheet, loaded
+- **Add / Change** → a reference-media bottom sheet that lists your assets grouped
+  by project; picked images become removable ✕ thumbnails
+- **Delete** → inline confirm inside the detail sheet
+
+References are the point: the agent reads the prompt **and** its reference images,
+so it can match your style instead of guessing it.
+
+Schema (`supabase/migrations/20261014000003_image_prompts.sql`):
+
+```
+image_prompts   user_id, name, prompt, notes,
+                reference_asset_ids uuid[]    -- ordered, cross-project
+                + RLS user_id = auth.uid()
+```
+
+Agents get the same library read/write over REST and MCP
+(`list_image_prompts`, `create_image_prompt`, `update_image_prompt`,
+`delete_image_prompt`).
+
+---
+
 ## Media API (R2, private) 🖼️
 
 Media lives in **R2** (free tier) and is never public. Flow:
@@ -189,13 +242,41 @@ External AI tools connect **into** PostGen and draft posts (drafts-only — you 
 
 - **REST**: `https://postgen.pages.dev/api/v1` — OpenAPI 3.1 spec at the same URL.
   Auth: `Authorization: Bearer pgk_live_…` (create keys in **Settings → AI connections**).
-- **MCP** (Streamable HTTP): `https://postgen.pages.dev/api/mcp` — 6 tools
-  (`list_projects`, `get_project`, `create_draft`, `update_draft`, `append_to_thread`,
-  `find_similar`) + `project://…` resources. Claude Desktop / Claude Code:
+- **MCP** (Streamable HTTP): `https://postgen.pages.dev/api/mcp` — 11 tools:
+  `list_projects`, `get_project`, `create_draft`, `update_draft`, `append_to_thread`,
+  `find_similar`, `list_assets`, `list_image_prompts`, `create_image_prompt`,
+  `update_image_prompt`, `delete_image_prompt` + `project://…` resources.
+  Claude Desktop / Claude Code:
   `npx mcp-remote https://postgen.pages.dev/api/mcp --header "Authorization: Bearer pgk_live_…"`
 - **Guardrails** (every write, web + agents): drafts-only for agents, the no-repeat
   check (409 unless `"allow_similar": true`), 250 req/min & 50 posts/day per key,
-  full `agent_activity` log.
+  full `agent_activity` log. Prompt-library writes validate `reference_asset_ids`
+  against the caller's **own** assets, cap the prompt at 4000 chars and notes at 1000.
+- **Update is a whole-object write** — `PATCH /api/v1/prompts/:id` and
+  `update_image_prompt` overwrite every field, so send the complete object.
+
+### REST endpoints
+
+```
+GET    /api/v1/projects                    list my projects
+POST   /api/v1/projects                    create a project
+GET    /api/v1/projects/:id                project + brand voice + profile
+PATCH  /api/v1/projects/:id                update project / profile fields
+GET    /api/v1/projects/:id/knowledge      knowledge & sources
+GET    /api/v1/posts                       ?project_id&status&category&type&tag&q
+GET    /api/v1/posts/:id                   post + tweets + media
+POST   /api/v1/posts/:id/tweets            append one tweet
+GET    /api/v1/assets                      my media (signed URLs on read)
+GET    /api/v1/prompts                     my prompt library
+POST   /api/v1/prompts                     create a prompt
+GET    /api/v1/prompts/:id                 one prompt
+PATCH  /api/v1/prompts/:id                 update (whole object)
+DELETE /api/v1/prompts/:id                 delete
+```
+
+Posts writes (`POST /api/v1/posts`, `PUT /api/v1/posts/:id/tweets`,
+`POST /api/v1/posts/:id/tweets`) are **hard-capped to `idea`/`draft`** — approving,
+scheduling and publishing stay human-only in the web app (403 otherwise).
 
 ## Keyboard shortcuts & autosave ⌨️
 
@@ -261,5 +342,42 @@ Per-project **blacklist words/symbols** (part of the brand profile):
 - **M4** ✅ Agent API: REST + API keys + MCP + OpenAPI + drafts-only guardrails
 - **M5** ✅ polish, ⌘K, export
 - ✅ project profile (logo, links, chains, pillars, samples, blacklist, …)
+- ✅ **prompt library** — shared image-prompt recipes with reference media,
+  bento grid + detail sheet in the UI, full read/write over REST and MCP
+- ✅ API keys **hard-delete** (row removed, not just revoked)
 
 Full detail in [`PLAN.md`](./PLAN.md).
+
+---
+
+## Current state & known gaps
+
+**Live:** <https://postgen.pages.dev> · `origin/main` deploys on every push ·
+11 MCP tools · migrations auto-apply via the Supabase GitHub integration.
+
+**All suites green** (`scripts/e2e.mjs` in-repo; the Playwright suites live in
+`/home/user/shots/` and run against production):
+
+| Suite | Covers |
+|---|---|
+| `scripts/e2e.mjs` | 44 checks — auth → web CRUD → dedupe → media → agent REST → MCP → revocation |
+| `shots/promptcrud.mjs` | UI create → view → edit → delete through the real bento UI |
+| `shots/agentwriteprompts.mjs` | agent create/update/delete over MCP **and** REST + guardrails + audit feed |
+| `shots/v18.mjs`, `shots/xid.mjs` | post open/edit flow, X identity |
+
+**Known gaps (not yet built):**
+
+1. The agent **cannot remove a reference image** it no longer needs from a prompt
+   — `create_image_prompt` / `update_image_prompt` accept `reference_asset_ids`, so
+   it *can* replace the whole list, but there is no single-purpose "drop this one
+   reference" tool, and no way to discover which reference is which without
+   guessing an asset id.
+2. The agent **cannot tell which prompt produced which past image** — reference
+   thumbnails exist only in the UI. Nothing in the API returns the image that a
+   prompt generated, so style provenance is human-readable only.
+3. `agent_activity` has **no `metadata` column** — the audit feed stores
+   `action` + `request` only. Don't select `metadata`.
+
+**Leftover to clean up:** a probe API key `pgk_live_ou5jbw_…` still exists on the
+`agent@postgen.com` account (Settings → AI connections → API keys → trash).
+Delete it before handing the project on.
