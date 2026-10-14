@@ -602,6 +602,7 @@ export default function ProjectDetailPage() {
                   <div className="ml-auto flex items-center gap-1.5">
                     <button
                       type="button"
+                      aria-label={allVisibleSelected ? 'Deselect all posts' : 'Select all posts'}
                       onClick={() => setSelected(allVisibleSelected ? new Set<string>() : new Set(visibleIds))}
                       className="rounded-full border border-white/75 bg-white/55 px-3 py-1.5 text-[12px] font-bold text-ink transition hover:bg-white/75 active:scale-95"
                     >
