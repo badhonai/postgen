@@ -41,11 +41,27 @@ function AttachmentChip({ asset, onRemove }: { asset: Asset; onRemove: () => voi
   return (
     <span className="flex items-center gap-1.5 rounded-full bg-white/65 py-1 pr-1 pl-1.5 text-xs font-bold text-ink">
       {isImage && url.data ? (
-        <img src={url.data} alt="" className="h-5 w-5 rounded-full object-cover" />
+        <a
+          href={url.data}
+          target="_blank"
+          rel="noreferrer"
+          title="Open full size to attach on X"
+          className="shrink-0"
+        >
+          <img src={url.data} alt="" className="h-5 w-5 rounded-full object-cover" />
+        </a>
       ) : (
         <span>{isImage ? '🖼' : '🎬'}</span>
       )}
-      <span className="max-w-32 truncate">{asset.filename}</span>
+      <a
+        href={url.data ?? '#'}
+        target="_blank"
+        rel="noreferrer"
+        title="Open full size to attach on X"
+        className="max-w-32 truncate hover:underline"
+      >
+        {asset.filename}
+      </a>
       <button
         type="button"
         onClick={onRemove}
