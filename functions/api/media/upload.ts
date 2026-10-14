@@ -1,4 +1,5 @@
 import { getUserFromRequest, serviceClient } from '../../_lib/auth'
+import { requireApiKey } from '../../_lib/apikey'
 import { jsonError, type Env } from '../../_lib/env'
 
 const ALLOWED: Record<string, string> = {
@@ -21,8 +22,19 @@ export async function onRequestPost(
 ): Promise<Response> {
   const { request, env } = context
 
-  const user = await getUserFromRequest(request, env)
-  if (!user) return jsonError('unauthorized', 401)
+  // Two kinds of caller: the signed-in web app (Supabase session token) and
+  // agents (Authorization: Bearer pgk_live_…). Both may upload media.
+  const bearer = (request.headers.get('authorization') ?? '').replace(/^Bearer /, '').trim()
+  let userId: string
+  if (bearer.startsWith('pgk_')) {
+    const gate = await requireApiKey(request, env)
+    if (!gate.ok) return gate.response
+    userId = gate.auth.userId
+  } else {
+    const user = await getUserFromRequest(request, env)
+    if (!user) return jsonError('unauthorized', 401)
+    userId = user.id
+  }
 
   let form: FormData
   try {
@@ -53,7 +65,7 @@ export async function onRequestPost(
     .from('projects')
     .select('id')
     .eq('id', projectId)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle()
   if (!project) return jsonError('project not found', 404)
 
@@ -61,7 +73,7 @@ export async function onRequestPost(
   const { data: totals } = await db
     .from('assets')
     .select('size_bytes')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
   const used = (totals ?? []).reduce((sum, row) => sum + Number(row.size_bytes ?? 0), 0)
   if (used + file.size > SOFT_CAP_BYTES) {
     return jsonError('storage soft cap reached (5 GB per user)', 413)
@@ -69,7 +81,7 @@ export async function onRequestPost(
 
   const stamp = Date.now().toString(36)
   const rand = crypto.randomUUID().slice(0, 8)
-  const key = `users/${user.id}/projects/${projectId}/${stamp}-${rand}.${ext}`
+  const key = `users/${userId}/projects/${projectId}/${stamp}-${rand}.${ext}`
 
   await env.MEDIA.put(key, await file.arrayBuffer(), {
     httpMetadata: { contentType: mime },
@@ -81,7 +93,7 @@ export async function onRequestPost(
   const { data: asset, error } = await db
     .from('assets')
     .insert({
-      user_id: user.id,
+      user_id: userId,
       project_id: projectId,
       r2_key: key,
       filename: file.name || `${stamp}.${ext}`,

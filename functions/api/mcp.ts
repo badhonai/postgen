@@ -62,6 +62,18 @@ const TOOLS = [
           description: 'Thread tweets in order (max 280 weighted chars each)',
         },
         tag_names: { type: 'array', items: { type: 'string' } },
+        media: {
+          type: 'array',
+          description: 'Images to attach: [{ asset_id, tweet_position }]. tweet_position is 1-based (default 1).',
+          items: {
+            type: 'object',
+            properties: {
+              asset_id: { type: 'string' },
+              tweet_position: { type: 'integer', minimum: 1 },
+            },
+            required: ['asset_id'],
+          },
+        },
         allow_similar: { type: 'boolean', default: false },
       },
       required: ['project_id', 'tweets'],
@@ -91,6 +103,18 @@ const TOOLS = [
         },
         tweets: { type: 'array', items: { type: 'string' } },
         tag_names: { type: 'array', items: { type: 'string' } },
+        media: {
+          type: 'array',
+          description: 'Images to attach (replaces the current set): [{ asset_id, tweet_position }].',
+          items: {
+            type: 'object',
+            properties: {
+              asset_id: { type: 'string' },
+              tweet_position: { type: 'integer', minimum: 1 },
+            },
+            required: ['asset_id'],
+          },
+        },
         allow_similar: { type: 'boolean', default: false },
       },
       required: ['post_id'],
@@ -168,6 +192,7 @@ async function callTool(
             tweets: args.tweets as string[],
             tagNames: args.tag_names as string[] | undefined,
             meta: (args.meta as Record<string, unknown> | undefined) ?? undefined,
+            media: args.media as Array<{ asset_id: string; tweet_position?: number }> | undefined,
             allowSimilar: args.allow_similar === true,
           }) },
       )
@@ -180,6 +205,7 @@ async function callTool(
             tweets: args.tweets as string[] | undefined,
             tagNames: args.tag_names as string[] | undefined,
             meta: (args.meta as Record<string, unknown> | undefined) ?? undefined,
+            media: args.media as Array<{ asset_id: string; tweet_position?: number }> | undefined,
             allowSimilar: args.allow_similar === true,
           }) },
       )

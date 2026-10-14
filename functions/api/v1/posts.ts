@@ -28,6 +28,7 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
       tweets: body.tweets as string[],
       tagNames: body.tag_names as string[] | undefined,
       meta: (body.meta as Record<string, unknown> | undefined) ?? undefined,
+      media: body.media as Array<{ asset_id: string; tweet_position?: number }> | undefined,
       allowSimilar: body.allow_similar === true,
     })
     return Response.json({ post }, { status: 201 })

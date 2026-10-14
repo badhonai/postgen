@@ -199,6 +199,8 @@ export type PostWrite = {
   tagNames?: string[]
   /** Type-specific extras — quote: { source, comment }. */
   meta?: Record<string, unknown>
+  /** Images to attach: [{ asset_id, tweet_position }] (tweet_position defaults to 1). */
+  media?: Array<{ asset_id: string; tweet_position?: number }>
   allowSimilar?: boolean
 }
 
@@ -228,6 +230,47 @@ function assertDraftsOnly(status?: string): 'idea' | 'draft' {
     })
   }
   return status
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Validates the caller's media list and shapes it for p_media.
+ * `position` is the order of the image *within* its tweet (1-based).
+ */
+function assertMedia(media: unknown): Array<{ tweet_position: number; asset_id: string; position: number }> {
+  if (media === undefined || media === null) return []
+  if (!Array.isArray(media)) {
+    throw new AgentError(400, { error: 'media must be an array of { asset_id, tweet_position }' })
+  }
+  const seen = new Map<number, number>()
+  return media.map((raw) => {
+    const m = (raw ?? {}) as Record<string, unknown>
+    const assetId = String(m.asset_id ?? '')
+    if (!UUID_RE.test(assetId)) {
+      throw new AgentError(400, { error: 'media[].asset_id must be a uuid' })
+    }
+    const pos = m.tweet_position === undefined || m.tweet_position === null ? 1 : Number(m.tweet_position)
+    if (!Number.isInteger(pos) || pos < 1) {
+      throw new AgentError(400, { error: 'media[].tweet_position must be an integer >= 1' })
+    }
+    const n = (seen.get(pos) ?? 0) + 1
+    seen.set(pos, n)
+    return { tweet_position: pos, asset_id: assetId, position: n }
+  })
+}
+
+/** Every referenced asset must exist and belong to this user. */
+async function assertOwnedAssets(env: Env, userId: string, media: Array<{ asset_id: string }>) {
+  if (media.length === 0) return
+  const ids = [...new Set(media.map((m) => m.asset_id))]
+  const { data, error } = await db(env).from('assets').select('id').eq('user_id', userId).in('id', ids)
+  if (error) fail(error)
+  const owned = new Set((data ?? []).map((r: { id: string }) => r.id))
+  const missing = ids.filter((id) => !owned.has(id))
+  if (missing.length > 0) {
+    throw new AgentError(400, { error: 'unknown asset_id', message: `not your assets: ${missing.join(', ')}` })
+  }
 }
 
 function assertTweets(tweets: unknown): string[] {
@@ -342,7 +385,23 @@ export async function getPost(env: Env, userId: string, id: string) {
     .order('position')
   if (tErr) fail(tErr)
 
-  return { ...post, tweets: (tweets ?? []).map((t) => t.content) }
+  const tweetIds = (tweets ?? []).map((t: { id: string }) => t.id)
+  let media: unknown[] = []
+  if (tweetIds.length > 0) {
+    const { data: mediaRows, error: mErr } = await client
+      .from('post_media')
+      .select('post_tweet_id, position, assets(id, r2_key, filename, mime_type)')
+      .in('post_tweet_id', tweetIds)
+      .order('position')
+    if (mErr) fail(mErr)
+    media = (mediaRows ?? []).map((r: Record<string, unknown>) => ({
+      tweet_position: (tweets ?? []).findIndex((t: { id: string }) => t.id === r.post_tweet_id) + 1,
+      position: r.position,
+      asset: r.assets,
+    }))
+  }
+
+  return { ...post, tweets: (tweets ?? []).map((t: { content: string }) => t.content), media }
 }
 
 export async function createDraft(
@@ -355,6 +414,9 @@ export async function createDraft(
   const type = assertPostType(input.type)
   const tweets = assertTweets(input.tweets)
   if (!input.projectId) throw new AgentError(400, { error: 'project_id is required' })
+
+  const media = assertMedia(input.media)
+  await assertOwnedAssets(env, auth.userId, media)
 
   const client = db(env)
   const { data: project } = await client
@@ -383,7 +445,7 @@ export async function createDraft(
     p_content_hash: contentHash,
     p_tweets: tweets,
     p_tag_names: input.tagNames ?? [],
-    p_media: [],
+    p_media: media,
     p_created_via: via,
     p_post_type: type,
     p_meta: input.meta ?? {},
@@ -407,6 +469,8 @@ export async function updateDraft(
   const type = assertPostType(patch.type)
   const tweets = patch.tweets ? assertTweets(patch.tweets) : (existing.tweets as string[])
   const meta = patch.meta ?? ((existing.meta ?? {}) as Record<string, unknown>)
+  const media = assertMedia(patch.media)
+  await assertOwnedAssets(env, auth.userId, media)
 
   const { data: projectRow } = await db(env)
     .from('projects')
@@ -432,7 +496,7 @@ export async function updateDraft(
     p_content_hash: contentHash,
     p_tweets: tweets,
     p_tag_names: patch.tagNames ?? [],
-    p_media: [],
+    p_media: media,
     p_created_via: via,
     p_post_type: type,
     p_meta: meta,
