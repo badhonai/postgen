@@ -2,37 +2,20 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   errorMessage,
-  useAllAssetsByProject,
   useCreateImagePrompt,
   useDeleteImagePrompt,
   useImagePrompts,
   useUpdateImagePrompt,
   type ImagePrompt,
 } from '../features/prompts/api'
+import PromptCard from '../features/prompts/PromptCard'
 import PromptComposerSheet, { type ComposerForm } from '../features/prompts/PromptComposerSheet'
+import PromptDetailSheet from '../features/prompts/PromptDetailSheet'
 import ReferenceMediaPicker from '../features/prompts/ReferenceMediaPicker'
-import { useAssetUrl } from '../lib/media'
-import { Button, ErrorBox, Spinner } from '../components/ui'
-import { cn } from '../lib/cn'
+import RefThumb from '../features/prompts/RefThumb'
+import { ErrorBox, Spinner } from '../components/ui'
 
 const EMPTY: ComposerForm = { name: '', prompt: '', notes: '' }
-
-function RefThumb({ assetId }: { assetId: string }) {
-  const groups = useAllAssetsByProject()
-  const asset = (groups.data ?? [])
-    .flatMap((g) => g.assets)
-    .find((a) => a.id === assetId)
-  const urlQuery = useAssetUrl(asset?.r2_key)
-  if (!asset) return null
-  return (
-    <img
-      src={urlQuery.data ?? ''}
-      alt={asset.alt_text || asset.filename}
-      className="h-12 w-12 rounded-[10px] object-cover"
-      loading="lazy"
-    />
-  )
-}
 
 export default function PromptLibraryPage() {
   const navigate = useNavigate()
@@ -46,7 +29,7 @@ export default function PromptLibraryPage() {
   const [form, setForm] = useState<ComposerForm>(EMPTY)
   const [refs, setRefs] = useState<string[]>([])
   const [picking, setPicking] = useState(false)
-  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [viewing, setViewing] = useState<ImagePrompt | null>(null)
 
   const closeSheet = () => setSheetOpen(false)
 
@@ -61,6 +44,7 @@ export default function PromptLibraryPage() {
     setEditing(p)
     setForm({ name: p.name, prompt: p.prompt, notes: p.notes })
     setRefs(p.reference_asset_ids ?? [])
+    setViewing(null)
     setSheetOpen(true)
   }
 
@@ -80,7 +64,7 @@ export default function PromptLibraryPage() {
 
   const remove = async (id: string) => {
     await deletePrompt.mutateAsync(id)
-    setConfirmId(null)
+    setViewing(null)
     if (editing?.id === id) closeSheet()
   }
 
@@ -129,8 +113,8 @@ export default function PromptLibraryPage() {
           images, so it can match your style instead of guessing it.
         </p>
 
-        {/* ── list ── */}
-        <section className="mt-6 space-y-3">
+        {/* ── bento grid ── */}
+        <section className="mt-6">
           {missingTable ? (
             <div className="pg-glass rounded-[22px] border border-amber-300/70 bg-amber-100/50 p-5 text-center">
               <p className="text-sm font-bold text-amber-900">The prompt library isn’t set up yet.</p>
@@ -154,79 +138,27 @@ export default function PromptLibraryPage() {
               </p>
             </div>
           ) : (
-            list.map((p) => (
-              <article
-                key={p.id}
-                className={cn(
-                  'pg-glass rounded-[22px] p-4',
-                  editing?.id === p.id ? 'ring-2 ring-butter' : '',
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="pg-title text-[15px] text-ink">{p.name}</h3>
-                    <p className="mt-0.5 text-[11px] font-bold text-ink-soft">
-                      {(p.reference_asset_ids ?? []).length} reference
-                      {(p.reference_asset_ids ?? []).length === 1 ? '' : 's'}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <Button variant="ghost" className="px-2.5 py-1 text-xs" onClick={() => openEdit(p)}>
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      className="px-2.5 py-1 text-xs"
-                      onClick={() => setConfirmId(p.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-
-                <p className="mt-2.5 text-sm leading-relaxed font-semibold whitespace-pre-wrap text-ink">
-                  {p.prompt}
-                </p>
-                {p.notes ? (
-                  <p className="mt-2 text-xs leading-relaxed font-semibold text-ink-soft">
-                    {p.notes}
-                  </p>
-                ) : null}
-
-                {(p.reference_asset_ids ?? []).length > 0 ? (
-                  <div className="mt-2.5 flex flex-wrap gap-2">
-                    {(p.reference_asset_ids ?? []).map((id) => (
-                      <RefThumb key={id} assetId={id} />
-                    ))}
-                  </div>
-                ) : null}
-
-                {confirmId === p.id ? (
-                  <div className="mt-3 flex items-center gap-2 rounded-[16px] bg-rose-soft/60 p-2.5">
-                    <p className="text-xs font-bold text-rose-700">Delete this prompt?</p>
-                    <Button
-                      variant="ghost"
-                      className="ml-auto px-2 py-1 text-xs"
-                      onClick={() => setConfirmId(null)}
-                    >
-                      Keep
-                    </Button>
-                    <Button
-                      variant="danger"
-                      className="px-2.5 py-1 text-xs"
-                      disabled={deletePrompt.isPending}
-                      onClick={() => void remove(p.id)}
-                    >
-                      {deletePrompt.isPending ? '…' : 'Delete'}
-                    </Button>
-                  </div>
-                ) : null}
-              </article>
-            ))
+            <div className="grid grid-cols-2 gap-3.5">
+              {list.map((p, i) => (
+                <PromptCard key={p.id} prompt={p} index={i} onOpen={() => setViewing(p)} />
+              ))}
+            </div>
           )}
         </section>
       </div>
 
+      {/* ── detail: what a card opens ── */}
+      {viewing ? (
+        <PromptDetailSheet
+          prompt={viewing}
+          deletePending={deletePrompt.isPending}
+          onClose={() => setViewing(null)}
+          onEdit={() => openEdit(viewing)}
+          onDelete={() => void remove(viewing.id)}
+        />
+      ) : null}
+
+      {/* ── create / edit ── */}
       {sheetOpen ? (
         <PromptComposerSheet
           editing={editing}
