@@ -9,12 +9,13 @@ import {
   useUpdateImagePrompt,
   type ImagePrompt,
 } from '../features/prompts/api'
+import PromptComposerSheet, { type ComposerForm } from '../features/prompts/PromptComposerSheet'
 import ReferenceMediaPicker from '../features/prompts/ReferenceMediaPicker'
 import { useAssetUrl } from '../lib/media'
-import { Button, ErrorBox, Input, Spinner, Textarea } from '../components/ui'
+import { Button, ErrorBox, Spinner } from '../components/ui'
 import { cn } from '../lib/cn'
 
-const EMPTY = { name: '', prompt: '', notes: '' }
+const EMPTY: ComposerForm = { name: '', prompt: '', notes: '' }
 
 function RefThumb({ assetId }: { assetId: string }) {
   const groups = useAllAssetsByProject()
@@ -41,21 +42,26 @@ export default function PromptLibraryPage() {
   const deletePrompt = useDeleteImagePrompt()
 
   const [editing, setEditing] = useState<ImagePrompt | null>(null)
-  const [form, setForm] = useState(EMPTY)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [form, setForm] = useState<ComposerForm>(EMPTY)
   const [refs, setRefs] = useState<string[]>([])
   const [picking, setPicking] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+
+  const closeSheet = () => setSheetOpen(false)
 
   const openNew = () => {
     setEditing(null)
     setForm(EMPTY)
     setRefs([])
+    setSheetOpen(true)
   }
 
   const openEdit = (p: ImagePrompt) => {
     setEditing(p)
     setForm({ name: p.name, prompt: p.prompt, notes: p.notes })
     setRefs(p.reference_asset_ids ?? [])
+    setSheetOpen(true)
   }
 
   const save = async () => {
@@ -65,19 +71,23 @@ export default function PromptLibraryPage() {
       await updatePrompt.mutateAsync({ id: editing.id, ...payload })
     } else {
       await createPrompt.mutateAsync(payload)
-      openNew()
     }
+    setEditing(null)
+    setForm(EMPTY)
+    setRefs([])
+    closeSheet()
   }
 
   const remove = async (id: string) => {
     await deletePrompt.mutateAsync(id)
     setConfirmId(null)
-    if (editing?.id === id) openNew()
+    if (editing?.id === id) closeSheet()
   }
 
   const busy = createPrompt.isPending || updatePrompt.isPending
   const list = prompts.data?.prompts ?? []
   const missingTable = prompts.data?.missing === true
+  const sheetError = errorMessage(createPrompt.error ?? updatePrompt.error, 'Failed to save')
 
   return (
     <div className="pg-shell">
@@ -99,82 +109,22 @@ export default function PromptLibraryPage() {
               {list.length} saved prompt{list.length === 1 ? '' : 's'}
             </p>
           </div>
+          <button
+            type="button"
+            aria-label="New prompt"
+            onClick={openNew}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-white shadow-[0_10px_24px_rgba(47,43,94,0.32)] transition active:scale-95"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
         </header>
 
         <p className="pg-glass mt-5 rounded-[20px] p-4 text-xs leading-relaxed font-semibold text-ink-soft">
           A prompt is a reusable recipe for art. The agent reads the prompt <em>and</em> its reference
           images, so it can match your style instead of guessing it.
         </p>
-
-        {/* ── editor ── */}
-        <section className="pg-glass mt-5 space-y-3 rounded-[22px] p-4">
-          <h2 className="pg-title text-[15px] text-ink">
-            {editing ? `Edit “${editing.name}”` : 'New prompt'}
-          </h2>
-          <Input
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Name — e.g. Neon poster"
-          />
-          <Textarea
-            value={form.prompt}
-            onChange={(e) => setForm({ ...form, prompt: e.target.value })}
-            placeholder="The image prompt itself…"
-            className="min-h-[92px]"
-          />
-          <Textarea
-            value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            placeholder="Notes — what output this tends to give (optional)"
-            className="min-h-[56px]"
-          />
-
-          <div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
-                Reference media · {refs.length}
-              </span>
-              <Button variant="ghost" className="px-2.5 py-1 text-xs" onClick={() => setPicking(true)}>
-                {refs.length ? 'Change' : 'Add'}
-              </Button>
-            </div>
-            {refs.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {refs.map((id) => (
-                  <span key={id} className="relative">
-                    <RefThumb assetId={id} />
-                    <button
-                      type="button"
-                      aria-label="Remove reference"
-                      onClick={() => setRefs(refs.filter((x) => x !== id))}
-                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[10px] font-bold text-white"
-                    >
-                      ✕
-                    </button>
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-1.5 text-[11px] font-semibold text-ink-soft">
-                None yet — references teach the style.
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 pt-1">
-            {editing ? (
-              <Button variant="ghost" onClick={openNew}>
-                Cancel
-              </Button>
-            ) : null}
-            <Button className="ml-auto" disabled={busy || !form.prompt.trim()} onClick={() => void save()}>
-              {busy ? '…' : editing ? 'Save changes' : 'Create prompt'}
-            </Button>
-          </div>
-          {createPrompt.error || updatePrompt.error ? (
-            <ErrorBox message={errorMessage(createPrompt.error ?? updatePrompt.error, 'Failed to save')} />
-          ) : null}
-        </section>
 
         {/* ── list ── */}
         <section className="mt-6 space-y-3">
@@ -196,7 +146,8 @@ export default function PromptLibraryPage() {
             <div className="pg-glass rounded-[22px] p-7 text-center">
               <p className="text-sm font-semibold text-ink-soft">No prompts yet.</p>
               <p className="mx-auto mt-1.5 max-w-[240px] text-xs font-semibold text-ink-soft">
-                Create one above and the agent can start using it.
+                Tap the <span className="text-ink">+</span> button to create your first prompt and the
+                agent can start using it.
               </p>
             </div>
           ) : (
@@ -272,6 +223,22 @@ export default function PromptLibraryPage() {
           )}
         </section>
       </div>
+
+      {sheetOpen ? (
+        <PromptComposerSheet
+          editing={editing}
+          form={form}
+          refs={refs}
+          busy={busy}
+          error={sheetError}
+          onChange={setForm}
+          onRefs={setRefs}
+          onSave={() => void save()}
+          onClose={closeSheet}
+          onPick={() => setPicking(true)}
+          renderThumb={(id) => <RefThumb assetId={id} />}
+        />
+      ) : null}
 
       {picking ? (
         <ReferenceMediaPicker
