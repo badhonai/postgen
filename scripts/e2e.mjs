@@ -478,7 +478,13 @@ async function main() {
   check('initialize', init.result?.serverInfo?.name === 'postgen', init.result?.protocolVersion)
 
   const tools = await rpc('tools/list', {}, 2)
-  check('tools/list (6 tools)', tools.result?.tools?.length === 6)
+  const toolNames = (tools.result?.tools ?? []).map((t) => t.name)
+  check(
+    'tools/list (8 tools)',
+    toolNames.length === 8 &&
+      ['list_assets', 'list_image_prompts'].every((n) => toolNames.includes(n)),
+    toolNames.join(','),
+  )
 
   const call = await rpc(
     'tools/call',
