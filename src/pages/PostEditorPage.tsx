@@ -10,22 +10,69 @@ import {
   type SavePostInput,
 } from '../features/posts/api'
 import { useProject } from '../features/projects/api'
+import { useQuery } from '@tanstack/react-query'
 import { getSignedUrl } from '../lib/media'
+import { fetchXProfile } from '../lib/xprofile'
+import { useAuth } from '../features/auth/context'
 import type { Asset } from '../lib/types'
 import { useAssetUrl } from '../lib/media'
 import PostForm from '../features/posts/PostForm'
 import DuplicateDialog from '../features/posts/DuplicateDialog'
 import { Button, ErrorBox, Spinner } from '../components/ui'
 
-/** Project avatar for the preview sheet — logo if there is one, else initial. */
-function PreviewAvatar({ project }: { project?: { name?: string; logo?: { r2_key: string } | null } | null }) {
-  const url = useAssetUrl(project?.logo?.r2_key)
-  if (url.data) {
-    return <img src={url.data} alt="" className="h-11 w-11 rounded-full object-cover ring-1 ring-white/70" />
+/**
+ * The identity the post will go out under: the X handle saved on the profile,
+ * with its real display name and profile picture. Falls back to the handle
+ * itself when the profile lookup is unavailable.
+ */
+function XIdentity() {
+  const { user } = useAuth()
+  const handle = String((user?.user_metadata as { x_username?: string } | undefined)?.x_username ?? '').replace(/^@/, '')
+  const profile = useQuery({
+    queryKey: ['x-profile', handle],
+    enabled: !!handle,
+    queryFn: () => fetchXProfile(handle),
+    staleTime: 5 * 60 * 1000,
+  })
+  const avatar = profile.data?.avatarUrl || (handle ? `https://unavatar.io/x/${encodeURIComponent(handle)}?fallback=false` : null)
+  const name = profile.data?.name || handle || 'Your account'
+
+  if (!handle) {
+    return (
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/70 font-display text-lg font-semibold text-ink-soft">
+          ?
+        </div>
+        <div className="min-w-0">
+          <p className="text-[14px] font-extrabold text-ink">No X handle yet</p>
+          <Link to="/profile" className="text-[12px] font-bold text-ink-soft underline">
+            Add it in your profile
+          </Link>
+        </div>
+      </div>
+    )
   }
+
   return (
-    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-mint font-display text-lg font-semibold text-ink">
-      {(project?.name ?? 'P').slice(0, 1).toUpperCase()}
+    <div className="flex items-center gap-3">
+      {avatar ? (
+        <img
+          src={avatar}
+          alt=""
+          onError={(e) => {
+            e.currentTarget.style.visibility = 'hidden'
+          }}
+          className="h-11 w-11 rounded-full bg-white/70 object-cover ring-1 ring-white/70"
+        />
+      ) : (
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-mint font-display text-lg font-semibold text-ink">
+          {name.slice(0, 1).toUpperCase()}
+        </div>
+      )}
+      <div className="min-w-0">
+        <p className="truncate text-[14px] font-extrabold text-ink">{name}</p>
+        <p className="truncate text-[12px] font-bold text-ink-soft">@{handle}</p>
+      </div>
     </div>
   )
 }
@@ -483,17 +530,7 @@ export default function PostEditorPage() {
               </div>
 
               <div className="rounded-[20px] bg-white p-4">
-                <div className="flex items-center gap-3">
-                  <PreviewAvatar project={project.data} />
-                  <div className="min-w-0">
-                    <p className="truncate text-[14px] font-extrabold text-ink">
-                      {project.data?.name ?? 'Your project'}
-                    </p>
-                    <p className="truncate text-[12px] font-bold text-ink-soft">
-                      @{project.data?.x_username ?? 'handle'}
-                    </p>
-                  </div>
-                </div>
+                <XIdentity />
 
                 <p className="mt-3 text-[15px] leading-relaxed font-semibold whitespace-pre-wrap text-ink">
                   {previewText || 'Nothing to preview yet.'}
