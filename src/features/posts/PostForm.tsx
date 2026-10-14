@@ -376,6 +376,26 @@ export default function PostForm({
             placeholder="Write the article — no character limit."
             className="mt-2 w-full resize-none bg-transparent text-[15px] leading-relaxed font-semibold text-ink placeholder:text-ink-soft/60 focus:outline-none"
           />
+
+          {/* attached media — the article editor used to hide it entirely, so an
+              image saved on an article could not be seen or reused here */}
+          <div className="mt-3 space-y-2">
+            {mediaHere.map((m) => (
+              <AttachedImage
+                key={m.asset.id}
+                asset={m.asset}
+                onRemove={() => setAttachments((a) => a.filter((x) => x.asset.id !== m.asset.id))}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => setAttachFor(focus)}
+              className="flex aspect-video w-full items-center justify-center rounded-[18px] border-2 border-dashed border-white/70 text-sm font-bold text-ink-soft transition hover:bg-white/40"
+            >
+              {mediaHere.length > 0 ? '+ Add another' : '🖼 Add image'}
+            </button>
+          </div>
+
           <div className="mt-3 flex items-center gap-1.5 border-t border-white/50 pt-3">{counter}</div>
         </div>
       ) : type === 'quote' ? (
