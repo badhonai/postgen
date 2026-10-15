@@ -15,6 +15,7 @@ import { TILE_COLORS } from '../lib/types'
 import ProjectForm from '../features/projects/ProjectForm'
 import { useImagePrompts } from '../features/prompts/api'
 import { usePendingShareCount } from '../features/shares/api'
+import { applyTheme, getTheme, type ThemeMode } from '../lib/theme'
 import TabBar from '../components/TabBar'
 import { Button, ErrorBox, Skeleton, SparkleLogo } from '../components/ui'
 
@@ -63,6 +64,12 @@ export default function DashboardPage() {
   const createProject = useCreateProject()
   const prompts = useImagePrompts()
   const pendingShares = usePendingShareCount()
+  const [theme, setTheme] = useState<ThemeMode>(getTheme)
+  const toggleTheme = () => {
+    const next: ThemeMode = theme === 'dark' ? 'light' : 'dark'
+    applyTheme(next)
+    setTheme(next)
+  }
   const [creating, setCreating] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
 
@@ -142,6 +149,24 @@ export default function DashboardPage() {
                   {pendingShares.data}
                 </span>
               ) : null}
+            </button>
+            <button
+              type="button"
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              title={theme === 'dark' ? 'Light theme' : 'Dark theme'}
+              onClick={toggleTheme}
+              className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
+            >
+              {theme === 'dark' ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" />
+                </svg>
+              )}
             </button>
             <button
               type="button"

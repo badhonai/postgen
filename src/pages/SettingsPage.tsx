@@ -10,7 +10,7 @@ import {
 } from '../features/agents/keys'
 import { Button, ErrorBox, Input, Spinner } from '../components/ui'
 import { buildAgentSetupText, buildMcpConfig } from '../features/agents/agentSetup'
-import { ACCENTS, applyAccent, getAccent, type AccentId } from '../lib/theme'
+import { ACCENTS, applyAccent, applyTheme, getAccent, getTheme, type AccentId, type ThemeMode } from '../lib/theme'
 
 const SWATCH: Record<AccentId, string> = {
   emerald: '#34d399',
@@ -149,6 +149,12 @@ export default function SettingsPage() {
   const [agentKey, setAgentKey] = useState<string | null>(null)
   const [agentCopied, setAgentCopied] = useState(false)
   const [accent, setAccent] = useState<AccentId>(getAccent)
+  const [theme, setTheme] = useState<ThemeMode>(getTheme)
+  const toggleTheme = () => {
+    const next: ThemeMode = theme === 'dark' ? 'light' : 'dark'
+    applyTheme(next)
+    setTheme(next)
+  }
   const [open, setOpen] = useState<'agent' | 'keys' | 'mcp' | 'rest' | null>(null)
 
   const origin = window.location.origin
@@ -219,7 +225,8 @@ export default function SettingsPage() {
             <GroupTitle>Appearance</GroupTitle>
             <Row
               label="Theme"
-              value="Pastel"
+              value={theme === 'dark' ? 'Dark' : 'Light'}
+              onClick={toggleTheme}
               icon={
                 <RowIcon tint="bg-sky/60">
                   <svg {...ROW_ICON}>

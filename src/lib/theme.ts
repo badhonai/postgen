@@ -23,3 +23,29 @@ export function applyAccent(id: AccentId): void {
 export function initAccent(): void {
   applyAccent(getAccent())
 }
+
+export type ThemeMode = 'light' | 'dark'
+
+const THEME_KEY = 'postgen.theme'
+
+export function getTheme(): ThemeMode {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
+export function applyTheme(mode: ThemeMode): void {
+  document.documentElement.dataset.theme = mode
+  try {
+    localStorage.setItem(THEME_KEY, mode)
+  } catch {
+    /* private mode — theme just won't persist */
+  }
+}
+
+/** Called once at boot so the saved theme applies before first paint. */
+export function initTheme(): void {
+  applyTheme(getTheme())
+}

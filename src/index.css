@@ -17,6 +17,14 @@
   --accent: #34d399;
   --accent-deep: #10b981;
   --accent-deeper: #059669;
+  /* The app's highlight (active pills, primary accents) follows the accent.
+     Emerald keeps the classic butter-yellow so the stock look is unchanged. */
+  --accent-butter: #ffe68a;
+  --accent-butter-deep: #f2c14e;
+  --shell-1: #cfe0f7;
+  --shell-2: #dcd6f6;
+  --shell-3: #e9d8ef;
+  --shell-4: #d6e5f5;
 }
 [data-accent='violet'] {
   --accent-0: #ddd6fe;
@@ -24,6 +32,12 @@
   --accent: #a78bfa;
   --accent-deep: #8b5cf6;
   --accent-deeper: #7c3aed;
+  --accent-butter: #ddd6fe;
+  --accent-butter-deep: #8b5cf6;
+  --shell-1: #d9ccff;
+  --shell-2: #cfc2fb;
+  --shell-3: #e3d4f7;
+  --shell-4: #d5dcff;
 }
 [data-accent='amber'] {
   --accent-0: #fde68a;
@@ -31,6 +45,12 @@
   --accent: #fbbf24;
   --accent-deep: #f59e0b;
   --accent-deeper: #d97706;
+  --accent-butter: #fde68a;
+  --accent-butter-deep: #f59e0b;
+  --shell-1: #f7e3bd;
+  --shell-2: #f3ddc0;
+  --shell-3: #f7e0cf;
+  --shell-4: #f2e7c9;
 }
 [data-accent='rose'] {
   --accent-0: #fecdd3;
@@ -38,6 +58,12 @@
   --accent: #fb7185;
   --accent-deep: #f43f5e;
   --accent-deeper: #e11d48;
+  --accent-butter: #fecdd3;
+  --accent-butter-deep: #f43f5e;
+  --shell-1: #f7d3dd;
+  --shell-2: #f2d0e4;
+  --shell-3: #f7d8e2;
+  --shell-4: #e8d8f2;
 }
 
 @theme {
@@ -96,8 +122,8 @@ body {
   --font-body: 'Nunito', ui-rounded, system-ui, sans-serif;
   --color-ink: #2f2b5e;
   --color-ink-soft: #75709e;
-  --color-butter: #ffe68a;
-  --color-butter-deep: #f2c14e;
+  --color-butter: var(--accent-butter);
+  --color-butter-deep: var(--accent-butter-deep);
   --color-mint: #c3ead8;
   --color-lilac: #dcd6f8;
   --color-cream: #f7efd3;
@@ -114,7 +140,7 @@ body {
   background:
     radial-gradient(900px 480px at 85% -8%, rgba(255, 255, 255, 0.85), transparent 62%),
     radial-gradient(700px 420px at -10% 108%, rgba(255, 255, 255, 0.5), transparent 55%),
-    linear-gradient(168deg, #cfe0f7 0%, #dcd6f6 44%, #e9d8ef 74%, #d6e5f5 100%);
+    linear-gradient(168deg, var(--shell-1) 0%, var(--shell-2) 44%, var(--shell-3) 74%, var(--shell-4) 100%);
   background-attachment: fixed;
 }
 
@@ -211,4 +237,83 @@ body {
 
 .pg-scroll {
   scrollbar-width: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Dark theme (data-theme='dark', toggled beside the profile icon).
+   Deep indigo surfaces, light ink, accent preserved. The white/xx
+   utility overrides turn the light theme's frosted panels into
+   dark glass instead of glowing white boxes.
+   ══════════════════════════════════════════════════════════════════ */
+[data-theme='dark'] {
+  --color-ink: #efedff;
+  --color-ink-soft: #aaa6cf;
+  --color-mint: #17453a;
+  --color-lilac: #2e2a55;
+  --color-cream: #3a3320;
+  --color-peach: #3d2c28;
+  --color-sky: #1e3a56;
+  --color-rose-soft: #4a2436;
+  color-scheme: dark;
+}
+html[data-theme='dark'] {
+  background-color: #141126;
+}
+[data-theme='dark'] body {
+  color-scheme: dark;
+}
+[data-theme='dark'] .pg-shell {
+  color: var(--color-ink);
+  color-scheme: dark;
+  background:
+    radial-gradient(900px 480px at 85% -8%, rgba(139, 133, 232, 0.22), transparent 62%),
+    radial-gradient(700px 420px at -10% 108%, rgba(84, 70, 160, 0.2), transparent 55%),
+    linear-gradient(168deg, #17142f 0%, #1d1838 44%, #251a40 74%, #121a30 100%);
+}
+[data-theme='dark'] .pg-glass {
+  background: rgba(38, 35, 68, 0.62);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+}
+[data-theme='dark'] .pg-glass-strong {
+  background: #232046;
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+}
+[data-theme='dark'] .pg-chip {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+/* frosted white panels → dark glass */
+[data-theme='dark'] :is(
+  .bg-white\/85, .bg-white\/75, .bg-white\/70, .bg-white\/65,
+  .bg-white\/60, .bg-white\/55, .bg-white\/50, .bg-white\/45, .bg-white\/40
+) {
+  background-color: rgba(255, 255, 255, 0.09);
+}
+[data-theme='dark'] .bg-white {
+  background-color: #262350;
+}
+[data-theme='dark'] :is(
+  .border-white\/90, .border-white\/75, .border-white\/70,
+  .border-white\/60, .border-white\/50
+) {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+/* primary indigo surfaces stay saturated; butter keeps dark text */
+[data-theme='dark'] .bg-ink {
+  background-color: #655fd0;
+}
+[data-theme='dark'] .bg-butter {
+  color: #292550;
+}
+[data-theme='dark'] .text-rose-700 {
+  color: #fda4af;
+}
+[data-theme='dark'] option {
+  background-color: #232046;
+  color: #efedff;
+}
+[data-theme='dark'] ::selection {
+  color: #17142f;
 }

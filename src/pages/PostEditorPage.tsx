@@ -463,9 +463,26 @@ export default function PostEditorPage() {
           </div>
         ) : null}
 
+        {/* ── one card: live preview + editor together (PostForm) ── */}
+        <div className="mt-6">
+          <PostForm
+            key={initial.postId ?? `new:${initial.projectId}`}
+            initial={initial}
+            busy={savePost.isPending}
+            error={formError ?? (savePost.error instanceof Error ? savePost.error.message : null)}
+            blacklist={projectBlacklist(project.data?.brand_voice)}
+            project={project.data}
+            onSubmit={handleSubmit}
+            onCancel={() =>
+              navigate(projectId ? `/projects/${projectId}` : '/dashboard', { replace: true })
+            }
+            onChange={onFormChange}
+          />
+        </div>
+
         {/* ── prev / next post (same project, newest first) ── */}
         {!isNew && postData ? (
-          <nav aria-label="Posts" className="pg-glass mt-5 flex items-center gap-2 rounded-full p-1.5">
+          <nav aria-label="Posts" className="pg-glass mt-6 flex items-center gap-2 rounded-full p-1.5">
             <button
               type="button"
               disabled={!prevPost}
@@ -488,22 +505,6 @@ export default function PostEditorPage() {
           </nav>
         ) : null}
 
-        {/* ── one card: live preview + editor together (PostForm) ── */}
-        <div className="mt-6">
-          <PostForm
-            key={initial.postId ?? `new:${initial.projectId}`}
-            initial={initial}
-            busy={savePost.isPending}
-            error={formError ?? (savePost.error instanceof Error ? savePost.error.message : null)}
-            blacklist={projectBlacklist(project.data?.brand_voice)}
-            project={project.data}
-            onSubmit={handleSubmit}
-            onCancel={() =>
-              navigate(projectId ? `/projects/${projectId}` : '/dashboard', { replace: true })
-            }
-            onChange={onFormChange}
-          />
-        </div>
 
         {postedAsk && postData ? (
           <div className="fixed inset-0 z-50 flex items-end bg-ink/45 px-3 pt-10 pb-6" onClick={() => setPostedAsk(false)}>
