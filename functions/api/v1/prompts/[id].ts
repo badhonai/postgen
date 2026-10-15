@@ -18,6 +18,8 @@ export function onRequestPatch(ctx: Ctx): Promise<Response> {
       notes: body.notes,
       referenceAssetIds: body.reference_asset_ids,
       projectIds: body.project_ids,
+      useReferenceImages: body.use_reference_images,
+      colorCodes: body.color_codes,
     })
     return Response.json({ image_prompt: prompt })
   })

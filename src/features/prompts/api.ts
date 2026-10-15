@@ -12,6 +12,11 @@ export type ImagePrompt = {
   reference_asset_ids: string[]
   /** Projects this prompt is for; empty = global (any project). */
   project_ids: string[]
+  /** False (default): reference images are a cover — how the output
+   *  looks — and must NOT be used as generation references. */
+  use_reference_images: boolean
+  /** Optional hex palette (e.g. #FF1E2D) the generated image must use. */
+  color_codes: string[]
   created_at: string
   updated_at: string
 }
@@ -63,6 +68,14 @@ export type PromptInput = {
   notes?: string
   referenceAssetIds?: string[]
   projectIds?: string[]
+  useReferenceImages?: boolean
+  colorCodes?: string[]
+}
+
+/** '#rrggbb' (any case, # optional) → '#RRGGBB', or null if invalid. */
+export function normalizeHex(raw: string): string | null {
+  const c = raw.trim()
+  return /^#?[0-9a-fA-F]{6}$/.test(c) ? `#${c.replace('#', '').toUpperCase()}` : null
 }
 
 export function useCreateImagePrompt() {
@@ -81,6 +94,8 @@ export function useCreateImagePrompt() {
           notes: input.notes?.trim() ?? '',
           reference_asset_ids: input.referenceAssetIds ?? [],
           project_ids: input.projectIds ?? [],
+          use_reference_images: input.useReferenceImages ?? false,
+          color_codes: (input.colorCodes ?? []).map((c) => normalizeHex(c) ?? c),
         })
         .select()
         .single()
@@ -103,6 +118,8 @@ export function useUpdateImagePrompt() {
           notes: input.notes?.trim() ?? '',
           reference_asset_ids: input.referenceAssetIds ?? [],
           project_ids: input.projectIds ?? [],
+          use_reference_images: input.useReferenceImages ?? false,
+          color_codes: (input.colorCodes ?? []).map((c) => normalizeHex(c) ?? c),
         })
         .eq('id', id)
       if (error) throw error

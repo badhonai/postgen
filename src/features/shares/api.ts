@@ -86,6 +86,16 @@ export type SharePromptPayload = {
   name: string
   prompt: string
   notes: string
+  /** Cover images travel with the prompt now (they show the output). */
+  reference_assets?: Array<
+    ShareAssetPayload & {
+      source_project_name?: string | null
+      source_project_slug?: string | null
+      source_project_x_username?: string | null
+    }
+  >
+  use_reference_images?: boolean
+  color_codes?: string[]
 }
 
 const assetPayload = (a: Asset): ShareAssetPayload => ({
@@ -166,19 +176,57 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
   if (itemType === 'prompt') {
     const { data, error } = await supa
       .from('image_prompts')
-      .select('id, name, prompt, notes, updated_at')
+      .select('id, name, prompt, notes, updated_at, reference_asset_ids, use_reference_images, color_codes')
       .eq('id', itemId)
       .single()
     if (error) throw error
-    // Reference images belong to the sender's projects — the text recipe
-    // travels, the reference files don't.
-    const d = data as { id: string; name: string; prompt: string; notes: string; updated_at?: string | null }
+    const d = data as {
+      id: string
+      name: string
+      prompt: string
+      notes: string
+      updated_at?: string | null
+      reference_asset_ids?: string[]
+      use_reference_images?: boolean
+      color_codes?: string[]
+    }
+    // The cover images travel with the prompt — they ARE how the
+    // recipient sees what this prompt produces.
+    const refIds = d.reference_asset_ids ?? []
+    let referenceAssets: SharePromptPayload['reference_assets'] = []
+    if (refIds.length > 0) {
+      const { data: rows } = await supa.from('assets').select('*').in('id', refIds)
+      const byId = new Map(((rows ?? []) as Asset[]).map((a) => [a.id, a]))
+      const projectIds = [...new Set(((rows ?? []) as Asset[]).map((a) => a.project_id))]
+      const { data: projs } = await supa
+        .from('projects')
+        .select('id, name, slug, x_username')
+        .in('id', projectIds)
+      const projById = new Map(
+        ((projs ?? []) as Array<{ id: string; name: string; slug: string; x_username: string | null }>).map((pr) => [pr.id, pr]),
+      )
+      referenceAssets = refIds
+        .map((id) => byId.get(id))
+        .filter((a): a is Asset => !!a)
+        .map((a) => {
+          const pr = projById.get(a.project_id)
+          return {
+            ...assetPayload(a),
+            source_project_name: pr?.name ?? null,
+            source_project_slug: pr?.slug ?? null,
+            source_project_x_username: pr?.x_username ?? null,
+          }
+        })
+    }
     return {
       name: d.name,
       prompt: d.prompt,
       notes: d.notes,
       source_item_id: d.id,
       source_updated_at: d.updated_at ?? null,
+      reference_assets: referenceAssets,
+      use_reference_images: d.use_reference_images ?? false,
+      color_codes: d.color_codes ?? [],
     } as Record<string, unknown>
   }
 
@@ -627,10 +675,58 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
         existingProjects = hit.project_ids ?? []
       }
     }
+    // Covers travel with the prompt: recreate their asset rows in the
+    // recipient's account and point the prompt at the local copies.
+    // Home for them: the local project matching the cover's source
+    // project (handle/slug), else the recipient's newest project, else
+    // a small dedicated project so the images are never dropped.
+    const covers = p.reference_assets ?? []
+    let localRefIds: string[] | null = null
+    if (covers.length > 0) {
+      let homeId: string | null = null
+      const first = covers[0]
+      if (first.source_project_x_username) {
+        const { data } = await supa.from('projects').select('id').eq('user_id', userId).eq('x_username', first.source_project_x_username).limit(1)
+        homeId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+      }
+      if (!homeId && first.source_project_slug) {
+        const { data } = await supa.from('projects').select('id').eq('user_id', userId).eq('slug', first.source_project_slug).limit(1)
+        homeId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+      }
+      if (!homeId) {
+        const { data } = await supa.from('projects').select('id').eq('user_id', userId).order('created_at', { ascending: false }).limit(1)
+        homeId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+      }
+      if (!homeId) {
+        const slug = await uniqueSlug(userId, 'prompt-covers', 'Prompt covers')
+        const { data, error: cErr } = await supa
+          .from('projects')
+          .insert({ user_id: userId, name: 'Prompt covers', slug, description: 'Cover images for prompts shared with me.' })
+          .select('id')
+          .single()
+        if (cErr) throw cErr
+        homeId = (data as { id: string }).id
+      }
+      const byKey = await importAssets(userId, homeId, covers)
+      localRefIds = covers.map((c) => byKey.get(c.r2_key)).filter((x): x is string => !!x)
+    }
+
     if (existingId) {
       const { error } = await supa
         .from('image_prompts')
-        .update({ name: p.name, prompt: p.prompt, notes: p.notes ?? '' })
+        .update({
+          name: p.name,
+          prompt: p.prompt,
+          notes: p.notes ?? '',
+          // Old payloads (pre-cover-sharing) don't replace existing refs.
+          ...(localRefIds !== null
+            ? {
+                reference_asset_ids: localRefIds,
+                use_reference_images: p.use_reference_images ?? false,
+                color_codes: p.color_codes ?? [],
+              }
+            : {}),
+        })
         .eq('id', existingId)
       if (error) throw error
       await recordImport(userId, share, { localId: existingId, sourceUpdatedAt: p.source_updated_at })
@@ -644,8 +740,10 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
           name: p.name,
           prompt: p.prompt,
           notes: p.notes ?? '',
-          reference_asset_ids: [],
+          reference_asset_ids: localRefIds ?? [],
           project_ids: [],
+          use_reference_images: p.use_reference_images ?? false,
+          color_codes: p.color_codes ?? [],
         })
         .select('id')
         .single()

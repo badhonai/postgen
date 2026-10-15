@@ -1,4 +1,5 @@
-import type { ImagePrompt } from './api'
+import { useState } from 'react'
+import { normalizeHex, type ImagePrompt } from './api'
 import { Button, Input, Textarea } from '../../components/ui'
 
 const EMPTY = { name: '', prompt: '', notes: '' }
@@ -17,6 +18,12 @@ type Props = {
   error: string | null
   onChange: (form: ComposerForm) => void
   onRefs: (ids: string[]) => void
+  /** May the cover images be used as generation references? (default off) */
+  useRefs: boolean
+  onUseRefs: (v: boolean) => void
+  /** Optional hex palette the generated image must use. */
+  colors: string[]
+  onColors: (codes: string[]) => void
   onProjects: (ids: string[]) => void
   onSave: () => void
   onClose: () => void
@@ -41,6 +48,10 @@ export default function PromptComposerSheet({
   error,
   onChange,
   onRefs,
+  useRefs,
+  onUseRefs,
+  colors,
+  onColors,
   onProjects,
   onSave,
   onClose,
@@ -48,6 +59,18 @@ export default function PromptComposerSheet({
   renderThumb,
 }: Props) {
   const set = (patch: Partial<ComposerForm>) => onChange({ ...form, ...patch })
+  const [colorDraft, setColorDraft] = useState('')
+  const [colorError, setColorError] = useState<string | null>(null)
+  const addColor = () => {
+    const n = normalizeHex(colorDraft)
+    if (!n) {
+      setColorError('Use a hex code like #FF1E2D')
+      return
+    }
+    setColorError(null)
+    setColorDraft('')
+    if (!colors.includes(n) && colors.length < 12) onColors([...colors, n])
+  }
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center">
@@ -148,12 +171,16 @@ export default function PromptComposerSheet({
           <div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
-                Reference media · {refs.length}
+                Cover media · {refs.length}
               </span>
               <Button variant="ghost" className="px-2.5 py-1 text-xs" onClick={onPick}>
                 {refs.length ? 'Change' : 'Add'}
               </Button>
             </div>
+            <p className="mt-1 text-[11px] leading-relaxed font-semibold text-ink-soft">
+              The cover shows how this prompt's output looks. It is <em>not</em> used to generate —
+              unless you turn that on below.
+            </p>
             {refs.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {refs.map((id) => (
@@ -161,7 +188,7 @@ export default function PromptComposerSheet({
                     {renderThumb(id)}
                     <button
                       type="button"
-                      aria-label="Remove reference"
+                      aria-label="Remove cover image"
                       onClick={() => onRefs(refs.filter((x) => x !== id))}
                       className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[10px] font-bold text-white"
                     >
@@ -172,9 +199,90 @@ export default function PromptComposerSheet({
               </div>
             ) : (
               <p className="mt-1.5 text-[11px] font-semibold text-ink-soft">
-                None yet — references teach the style.
+                None yet — add an example output as the cover.
               </p>
             )}
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={useRefs}
+              onClick={() => onUseRefs(!useRefs)}
+              className="mt-3 flex w-full items-center gap-3 rounded-[16px] bg-white/45 px-3 py-2.5 text-left transition active:scale-[0.99]"
+            >
+              <span
+                className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition ${
+                  useRefs ? 'justify-end bg-ink' : 'justify-start bg-ink/20'
+                }`}
+              >
+                <span className="h-5 w-5 rounded-full bg-white shadow" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-extrabold text-ink">Use cover as generation reference</span>
+                <span className="block text-[11px] leading-snug font-semibold text-ink-soft">
+                  {useRefs
+                    ? 'On — agents may feed the cover images to the image model as references.'
+                    : 'Off — cover is display only; agents never use it to generate.'}
+                </span>
+              </span>
+            </button>
+          </div>
+
+          <div>
+            <span className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
+              Color codes · {colors.length}
+            </span>
+            <p className="mt-1 text-[11px] leading-relaxed font-semibold text-ink-soft">
+              Optional. When set, generated images must use exactly these colors.
+            </p>
+            {colors.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {colors.map((c) => (
+                  <span
+                    key={c}
+                    className="flex items-center gap-1.5 rounded-full bg-white/55 py-1 pr-1.5 pl-2 text-[11px] font-extrabold text-ink"
+                  >
+                    <span className="h-3.5 w-3.5 rounded-full ring-1 ring-white/80" style={{ background: c }} />
+                    {c}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${c}`}
+                      onClick={() => onColors(colors.filter((x) => x !== c))}
+                      className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-ink/8 text-[10px] text-ink-soft hover:text-ink"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <div className="mt-2 flex items-center gap-2">
+              <span className="relative shrink-0">
+                <input
+                  type="color"
+                  aria-label="Pick a color"
+                  value={normalizeHex(colorDraft) ?? '#FF1E2D'}
+                  onChange={(e) => setColorDraft(e.target.value.toUpperCase())}
+                  className="h-9 w-9 cursor-pointer rounded-full border border-white/70 bg-white/60 p-1"
+                />
+              </span>
+              <Input
+                value={colorDraft}
+                onChange={(e) => setColorDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addColor()
+                  }
+                }}
+                placeholder="#FF1E2D"
+                className="min-w-0 flex-1 py-2"
+              />
+              <Button variant="ghost" className="shrink-0 px-3 py-2 text-xs" onClick={addColor}>
+                Add
+              </Button>
+            </div>
+            {colorError ? <p className="mt-1 text-[11px] font-bold text-rose-700">{colorError}</p> : null}
           </div>
 
           <div className="flex items-center gap-2 pt-1">

@@ -747,16 +747,45 @@ export type ImagePromptRow = {
   reference_asset_ids: string[]
   /** Projects this prompt is for; empty = global (any project). */
   project_ids: string[]
+  /** When false (default) the reference images are a COVER — they show
+   *  how the output looks and must NOT be used as generation references. */
+  use_reference_images: boolean
+  /** Optional hex palette (e.g. #FF1E2D) the image should use. */
+  color_codes: string[]
   created_at: string
   updated_at: string
 }
 
-export type ImagePromptWithRefs = ImagePromptRow & { reference_assets: AssetSummary[] }
+export type ImagePromptWithRefs = ImagePromptRow & {
+  /** Cover images — how the output looks. Preview only. Always present. */
+  cover_assets: AssetSummary[]
+  /** Generation references — ONLY populated when use_reference_images
+   *  is true. Agents must not feed cover_assets to an image model. */
+  reference_assets: AssetSummary[]
+}
+
+const HEX_RE = /^#?[0-9a-fA-F]{6}$/
+
+/** Normalize a color list: '#rrggbb' uppercase, deduped, max 12. */
+export function cleanColorCodes(input: unknown): string[] {
+  if (input == null) return []
+  if (!Array.isArray(input)) throw new AgentError(400, { error: 'color_codes must be an array of hex colors' })
+  const out: string[] = []
+  for (const raw of input) {
+    const c = String(raw).trim()
+    if (!HEX_RE.test(c)) throw new AgentError(400, { error: 'invalid color code', message: `'${c}' is not a hex color like #FF1E2D` })
+    const norm = `#${c.replace('#', '').toUpperCase()}`
+    if (!out.includes(norm)) out.push(norm)
+    if (out.length > 12) throw new AgentError(400, { error: 'too many color codes', message: 'max 12' })
+  }
+  return out
+}
 
 /**
- * Saved image prompts with their reference images resolved.
- * References are the point: the prompt says what to make, the images
- * show what it should look like, so both travel together.
+ * Saved image prompts. Cover images are resolved for preview; they are
+ * only exposed as generation references when the owner turned that on
+ * for the prompt (use_reference_images) — otherwise reference_assets
+ * stays empty on purpose.
  */
 export async function listImagePrompts(
   env: Env,
@@ -766,7 +795,7 @@ export async function listImagePrompts(
 ): Promise<ImagePromptWithRefs[]> {
   const { data, error } = await db(env)
     .from('image_prompts')
-    .select('id, name, prompt, notes, reference_asset_ids, project_ids, created_at, updated_at')
+    .select('id, name, prompt, notes, reference_asset_ids, project_ids, use_reference_images, color_codes, created_at, updated_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
   // PGRST205 = table not in the schema cache yet (migration not applied).
@@ -812,13 +841,21 @@ export async function listImagePrompts(
     )
   }
 
-  return prompts.map((p) => ({
-    ...p,
+  return prompts.map((p) => {
     // keep the stored order, and drop anything deleted since
-    reference_assets: (p.reference_asset_ids ?? [])
+    const covers = (p.reference_asset_ids ?? [])
       .map((id) => byId.get(id))
-      .filter((a): a is AssetSummary => !!a),
-  }))
+      .filter((a): a is AssetSummary => !!a)
+    return {
+      ...p,
+      use_reference_images: p.use_reference_images ?? false,
+      color_codes: p.color_codes ?? [],
+      cover_assets: covers,
+      // The gate: covers become generation references ONLY when the
+      // owner enabled it for this prompt.
+      reference_assets: p.use_reference_images ? covers : [],
+    }
+  })
 }
 
 // ──────────────────── image prompt writes ────────────────────
@@ -858,7 +895,17 @@ function cleanPromptInput(input: {
   notes?: unknown
   referenceAssetIds?: unknown
   projectIds?: unknown
-}): { name: string; prompt: string; notes: string; reference_asset_ids: string[]; project_ids: string[] } {
+  useReferenceImages?: unknown
+  colorCodes?: unknown
+}): {
+  name: string
+  prompt: string
+  notes: string
+  reference_asset_ids: string[]
+  project_ids: string[]
+  use_reference_images: boolean
+  color_codes: string[]
+} {
   const name = String(input.name ?? '').trim()
   const prompt = String(input.prompt ?? '').trim()
   const notes = String(input.notes ?? '').trim()
@@ -876,14 +923,22 @@ function cleanPromptInput(input: {
   if (projectIds.some((r) => !UUID_RE.test(r))) {
     throw new AgentError(400, { error: 'project_ids must be project uuids' })
   }
-  return { name, prompt, notes, reference_asset_ids: refs, project_ids: projectIds }
+  return {
+    name,
+    prompt,
+    notes,
+    reference_asset_ids: refs,
+    project_ids: projectIds,
+    use_reference_images: input.useReferenceImages === true,
+    color_codes: cleanColorCodes(input.colorCodes),
+  }
 }
 
 export async function createImagePrompt(
   env: Env,
   auth: AgentAuth,
   via: CreatedVia,
-  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown; projectIds?: unknown },
+  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown; projectIds?: unknown; useReferenceImages?: unknown; colorCodes?: unknown },
 ) {
   const row = cleanPromptInput(input)
   await assertOwnedAssetIds(env, auth.userId, row.reference_asset_ids)
@@ -907,7 +962,7 @@ export async function updateImagePrompt(
   auth: AgentAuth,
   via: CreatedVia,
   id: string,
-  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown; projectIds?: unknown },
+  input: { name?: unknown; prompt?: unknown; notes?: unknown; referenceAssetIds?: unknown; projectIds?: unknown; useReferenceImages?: unknown; colorCodes?: unknown },
 ) {
   const row = cleanPromptInput(input)
   await assertOwnedAssetIds(env, auth.userId, row.reference_asset_ids)

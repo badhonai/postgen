@@ -31,6 +31,8 @@ export default function PromptLibraryPage() {
   const [form, setForm] = useState<ComposerForm>(EMPTY)
   const [refs, setRefs] = useState<string[]>([])
   const [promptProjects, setPromptProjects] = useState<string[]>([])
+  const [useRefs, setUseRefs] = useState(false)
+  const [colors, setColors] = useState<string[]>([])
   const projects = useProjects()
   const projectList = (projects.data ?? []).map((pr) => ({ id: pr.id, name: pr.name }))
   const projectName = (id: string) => projectList.find((pr) => pr.id === id)?.name ?? 'Project'
@@ -45,6 +47,8 @@ export default function PromptLibraryPage() {
     setForm(EMPTY)
     setRefs([])
     setPromptProjects([])
+    setUseRefs(false)
+    setColors([])
     setSheetOpen(true)
   }
 
@@ -53,13 +57,21 @@ export default function PromptLibraryPage() {
     setForm({ name: p.name, prompt: p.prompt, notes: p.notes })
     setRefs(p.reference_asset_ids ?? [])
     setPromptProjects(p.project_ids ?? [])
+    setUseRefs(p.use_reference_images ?? false)
+    setColors(p.color_codes ?? [])
     setViewing(null)
     setSheetOpen(true)
   }
 
   const save = async () => {
     if (!form.prompt.trim()) return
-    const payload = { ...form, referenceAssetIds: refs, projectIds: promptProjects }
+    const payload = {
+      ...form,
+      referenceAssetIds: refs,
+      projectIds: promptProjects,
+      useReferenceImages: useRefs,
+      colorCodes: colors,
+    }
     if (editing) {
       await updatePrompt.mutateAsync({ id: editing.id, ...payload })
     } else {
@@ -69,6 +81,8 @@ export default function PromptLibraryPage() {
     setForm(EMPTY)
     setRefs([])
     setPromptProjects([])
+    setUseRefs(false)
+    setColors([])
     closeSheet()
   }
 
@@ -119,8 +133,9 @@ export default function PromptLibraryPage() {
         </header>
 
         <p className="pg-glass mt-5 rounded-[20px] p-4 text-xs leading-relaxed font-semibold text-ink-soft">
-          A prompt is a reusable recipe for art. The agent reads the prompt <em>and</em> its reference
-          images, so it can match your style instead of guessing it.
+          A prompt is a reusable recipe for art. Its <strong className="text-ink">cover image</strong> shows
+          how the output looks — the agent uses it as a generation reference{' '}
+          <em>only if you turn that on</em> in the prompt. Color codes pin the palette when you want one.
         </p>
 
         {/* ── bento grid ── */}
@@ -198,6 +213,10 @@ export default function PromptLibraryPage() {
           error={sheetError}
           onChange={setForm}
           onRefs={setRefs}
+          useRefs={useRefs}
+          onUseRefs={setUseRefs}
+          colors={colors}
+          onColors={setColors}
           onProjects={setPromptProjects}
           onSave={() => void save()}
           onClose={closeSheet}

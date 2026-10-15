@@ -54,7 +54,7 @@ export default function PromptCard({
           </span>
         )}
         <span className="rounded-full bg-white/55 px-2.5 py-1 text-[10px] font-bold text-ink">
-          {refs.length === 0 ? 'no refs' : `${refs.length} reference${refs.length === 1 ? '' : 's'}`}
+          {refs.length === 0 ? 'no cover' : `${refs.length} cover${refs.length === 1 ? '' : 's'}`}
         </span>
       </div>
 
@@ -65,7 +65,21 @@ export default function PromptCard({
         </p>
         <p className="mt-0.5 truncate text-[10px] font-bold text-ink-soft/80">
           {projectNames.length ? `For: ${projectNames.join(', ')}` : 'Global · all projects'}
+          {prompt.use_reference_images ? ' · refs on' : ''}
         </p>
+        {(prompt.color_codes ?? []).length > 0 ? (
+          <span className="mt-1.5 flex items-center gap-1">
+            {(prompt.color_codes ?? []).slice(0, 6).map((c) => (
+              <span
+                key={c}
+                title={c}
+                className="h-3 w-3 rounded-full ring-1 ring-white/80"
+                style={{ background: c }}
+              />
+            ))}
+            <span className="text-[9px] font-bold text-ink-soft">{(prompt.color_codes ?? []).length} colors</span>
+          </span>
+        ) : null}
       </div>
     </button>
   )

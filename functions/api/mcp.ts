@@ -183,11 +183,12 @@ const TOOLS = [
   {
     name: 'list_image_prompts',
     description:
-      'List the user’s saved image prompts. Each has the prompt text, a note about the ' +
-      'output it tends to produce, project_ids (empty = global), and reference images ' +
-      '(with signed URLs) that show the style. Pass project_id to receive ONLY that ' +
-      'project’s prompts (project-tagged first) plus globals. Use the prompt AND the ' +
-      'reference images together when generating art.',
+      'List the user’s saved image prompts. Each has the prompt text, notes, project_ids ' +
+      '(empty = global), cover_assets (signed URLs showing how the output LOOKS — preview ' +
+      'only, never feed them to an image model), and color_codes (optional hex palette to ' +
+      'use when generating). reference_assets is ONLY filled when the prompt’s ' +
+      'use_reference_images flag is true — only then may you use those images as generation ' +
+      'references. Pass project_id to receive ONLY that project’s prompts plus globals.',
     inputSchema: {
       type: 'object',
       properties: { project_id: { type: 'string', description: 'Only prompts for this project + globals.' } },
@@ -197,8 +198,8 @@ const TOOLS = [
   {
     name: 'create_image_prompt',
     description:
-      'Save a new image prompt to the user’s library, optionally with reference images. ' +
-      'Use list_assets first to get asset ids you may reference.',
+      'Save a new image prompt to the user’s library, optionally with reference images ' +
+      '(saved as the prompt’s cover) and color codes. Use list_assets first for asset ids.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -215,6 +216,15 @@ const TOOLS = [
           items: { type: 'string' },
           description: 'Projects this prompt is for. Empty/omitted = global (any project).',
         },
+        use_reference_images: {
+          type: 'boolean',
+          description: 'May the reference (cover) images be used as generation references? Default false — cover only.',
+        },
+        color_codes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Hex colors (e.g. #FF1E2D) the image should use. Max 12.',
+        },
       },
       required: ['name', 'prompt'],
       additionalProperties: false,
@@ -223,8 +233,9 @@ const TOOLS = [
   {
     name: 'update_image_prompt',
     description:
-      'Replace an existing image prompt. Sends the whole prompt — name, prompt text, notes ' +
-      'and reference_asset_ids are all overwritten, so pass the full intended values.',
+      'Replace an existing image prompt. Sends the whole prompt — name, prompt text, notes, ' +
+      'reference_asset_ids, project_ids, use_reference_images and color_codes are all ' +
+      'overwritten, so pass the full intended values.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -234,6 +245,8 @@ const TOOLS = [
         notes: { type: 'string' },
         reference_asset_ids: { type: 'array', items: { type: 'string' } },
         project_ids: { type: 'array', items: { type: 'string' }, description: 'Projects this prompt is for; empty = global.' },
+        use_reference_images: { type: 'boolean', description: 'May the cover images be used as generation references? Default false.' },
+        color_codes: { type: 'array', items: { type: 'string' }, description: 'Hex colors the image should use. Max 12.' },
       },
       required: ['prompt_id', 'name', 'prompt'],
       additionalProperties: false,
@@ -347,6 +360,8 @@ async function callTool(
           notes: args.notes,
           referenceAssetIds: args.reference_asset_ids,
           projectIds: args.project_ids,
+          useReferenceImages: args.use_reference_images,
+          colorCodes: args.color_codes,
         }),
       })
     case 'update_image_prompt':
@@ -357,6 +372,8 @@ async function callTool(
           notes: args.notes,
           referenceAssetIds: args.reference_asset_ids,
           projectIds: args.project_ids,
+          useReferenceImages: args.use_reference_images,
+          colorCodes: args.color_codes,
         }),
       })
     case 'delete_image_prompt':

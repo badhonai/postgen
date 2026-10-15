@@ -52,8 +52,8 @@ export default function PromptDetailSheet({
             <h2 className="pg-title text-lg text-ink">{prompt.name}</h2>
             <p className="mt-0.5 text-[11px] font-bold text-ink-soft">
               {refs.length === 0
-                ? 'No references'
-                : `${refs.length} reference${refs.length === 1 ? '' : 's'}`}
+                ? 'No cover image'
+                : `${refs.length} cover${refs.length === 1 ? '' : 's'}`}
               {' · '}
               {projectNames.length ? `For: ${projectNames.join(', ')}` : 'Global · all projects'}
             </p>
@@ -73,11 +73,38 @@ export default function PromptDetailSheet({
         {refs.length > 0 ? (
           <div className="mt-4">
             <span className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
-              Reference media
+              Cover — how the output looks
             </span>
             <div className="mt-2">
               <RefThumbRow ids={refs} />
             </div>
+            <p className="mt-2 text-[11px] leading-relaxed font-semibold text-ink-soft">
+              {prompt.use_reference_images
+                ? 'Generation reference is ON — agents may feed these images to the image model as references.'
+                : 'Cover only — agents never feed these images to the image model. Turn on “Use as generation reference” in Edit if you want that.'}
+            </p>
+          </div>
+        ) : null}
+
+        {(prompt.color_codes ?? []).length > 0 ? (
+          <div className="mt-4">
+            <span className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
+              Color codes
+            </span>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(prompt.color_codes ?? []).map((c) => (
+                <span
+                  key={c}
+                  className="flex items-center gap-1.5 rounded-full bg-white/55 py-1 pr-2.5 pl-1.5 text-[11px] font-extrabold text-ink"
+                >
+                  <span className="h-3.5 w-3.5 rounded-full ring-1 ring-white/80" style={{ background: c }} />
+                  {c}
+                </span>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11px] font-semibold text-ink-soft">
+              Generated images must use this palette.
+            </p>
           </div>
         ) : null}
 

@@ -6,10 +6,11 @@ type Ctx = { request: Request; env: Env }
 
 /**
  * GET /api/v1/prompts
- * The user's saved image prompts, each with its reference images resolved
- * to short-lived signed URLs. The prompt text and the reference images are
- * meant to be used together — the words say what to make, the images show
- * the style it should come out in.
+ * The user's saved image prompts. cover_assets (signed URLs) show how
+ * each prompt's output looks — preview only. reference_assets is ONLY
+ * populated when the prompt's use_reference_images flag is on; agents
+ * must not feed covers to an image model otherwise. color_codes is the
+ * optional hex palette to generate with.
  */
 export function onRequestGet(ctx: Ctx): Promise<Response> {
   return agentRoute(ctx.request, ctx.env, async (auth) => {
@@ -31,6 +32,8 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
       notes: body.notes,
       referenceAssetIds: body.reference_asset_ids,
       projectIds: body.project_ids,
+      useReferenceImages: body.use_reference_images,
+      colorCodes: body.color_codes,
     })
     return Response.json({ image_prompt: prompt }, { status: 201 })
   })
