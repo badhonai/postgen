@@ -55,6 +55,10 @@ export type ShareProjectPayload = {
     custom_instructions: string | null
     official_links: unknown[]
     x_premium: boolean
+    /** Logo files travel with the project (posts/other media never do). */
+    logos: ShareAssetPayload[]
+    /** r2_key of the primary logo (projects.logo_asset_id), if any. */
+    logo_r2_key: string | null
   }
   knowledge: Array<{
     kind: string
@@ -177,6 +181,26 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
     .single()
   if (pErr) throw pErr
 
+  // Logos are part of the project's identity — they travel with it.
+  // (Posts and other media do not; posts are shared individually.)
+  const { data: logoRows } = await supa
+    .from('assets')
+    .select('*')
+    .eq('project_id', itemId)
+    .in('kind', ['logo', 'logo_full', 'logo_icon', 'logo_transparent_name'])
+  const logoAssets = new Map<string, ShareAssetPayload>()
+  for (const row of (logoRows ?? []) as Asset[]) logoAssets.set(row.r2_key, assetPayload(row))
+  let logoR2Key: string | null = null
+  const primaryLogoId = (project as { logo_asset_id?: string | null }).logo_asset_id
+  if (primaryLogoId) {
+    const { data: primary } = await supa.from('assets').select('*').eq('id', primaryLogoId).maybeSingle()
+    if (primary) {
+      const a = assetPayload(primary as Asset)
+      logoAssets.set(a.r2_key, a)
+      logoR2Key = a.r2_key
+    }
+  }
+
   const { data: knowledge, error: kErr } = await supa
     .from('knowledge')
     .select('kind, title, content, url, notes')
@@ -197,6 +221,8 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
       custom_instructions: (project.custom_instructions as string | null) ?? null,
       official_links: (project.official_links as unknown[]) ?? [],
       x_premium: Boolean(project.x_premium),
+      logos: [...logoAssets.values()],
+      logo_r2_key: logoR2Key,
     },
     knowledge: (knowledge ?? []) as ShareProjectPayload['knowledge'],
   }
@@ -481,8 +507,22 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
     if (error) throw error
     const projectId = (created as { id: string }).id
 
-    // Project-only accept: profile/brand + knowledge. Posts/media in an
-    // older pending payload are deliberately ignored here.
+    // Logos travel with the project: recreate their asset rows here and
+    // point the project's primary logo at the matching copy.
+    const legacyLogo = (p.project as { logo?: ShareAssetPayload | null }).logo
+    const logoPayloads: ShareAssetPayload[] =
+      p.project.logos ?? (legacyLogo ? [legacyLogo] : [])
+    if (logoPayloads.length > 0) {
+      const logoIds = await importAssets(userId, projectId, logoPayloads)
+      const primaryKey = p.project.logo_r2_key ?? legacyLogo?.r2_key ?? logoPayloads[0].r2_key
+      const primaryId = logoIds.get(primaryKey)
+      if (primaryId) {
+        await supa.from('projects').update({ logo_asset_id: primaryId }).eq('id', projectId)
+      }
+    }
+
+    // Profile/brand + knowledge. Posts/media in an older pending payload
+    // are deliberately ignored here.
     if (p.knowledge?.length > 0) {
       const { error: kErr } = await supa.from('knowledge').insert(
         p.knowledge.map((k) => ({ user_id: userId, project_id: projectId, ...k })),
