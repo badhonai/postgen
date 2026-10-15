@@ -35,6 +35,8 @@ export type Project = {
   custom_instructions: string | null
   official_links: OfficialLink[]
   logo_asset_id: string | null
+  /** User-chosen display order from Settings (lower first; null = unordered, goes last). */
+  sort_order: number | null
   /** The project's X account has Premium → long posts (25k chars), not 280. */
   x_premium: boolean
   /** Populated via FK embed when listed (`logo:assets!projects_logo_asset_id_fkey(r2_key)`). */

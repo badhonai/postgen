@@ -38,6 +38,22 @@ function projectRow(input: ProjectInput): Record<string, unknown> {
   }
 }
 
+/**
+ * Display order for projects: the user's own order from Settings
+ * (`sort_order`, lower first) wins; unordered projects (null — e.g.
+ * freshly imported ones) go last, newest first among themselves.
+ */
+export function orderProjects(list: Project[]): Project[] {
+  return [...list].sort((a, b) => {
+    const ao = a.sort_order ?? null
+    const bo = b.sort_order ?? null
+    if (ao !== null && bo !== null) return ao - bo
+    if (ao !== null) return -1
+    if (bo !== null) return 1
+    return b.created_at.localeCompare(a.created_at)
+  })
+}
+
 export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
@@ -46,10 +62,40 @@ export function useProjects() {
       const { data, error } = await supabase!
         .from('projects')
         .select('*, logo:assets!projects_logo_asset_id_fkey(r2_key)')
-        .order('created_at', { ascending: false })
       if (error) throw error
-      return data as Project[]
+      return orderProjects(data as Project[])
     },
+  })
+}
+
+/** Persist a new display order (ids in the order they should show). */
+export function useReorderProjects() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (ids: string[]): Promise<void> => {
+      const results = await Promise.all(
+        ids.map((id, i) => supabase!.from('projects').update({ sort_order: i }).eq('id', id)),
+      )
+      const failed = results.find((r) => r.error)
+      if (failed?.error) throw failed.error
+    },
+    // Instant feedback: rearrange the cached list while the writes run.
+    onMutate: async (ids) => {
+      await qc.cancelQueries({ queryKey: ['projects'] })
+      const prev = qc.getQueryData<Project[]>(['projects'])
+      if (prev) {
+        const rank = new Map(ids.map((id, i) => [id, i]))
+        qc.setQueryData<Project[]>(
+          ['projects'],
+          orderProjects(prev.map((p) => ({ ...p, sort_order: rank.get(p.id) ?? null }))),
+        )
+      }
+      return { prev }
+    },
+    onError: (_err, _ids, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['projects'], ctx.prev)
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ['projects'] }),
   })
 }
 
@@ -123,9 +169,23 @@ async function insertProject(input: ProjectInput, slug: string): Promise<Project
   const { data: authData, error: authErr } = await supabase!.auth.getUser()
   const userId = authData.user?.id
   if (authErr || !userId) throw authErr ?? new Error('Not signed in')
+  // New projects go last in the user's chosen order. If the sort_order
+  // column isn't there yet (migration pending), insert without it.
+  let sortOrder: number | undefined
+  const { data: rows, error: orderErr } = await supabase!
+    .from('projects')
+    .select('sort_order')
+    .eq('user_id', userId)
+  if (!orderErr) {
+    const max = ((rows ?? []) as Array<{ sort_order: number | null }>).reduce(
+      (m, r) => (typeof r.sort_order === 'number' ? Math.max(m, r.sort_order) : m),
+      -1,
+    )
+    sortOrder = max + 1
+  }
   const { data, error } = await supabase!
     .from('projects')
-    .insert({ ...projectRow(input), slug, user_id: userId })
+    .insert({ ...projectRow(input), slug, user_id: userId, ...(sortOrder !== undefined ? { sort_order: sortOrder } : {}) })
     .select()
     .single()
   if (error) throw error

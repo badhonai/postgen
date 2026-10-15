@@ -9,6 +9,7 @@ import {
   useRevokeApiKey,
 } from '../features/agents/keys'
 import { Button, ErrorBox, Input, Spinner } from '../components/ui'
+import { useProjects, useReorderProjects } from '../features/projects/api'
 import { buildAgentSetupText, buildMcpConfig } from '../features/agents/agentSetup'
 import { ACCENTS, applyAccent, applyTheme, getAccent, getTheme, type AccentId, type ThemeMode } from '../lib/theme'
 
@@ -201,6 +202,22 @@ export default function SettingsPage() {
 
   const displayKey = agentKey ?? freshKey ?? 'pgk_live_…'
 
+  const projectsQ = useProjects()
+  const reorderProjects = useReorderProjects()
+  const projectList2 = projectsQ.data ?? []
+  const moveProject = (index: number, dir: -1 | 1) => {
+    const ids = projectList2.map((p) => p.id)
+    const j = index + dir
+    if (j < 0 || j >= ids.length) return
+    ;[ids[index], ids[j]] = [ids[j], ids[index]]
+    reorderProjects.mutate(ids)
+  }
+  const reorderError = reorderProjects.error
+    ? /sort_order/.test(reorderProjects.error instanceof Error ? reorderProjects.error.message : '')
+      ? 'Saving the order needs a one-time database update — run migration 20261016000007_project_sort_order.sql in Supabase.'
+      : 'Could not save the new order.'
+    : null
+
   return (
     <main className="pg-shell">
       <div className="mx-auto max-w-[440px] px-5 pt-6 pb-24">
@@ -268,6 +285,71 @@ export default function SettingsPage() {
                 ))}
               </span>
             </Row>
+          </div>
+        </section>
+
+        {/* ── Projects: display order ── */}
+        <section className="mt-7">
+          <div className="pg-glass overflow-hidden rounded-[22px]">
+            <GroupTitle>Projects</GroupTitle>
+            <p className="px-4 pb-2 text-[11px] leading-relaxed font-semibold text-ink-soft">
+              <strong className="text-ink">Show order</strong> — put your projects in any order you
+              want with the arrows. They'll show in this order everywhere: dashboard, pickers, lists.
+            </p>
+            {projectsQ.isPending ? (
+              <div className="px-4 pb-4">
+                <Spinner />
+              </div>
+            ) : projectList2.length === 0 ? (
+              <p className="px-4 pb-4 text-xs font-semibold text-ink-soft">No projects yet.</p>
+            ) : (
+              <div className="divide-y divide-white/50">
+                {projectList2.map((p, i) => (
+                  <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/55 text-[11px] font-extrabold text-ink-soft">
+                      {i + 1}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-ink">{p.name}</span>
+                      {p.x_username ? (
+                        <span className="block truncate text-[11px] font-semibold text-ink-soft">@{p.x_username}</span>
+                      ) : null}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        aria-label={`Move ${p.name} up`}
+                        disabled={i === 0}
+                        onClick={() => moveProject(i, -1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-white/55 text-ink transition active:scale-95 disabled:opacity-30"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 15l-6-6-6 6" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${p.name} down`}
+                        disabled={i === projectList2.length - 1}
+                        onClick={() => moveProject(i, 1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-white/55 text-ink transition active:scale-95 disabled:opacity-30"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {reorderProjects.isPending ? (
+              <p className="px-4 pb-3 text-[11px] font-bold text-ink-soft">Saving order…</p>
+            ) : reorderError ? (
+              <p className="px-4 pb-3 text-[11px] font-bold text-rose-700">{reorderError}</p>
+            ) : reorderProjects.isSuccess ? (
+              <p className="px-4 pb-3 text-[11px] font-bold text-ink-soft">Order saved ✓</p>
+            ) : null}
           </div>
         </section>
 
