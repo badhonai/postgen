@@ -214,20 +214,33 @@ Writing happens in a **bottom sheet behind a small + in the header**:
   by project; picked images become removable ✕ thumbnails
 - **Delete** → inline confirm inside the detail sheet
 
-References are the point: the agent reads the prompt **and** its reference images,
-so it can match your style instead of guessing it.
+The attached images are a **cover** — they show how the prompt's output
+looks. They are **not** used as generation references unless the owner
+turns on that prompt's **"Use cover as generation reference"** switch
+(`use_reference_images`, default off). A prompt can also carry optional
+**color codes** (`color_codes`, hex `#RRGGBB`, max 12) that generated
+images must use.
 
-Schema (`supabase/migrations/20261014000003_image_prompts.sql`):
+The agent API enforces the cover rule server-side: list responses always
+include `cover_assets` (preview only) and include the same images in
+`reference_assets` **only** when `use_reference_images` is true. Agents
+are instructed never to feed covers to an image model otherwise.
+
+Schema (`supabase/migrations/20261014000003_image_prompts.sql`,
+`20261016000006_prompt_cover_colors.sql`):
 
 ```
 image_prompts   user_id, name, prompt, notes,
-                reference_asset_ids uuid[]    -- ordered, cross-project
+                reference_asset_ids uuid[]    -- ordered cover images, cross-project
+                use_reference_images boolean  -- default false (cover only)
+                color_codes text[]            -- optional hex palette
                 + RLS user_id = auth.uid()
 ```
 
 Agents get the same library read/write over REST and MCP
 (`list_image_prompts`, `create_image_prompt`, `update_image_prompt`,
-`delete_image_prompt`).
+`delete_image_prompt`; `update_image_prompt` is a whole-object write —
+send `use_reference_images` and `color_codes` too or they're reset).
 
 ---
 
