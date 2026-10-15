@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../features/auth/context'
@@ -86,12 +86,15 @@ export default function DashboardPage() {
     },
   })
 
-  const postsByProject = new Map<string, PostSummary[]>()
-  for (const s of summaries.data ?? []) {
-    const list = postsByProject.get(s.project_id) ?? []
-    list.push(s)
-    postsByProject.set(s.project_id, list)
-  }
+  const postsByProject = useMemo(() => {
+    const map = new Map<string, PostSummary[]>()
+    for (const s of summaries.data ?? []) {
+      const list = map.get(s.project_id) ?? []
+      list.push(s)
+      map.set(s.project_id, list)
+    }
+    return map
+  }, [summaries.data])
 
   const all = projects.data ?? []
   const visible =

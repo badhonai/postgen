@@ -27,6 +27,8 @@ function Logo({ r2Key, size }: { r2Key?: string | null; size: number }) {
     <img
       src={url.data}
       alt=""
+      loading="lazy"
+      decoding="async"
       className="rounded-[20px] object-cover ring-1 ring-white/70"
       style={{ width: size, height: size }}
     />
@@ -46,7 +48,7 @@ export function HeroTile({
   const shown = posts.slice(0, 3)
   const more = posts.length - shown.length
   return (
-    <Link to={`/projects/${project.id}?status=${statusTab}`} className="pg-tile relative block bg-mint p-5">
+    <Link to={`/projects/${project.id}?status=${statusTab}`} className="pg-tile pg-cv relative block bg-mint p-5">
       <span className="absolute top-4 right-4 rounded-full bg-white/55 px-2.5 py-1 text-[10px] font-bold text-ink">
         {posts.length} post{posts.length === 1 ? '' : 's'}
       </span>
@@ -119,7 +121,7 @@ export function SmallTile({
   return (
     <Link
       to={`/projects/${project.id}?status=${statusTab}`}
-      className={`pg-tile flex min-h-[150px] flex-col justify-between ${color} p-4`}
+      className={`pg-tile pg-cv flex min-h-[150px] flex-col justify-between ${color} p-4`}
     >
       <div className="flex items-start justify-between gap-2">
         <Logo r2Key={project.logo?.r2_key} size={42} />
@@ -144,7 +146,7 @@ export function SmallTile({
  */
 export function PromptLibraryTile({ promptCount }: { promptCount: number }) {
   return (
-    <Link to="/prompts" className="pg-tile flex min-h-[150px] flex-col justify-between bg-cream p-4">
+    <Link to="/prompts" className="pg-tile pg-cv flex min-h-[150px] flex-col justify-between bg-cream p-4">
       <div className="flex items-start justify-between gap-2">
         <span className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-white/60 text-ink">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

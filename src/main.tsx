@@ -10,7 +10,20 @@ import './index.css'
 initAccent()
 initTheme()
 
-const queryClient = new QueryClient()
+// Cache server state for a while: pages should render instantly from
+// cache on revisit instead of refetching projects/posts/assets every
+// navigation (the old default staleTime of 0 made every screen hit the
+// network). Mutations invalidate explicitly where freshness matters.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 10 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

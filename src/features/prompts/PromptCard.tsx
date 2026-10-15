@@ -1,6 +1,7 @@
+import { memo } from 'react'
 import type { ImagePrompt } from './api'
 import { TILE_COLORS } from '../../lib/types'
-import { useAllAssetsByProject } from './api'
+import { useAssetById } from './api'
 import { useAssetUrl } from '../../lib/media'
 import RefThumb from './RefThumb'
 import { cn } from '../../lib/cn'
@@ -12,7 +13,7 @@ import { cn } from '../../lib/cn'
  * visible at a glance. Name/count/palette sit below it; the full prompt
  * lives behind a tap.
  */
-export default function PromptCard({
+function PromptCard({
   prompt,
   index,
   projectNames = [],
@@ -24,10 +25,8 @@ export default function PromptCard({
   onOpen: () => void
 }) {
   const refs = prompt.reference_asset_ids ?? []
-  const groups = useAllAssetsByProject()
-  const cover = refs.length
-    ? (groups.data ?? []).flatMap((g) => g.assets).find((a) => a.id === refs[0])
-    : undefined
+  const byId = useAssetById()
+  const cover = refs.length ? byId.get(refs[0]) : undefined
   const coverUrl = useAssetUrl(cover?.r2_key)
 
   return (
@@ -36,7 +35,7 @@ export default function PromptCard({
       onClick={onOpen}
       aria-label={`View ${prompt.name}`}
       className={cn(
-        'pg-tile flex flex-col self-start p-3 text-left',
+        'pg-tile pg-cv flex flex-col self-start p-3 text-left',
         TILE_COLORS[index % TILE_COLORS.length],
       )}
     >
@@ -51,6 +50,7 @@ export default function PromptCard({
             width={cover.width ?? undefined}
             height={cover.height ?? undefined}
             loading="lazy"
+            decoding="async"
             className="block max-h-[300px] w-full object-contain"
           />
           <span className="absolute top-2 right-2 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-bold text-ink backdrop-blur-sm">
@@ -95,6 +95,8 @@ export default function PromptCard({
     </button>
   )
 }
+
+export default memo(PromptCard)
 
 /** Cover thumbnails for the detail sheet — larger, actual ratio, uncropped. */
 export function RefThumbRow({ ids }: { ids: string[] }) {

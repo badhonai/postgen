@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/context'
@@ -156,9 +157,9 @@ export function useAllAssetsByProject() {
       if (pErr) throw pErr
       const { data: assets, error: aErr } = await supabase!
         .from('assets')
-        .select('*')
+        .select('id, user_id, project_id, r2_key, filename, mime_type, size_bytes, width, height, alt_text, kind, created_at, updated_at')
         .order('created_at', { ascending: false })
-        .limit(500)
+        .limit(2000)
       if (aErr) throw aErr
 
       const nameOf = new Map((projects ?? []).map((p: { id: string; name: string }) => [p.id, p.name]))
@@ -175,4 +176,18 @@ export function useAllAssetsByProject() {
       }))
     },
   })
+}
+
+/**
+ * id → asset lookup built once per asset-list change. Cards and thumbs
+ * used to flatMap + find across the whole library on every render; with
+ * many assets × many cards that was real work per frame.
+ */
+export function useAssetById(): Map<string, Asset> {
+  const groups = useAllAssetsByProject()
+  return useMemo(() => {
+    const map = new Map<string, Asset>()
+    for (const g of groups.data ?? []) for (const a of g.assets) map.set(a.id, a)
+    return map
+  }, [groups.data])
 }

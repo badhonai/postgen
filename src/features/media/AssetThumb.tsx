@@ -30,7 +30,7 @@ export default function AssetThumb({
   return (
     <div
       className={cn(
-        'pg-glass group relative overflow-hidden rounded-[22px]',
+        'pg-glass pg-cv group relative overflow-hidden rounded-[22px]',
         selected ? 'ring-2 ring-ink' : '',
         selectable ? 'cursor-pointer hover:bg-white/70' : '',
       )}
@@ -47,7 +47,15 @@ export default function AssetThumb({
     >
       <div className="flex h-28 items-center justify-center bg-white/35">
         {isImage && url.data ? (
-          <img src={url.data} alt={asset.alt_text ?? asset.filename} className="h-full w-full object-cover" />
+          <img
+            src={url.data}
+            alt={asset.alt_text ?? asset.filename}
+            width={asset.width ?? undefined}
+            height={asset.height ?? undefined}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <span className="text-3xl">{asset.mime_type.startsWith('video/') ? '🎬' : '📄'}</span>
         )}

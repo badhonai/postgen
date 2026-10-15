@@ -197,6 +197,13 @@ body {
   transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
+/* Long-list performance: off-screen cards/rows skip layout & paint
+   entirely until scrolled near. Keeps huge libraries/projects smooth. */
+.pg-cv {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
 .pg-tile:active {
   transform: scale(0.975);
 }

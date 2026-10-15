@@ -873,7 +873,7 @@ function PostRow({
         aria-label={`${selected ? 'Deselect' : 'Select'} ${label}`}
         onClick={onToggle}
         className={cn(
-          'pg-glass-strong flex w-full items-center gap-2.5 rounded-[20px] p-2.5 pr-3.5 text-left transition active:scale-[0.98]',
+          'pg-glass-strong pg-cv flex w-full items-center gap-2.5 rounded-[20px] p-2.5 pr-3.5 text-left transition active:scale-[0.98]',
           selected && 'ring-2 ring-ink/20',
         )}
       >
@@ -889,7 +889,7 @@ function PostRow({
         to={`/posts/${post.id}`}
         draggable={false}
         onDragStart={(e) => e.preventDefault()}
-        className="pg-glass-strong flex items-center gap-3 rounded-[20px] p-2.5 pr-3.5 transition active:scale-[0.98]"
+        className="pg-glass-strong pg-cv flex items-center gap-3 rounded-[20px] p-2.5 pr-3.5 transition active:scale-[0.98]"
       >
         {cover}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-soft">
@@ -917,6 +917,8 @@ function PostCover({
         <img
           src={url.data}
           alt=""
+          loading="lazy"
+          decoding="async"
           onError={() => setBroken(true)}
           className="h-full w-full object-cover"
         />

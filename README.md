@@ -258,6 +258,29 @@ Media lives in **R2** (free tier) and is never public. Flow:
   or serves it directly for a valid user JWT that owns the key.
 - `POST /api/media/delete` — `{ "key" }` → removes R2 object + DB row (owner only).
 
+## Performance ⚡
+
+Built to stay smooth as projects/posts/media grow:
+
+- **Query caching** — TanStack Query defaults: 30s stale / 10min GC, no
+  refetch-on-focus; screens render from cache on revisit instead of
+  refetching the world per navigation.
+- **Code splitting** — every authed page is a lazy chunk (13–30 KB);
+  landing/login ship only the app shell.
+- **Batched image signing** — `POST /api/media/sign-batch` signs up to
+  100 asset URLs per request; the client coalesces a grid's worth of
+  `useAssetUrl` calls into one round-trip (old per-image `/sign` kept
+  as fallback).
+- **Media caching** — signed media responses are `private, max-age=300,
+  immutable` with ETag/304 revalidation (uploads mint fresh keys, so a
+  key's bytes never change).
+- **Upload optimization** — browser uploads over ~700 KB are capped at
+  1920px and re-encoded (JPEG q85 for opaque images, PNG kept for
+  transparent logos), typically 5–10× smaller.
+- **Render containment** — cards/rows use `content-visibility: auto`
+  (`.pg-cv`) so off-screen items skip layout/paint; asset lookups in the
+  prompt library go through one memoized id→asset map.
+
 ## Agent API + MCP 🤖
 
 External AI tools connect **into** PostGen and draft posts (drafts-only — you approve/publish).

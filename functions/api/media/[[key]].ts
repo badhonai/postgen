@@ -37,10 +37,18 @@ export async function onRequestGet(
   const object = await env.MEDIA.get(key)
   if (!object) return jsonError('not found', 404)
 
+  // Signed URLs are immutable (uploads always mint fresh random keys, so
+  // the object behind a key never changes) — let browsers cache hard and
+  // revalidate cheaply with a weak ETag from key + size.
+  const etag = `W/"${object.size}-${key.length}-${key.slice(-8)}"`
   const headers = new Headers({
     'content-type': object.httpMetadata?.contentType ?? 'application/octet-stream',
-    'content-length': String(object.size),
-    'cache-control': 'private, max-age=300',
+    'cache-control': 'private, max-age=300, immutable',
+    etag,
   })
+  if (request.headers.get('if-none-match') === etag) {
+    return new Response(null, { status: 304, headers })
+  }
+  headers.set('content-length', String(object.size))
   return new Response(object.body, { headers })
 }
