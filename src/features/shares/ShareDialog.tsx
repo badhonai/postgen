@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSendShare } from './api'
 import { SHARE_ITEM_LABEL, type ShareItemType } from '../../lib/types'
 import { Button, ErrorBox, Input } from '../../components/ui'
+import RecentRecipients from './RecentRecipients'
 
 export type ShareTarget = { itemType: ShareItemType; itemId: string; title: string }
 
@@ -81,6 +82,7 @@ export default function ShareDialog({ targets, onClose }: { targets: ShareTarget
                 className="mt-1.5 w-full"
                 autoFocus
               />
+              <RecentRecipients value={email} onPick={setEmail} />
             </label>
 
             <label className="mt-3 block">

@@ -16,6 +16,7 @@ import { usePosts } from '../features/posts/api'
 import { useImagePrompts } from '../features/prompts/api'
 import { SHARE_ITEM_LABEL, type Share, type ShareItemType } from '../lib/types'
 import { Button, ErrorBox, Input, Select, Spinner } from '../components/ui'
+import RecentRecipients from '../features/shares/RecentRecipients'
 import { cn } from '../lib/cn'
 
 const ITEM_ICON: Record<ShareItemType, string> = { project: '📁', post: '💬', prompt: '🎨' }
@@ -551,6 +552,7 @@ function SendSomething() {
         placeholder="Recipient's PostGen email"
         className="mt-4 w-full"
       />
+      <RecentRecipients key={doneCount} value={email} onPick={setEmail} />
       <Input
         value={message}
         onChange={(e) => setMessage(e.target.value)}

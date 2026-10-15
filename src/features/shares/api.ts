@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { sha256Hex, threadToContentText } from '../../lib/text'
 import { findExactDuplicate } from '../../lib/dedupe'
+import { rememberRecipient } from '../../lib/recipients'
 import type {
   Asset,
   PostCategory,
@@ -366,7 +367,11 @@ export function useSendShare() {
       const { error } = await supa.from('shares').insert(rows)
       if (error) throw error
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['shares'] }),
+    onSuccess: (_data, vars) => {
+      // Offer this email as a one-tap quick-select on future sends.
+      rememberRecipient(vars.recipientEmail)
+      void qc.invalidateQueries({ queryKey: ['shares'] })
+    },
   })
 }
 
