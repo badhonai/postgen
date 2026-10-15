@@ -101,6 +101,7 @@ export default function ProjectDetailPage() {
   const [type, setType] = useState<PostType | ''>('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [sharePostsOpen, setSharePostsOpen] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const bulkStatus = useBulkSetStatus()
@@ -644,6 +645,14 @@ export default function ProjectDetailPage() {
                   </button>
                   <button
                     type="button"
+                    disabled={selectedPosts.length === 0}
+                    onClick={() => setSharePostsOpen(true)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/75 bg-white/55 px-2 py-2.5 text-[13px] font-bold text-ink transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    {`Send ${selectedPosts.length || ''}`}
+                  </button>
+                  <button
+                    type="button"
                     disabled={busyBulk || selectedPosts.length === 0}
                     onClick={() => void runBulkDelete()}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-rose-300/70 bg-rose-soft/60 px-2 py-2.5 text-[13px] font-bold text-rose-700 transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
@@ -671,9 +680,20 @@ export default function ProjectDetailPage() {
               }}
             />
 
+            {sharePostsOpen ? (
+              <ShareDialog
+                targets={selectedPosts.map((post) => ({
+                  itemType: 'post' as const,
+                  itemId: post.id,
+                  title: post.title || post.content_text.slice(0, 60) || 'Untitled post',
+                }))}
+                onClose={() => setSharePostsOpen(false)}
+              />
+            ) : null}
+
             {shareOpen ? (
               <ShareDialog
-                target={{ itemType: 'project', itemId: p.id, title: p.name }}
+                targets={[{ itemType: 'project', itemId: p.id, title: p.name }]}
                 onClose={() => setShareOpen(false)}
               />
             ) : null}

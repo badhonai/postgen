@@ -291,13 +291,12 @@ export function useSendShare() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: {
-      itemType: ShareItemType
-      itemId: string
-      title: string
+      items: Array<{ itemType: ShareItemType; itemId: string; title: string }>
       recipientEmail: string
       message?: string
     }): Promise<void> => {
       const supa = supabase!
+      if (input.items.length === 0) throw new Error('Pick at least one item to send.')
       const { data: me } = await supa.auth.getUser()
       if (!me.user) throw new Error('You are signed out.')
 
@@ -312,16 +311,21 @@ export function useSendShare() {
         )
       }
 
-      const payload = await buildPayload(input.itemType, input.itemId)
-      const { error } = await supa.from('shares').insert({
-        sender_id: me.user.id,
-        recipient_id: recipient.id,
-        item_type: input.itemType,
-        item_id: input.itemId,
-        title: input.title,
-        payload,
-        message: (input.message ?? '').trim(),
-      })
+      // One pending share per item, inserted together: the recipient can
+      // accept or decline each project/post/prompt independently.
+      const rows = []
+      for (const item of input.items) {
+        rows.push({
+          sender_id: me.user.id,
+          recipient_id: recipient.id,
+          item_type: item.itemType,
+          item_id: item.itemId,
+          title: item.title,
+          payload: await buildPayload(item.itemType, item.itemId),
+          message: (input.message ?? '').trim(),
+        })
+      }
+      const { error } = await supa.from('shares').insert(rows)
       if (error) throw error
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['shares'] }),

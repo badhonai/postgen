@@ -309,81 +309,137 @@ export default function SharesPage() {
   )
 }
 
-/** Compose a share right from the Shares page. */
+/** Compose a share right from the Shares page — pick any mix of items. */
 function SendSomething() {
   const send = useSendShare()
   const projects = useProjects()
   const posts = usePosts({})
   const prompts = useImagePrompts()
-  const [itemType, setItemType] = useState<ShareItemType>('project')
-  const [itemId, setItemId] = useState('')
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
-  const [done, setDone] = useState(false)
+  const [doneCount, setDoneCount] = useState(0)
 
-  const items: Array<{ id: string; title: string }> =
-    itemType === 'project'
-      ? (projects.data ?? []).map((p) => ({ id: p.id, title: p.name }))
-      : itemType === 'post'
-        ? (posts.data ?? []).map((p) => ({
-            id: p.id,
-            title: p.title || p.content_text.slice(0, 60) || 'Untitled post',
-          }))
-        : (prompts.data?.prompts ?? []).map((p) => ({ id: p.id, title: p.name }))
+  type Pick = { itemType: ShareItemType; itemId: string; title: string }
+  const groups: Array<{ type: ShareItemType; label: string; items: Pick[] }> = [
+    {
+      type: 'project',
+      label: 'Projects',
+      items: (projects.data ?? []).map((pr) => ({ itemType: 'project' as const, itemId: pr.id, title: pr.name })),
+    },
+    {
+      type: 'post',
+      label: 'Posts',
+      items: (posts.data ?? []).map((pr) => ({
+        itemType: 'post' as const,
+        itemId: pr.id,
+        title: pr.title || pr.content_text.slice(0, 60) || 'Untitled post',
+      })),
+    },
+    {
+      type: 'prompt',
+      label: 'Prompts',
+      items: (prompts.data?.prompts ?? []).map((pr) => ({ itemType: 'prompt' as const, itemId: pr.id, title: pr.name })),
+    },
+  ]
+  const allItems = groups.flatMap((g) => g.items)
+  const keyOf = (i: Pick) => `${i.itemType}:${i.itemId}`
+  const selectedItems = allItems.filter((i) => selectedKeys.has(keyOf(i)))
 
-  const selected = items.find((i) => i.id === itemId) ?? items[0]
+  const toggle = (item: Pick) =>
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      const k = keyOf(item)
+      if (next.has(k)) next.delete(k)
+      else next.add(k)
+      return next
+    })
 
   const submit = async () => {
-    if (!selected || !email.trim()) return
-    await send.mutateAsync({ itemType, itemId: selected.id, title: selected.title, recipientEmail: email, message })
-    setDone(true)
+    if (selectedItems.length === 0 || !email.trim()) return
+    await send.mutateAsync({ items: selectedItems, recipientEmail: email, message })
+    setDoneCount(selectedItems.length)
+    setSelectedKeys(new Set())
     setEmail('')
     setMessage('')
   }
 
   return (
     <section className="pg-glass mt-5 rounded-[24px] p-4">
-      <h2 className="pg-title text-[17px] text-ink">Send something</h2>
-      <div className="mt-3 flex gap-1.5">
-        {(Object.keys(SHARE_ITEM_LABEL) as ShareItemType[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => {
-              setItemType(t)
-              setItemId('')
-              setDone(false)
-            }}
-            className={cn(
-              'flex-1 rounded-full px-2 py-2 text-xs font-extrabold transition active:scale-95',
-              itemType === t ? 'bg-butter text-ink' : 'bg-white/55 text-ink-soft',
-            )}
-          >
-            {ITEM_ICON[t]} {SHARE_ITEM_LABEL[t]}
-          </button>
-        ))}
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="pg-title text-[17px] text-ink">Send something</h2>
+        <span className="text-xs font-extrabold text-ink-soft">
+          {selectedItems.length > 0 ? `${selectedItems.length} selected` : 'Tap to select'}
+        </span>
       </div>
 
-      <Select
-        value={selected?.id ?? ''}
-        onChange={(e) => setItemId(e.target.value)}
-        className="mt-3 w-full py-2"
-        disabled={items.length === 0}
-      >
-        {items.length === 0 ? <option value="">Nothing to send yet</option> : null}
-        {items.map((i) => (
-          <option key={i.id} value={i.id}>
-            {i.title}
-          </option>
-        ))}
-      </Select>
+      {groups.map((g) => (
+        <div key={g.type} className="mt-3">
+          <div className="flex items-center justify-between px-0.5">
+            <span className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
+              {ITEM_ICON[g.type]} {g.label}
+            </span>
+            {g.items.length > 0 ? (
+              <button
+                type="button"
+                className="text-[11px] font-extrabold text-ink-soft hover:text-ink"
+                onClick={() =>
+                  setSelectedKeys((prev) => {
+                    const next = new Set(prev)
+                    const allOn = g.items.every((i) => next.has(keyOf(i)))
+                    for (const i of g.items) {
+                      if (allOn) next.delete(keyOf(i))
+                      else next.add(keyOf(i))
+                    }
+                    return next
+                  })
+                }
+              >
+                {g.items.every((i) => selectedKeys.has(keyOf(i))) ? 'Select none' : 'Select all'}
+              </button>
+            ) : null}
+          </div>
+          {g.items.length === 0 ? (
+            <p className="mt-1.5 px-0.5 text-xs font-semibold text-ink-soft">Nothing here yet.</p>
+          ) : (
+            <ul className="pg-scroll mt-1.5 max-h-44 space-y-1.5 overflow-y-auto pr-0.5">
+              {g.items.map((item) => {
+                const on = selectedKeys.has(keyOf(item))
+                return (
+                  <li key={keyOf(item)}>
+                    <button
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggle(item)}
+                      className={cn(
+                        'flex w-full items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left text-sm font-bold transition active:scale-[0.99]',
+                        on ? 'bg-butter text-ink shadow-[0_6px_16px_rgba(242,193,78,0.4)]' : 'bg-white/55 text-ink hover:bg-white/75',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px]',
+                          on ? 'border-ink bg-ink text-white' : 'border-ink-soft/40 text-transparent',
+                        )}
+                      >
+                        ✓
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      ))}
 
       <Input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Recipient's PostGen email"
-        className="mt-2 w-full"
+        className="mt-4 w-full"
       />
       <Input
         value={message}
@@ -397,18 +453,22 @@ function SendSomething() {
           <ErrorBox message={send.error instanceof Error ? send.error.message : 'Could not send'} />
         </div>
       ) : null}
-      {done && !send.error ? (
+      {doneCount > 0 && !send.error ? (
         <p className="mt-3 rounded-[14px] bg-mint/60 px-3 py-2 text-sm font-bold text-ink">
-          Sent ✓ They'll see it in Shares → Received.
+          Sent {doneCount} item{doneCount === 1 ? '' : 's'} ✓ They'll see them in Shares → Received.
         </p>
       ) : null}
 
       <Button
         className="mt-3 w-full py-3"
-        disabled={send.isPending || !selected || !email.trim()}
+        disabled={send.isPending || selectedItems.length === 0 || !email.trim()}
         onClick={() => void submit()}
       >
-        {send.isPending ? 'Sending…' : 'Send'}
+        {send.isPending
+          ? 'Sending…'
+          : selectedItems.length > 0
+            ? `Send ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'}`
+            : 'Select items to send'}
       </Button>
     </section>
   )

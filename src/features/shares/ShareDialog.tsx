@@ -10,17 +10,21 @@ export type ShareTarget = { itemType: ShareItemType; itemId: string; title: stri
  * email. They get it in their Shares inbox and choose to accept or decline —
  * nothing lands in their account until they accept.
  */
-export default function ShareDialog({ target, onClose }: { target: ShareTarget; onClose: () => void }) {
+export default function ShareDialog({ targets, onClose }: { targets: ShareTarget[]; onClose: () => void }) {
   const send = useSendShare()
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
 
   const submit = async () => {
-    if (!email.trim()) return
-    await send.mutateAsync({ ...target, recipientEmail: email, message })
+    if (!email.trim() || targets.length === 0) return
+    await send.mutateAsync({ items: targets, recipientEmail: email, message })
     setSent(true)
   }
+  const kindLabel =
+    targets.length > 0 && targets.every((t) => t.itemType === targets[0].itemType)
+      ? `${SHARE_ITEM_LABEL[targets[0].itemType].toLowerCase()}${targets.length > 1 ? 's' : ''}`
+      : 'items'
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center">
@@ -28,7 +32,7 @@ export default function ShareDialog({ target, onClose }: { target: ShareTarget; 
       <section
         role="dialog"
         aria-modal="true"
-        aria-label={`Send ${SHARE_ITEM_LABEL[target.itemType].toLowerCase()}`}
+        aria-label={`Send ${kindLabel}`}
         className="pg-glass-strong relative mx-auto w-full max-w-[440px] rounded-t-[28px] px-5 pt-2.5 pb-7"
         style={{ animation: 'pg-sheet-up 0.26s cubic-bezier(0.22, 1, 0.36, 1)' }}
       >
@@ -38,8 +42,11 @@ export default function ShareDialog({ target, onClose }: { target: ShareTarget; 
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-mint text-2xl">✉️</div>
             <h2 className="pg-title mt-3 text-xl text-ink">Sent!</h2>
             <p className="mx-auto mt-1.5 max-w-[300px] text-sm leading-relaxed font-semibold text-ink-soft">
-              <strong className="text-ink">{target.title}</strong> is on its way to {email.trim()}. It will
-              appear in their account only if they accept it from their Shares page.
+              <strong className="text-ink">
+                {targets.length === 1 ? targets[0].title : `${targets.length} ${kindLabel}`}
+              </strong>{' '}
+              {targets.length === 1 ? 'is' : 'are'} on the way to {email.trim()}. They will appear in their
+              account only if they accept them from their Shares page.
             </p>
             <Button className="mt-5 w-full" onClick={onClose}>
               Done
@@ -48,9 +55,19 @@ export default function ShareDialog({ target, onClose }: { target: ShareTarget; 
         ) : (
           <>
             <h2 className="pg-title mt-3 text-xl text-ink">
-              Send {SHARE_ITEM_LABEL[target.itemType].toLowerCase()}
+              Send {kindLabel}
             </h2>
-            <p className="mt-1 truncate text-sm font-semibold text-ink-soft">{target.title}</p>
+            {targets.length === 1 ? (
+              <p className="mt-1 truncate text-sm font-semibold text-ink-soft">{targets[0].title}</p>
+            ) : (
+              <ul className="pg-scroll mt-2 max-h-32 space-y-1 overflow-y-auto pr-1">
+                {targets.map((t) => (
+                  <li key={`${t.itemType}:${t.itemId}`} className="truncate rounded-[12px] bg-white/55 px-3 py-1.5 text-sm font-semibold text-ink">
+                    {SHARE_ITEM_LABEL[t.itemType]} · {t.title}
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <label className="mt-4 block">
               <span className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
@@ -87,7 +104,7 @@ export default function ShareDialog({ target, onClose }: { target: ShareTarget; 
 
             <div className="mt-5 flex gap-2">
               <Button className="flex-1 py-3" disabled={send.isPending || !email.trim()} onClick={() => void submit()}>
-                {send.isPending ? 'Sending…' : 'Send'}
+                {send.isPending ? 'Sending…' : targets.length > 1 ? `Send ${targets.length} items` : 'Send'}
               </Button>
               <Button variant="ghost" className="py-3" onClick={onClose} disabled={send.isPending}>
                 Cancel

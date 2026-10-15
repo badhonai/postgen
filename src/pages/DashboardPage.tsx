@@ -121,45 +121,42 @@ export default function DashboardPage() {
               <p className="mt-1 text-[11px] font-bold text-ink-soft">X Post Studio</p>
             </div>
           </div>
-          <button
-            type="button"
-            aria-label="Your profile"
-            onClick={() => navigate('/profile')}
-            className="transition active:scale-95"
-          >
-            <UserAvatar user={user} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label={
+                (pendingShares.data ?? 0) > 0
+                  ? `Shares, ${pendingShares.data} waiting to accept`
+                  : 'Shares'
+              }
+              title="Shares — send & receive"
+              onClick={() => navigate('/shares')}
+              className="pg-glass relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="3" />
+                <path d="m3.5 7 8.5 6 8.5-6" />
+              </svg>
+              {(pendingShares.data ?? 0) > 0 ? (
+                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white ring-2 ring-white/80">
+                  {pendingShares.data}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              aria-label="Your profile"
+              onClick={() => navigate('/profile')}
+              className="transition active:scale-95"
+            >
+              <UserAvatar user={user} />
+            </button>
+          </div>
         </header>
 
         <h1 className="pg-title mt-5 text-[2.35rem] leading-none whitespace-nowrap text-ink">
           Your Projects
         </h1>
-
-        {/* ── shares inbox shortcut ── */}
-        <button
-          type="button"
-          onClick={() => navigate('/shares')}
-          className="pg-glass mt-4 flex w-full items-center gap-3 rounded-[20px] px-4 py-3 text-left transition active:scale-[0.98]"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-butter text-lg shadow-[0_6px_16px_rgba(242,193,78,0.45)]">
-            ✉️
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-extrabold text-ink">Shares</span>
-            <span className="block truncate text-xs font-semibold text-ink-soft">
-              {(pendingShares.data ?? 0) > 0
-                ? `${pendingShares.data} waiting for you to accept`
-                : 'Send & receive projects, posts, prompts'}
-            </span>
-          </span>
-          {(pendingShares.data ?? 0) > 0 ? (
-            <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-extrabold text-white">
-              {pendingShares.data}
-            </span>
-          ) : (
-            <span className="shrink-0 text-ink-soft">→</span>
-          )}
-        </button>
 
         {/* ── filter pills ── */}
         <div className="pg-glass mt-5 flex gap-1 rounded-full p-1.5">

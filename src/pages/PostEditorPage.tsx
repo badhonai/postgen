@@ -551,11 +551,13 @@ export default function PostEditorPage() {
 
         {shareOpen && postData ? (
           <ShareDialog
-            target={{
-              itemType: 'post',
-              itemId: postData.id,
-              title: postData.title || postData.post_tweets[0]?.content?.slice(0, 60) || 'Untitled post',
-            }}
+            targets={[
+              {
+                itemType: 'post',
+                itemId: postData.id,
+                title: postData.title || postData.post_tweets[0]?.content?.slice(0, 60) || 'Untitled post',
+              },
+            ]}
             onClose={() => setShareOpen(false)}
           />
         ) : null}

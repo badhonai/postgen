@@ -181,7 +181,7 @@ export default function PromptLibraryPage() {
 
       {sharing ? (
         <ShareDialog
-          target={{ itemType: 'prompt', itemId: sharing.id, title: sharing.name }}
+          targets={[{ itemType: 'prompt', itemId: sharing.id, title: sharing.name }]}
           onClose={() => setSharing(null)}
         />
       ) : null}
