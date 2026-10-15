@@ -200,11 +200,13 @@ A **single shared library** of image prompts, reached from the dashboard bento g
 (it takes the slot of a project tile) at `/prompts`. Not per-project — one recipe
 book for the whole account.
 
-The page is a **bento grid of small cards** (same tile language as the project
-tiles). A card shows only the prompt's name, a reference-count pill, its first
-reference image as the cover, and one truncated line of notes — **never the full
-prompt**. Tapping a card opens a detail sheet with the whole prompt, the notes,
-the references, and Delete / Edit.
+The page is a **bento grid of cards** (same tile language as the project
+tiles). A card leads with its cover image at **full card width in the
+image's actual aspect ratio — never cropped** — so the whole example
+output is visible at a glance, then the name, a cover-count pill and one
+truncated line of notes — **never the full prompt**. Tapping a card opens
+a detail sheet with the whole prompt, the notes, the covers (also shown
+at actual ratio) and Delete / Edit.
 
 Writing happens in a **bottom sheet behind a small + in the header**:
 
