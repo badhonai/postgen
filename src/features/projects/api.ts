@@ -35,7 +35,6 @@ function projectRow(input: ProjectInput): Record<string, unknown> {
     sample_posts: cleanList(input.samplePosts),
     custom_instructions: input.customInstructions.trim() || null,
     official_links: cleanLinks(input.officialLinks),
-    x_premium: input.xPremium,
   }
 }
 
@@ -80,7 +79,6 @@ export type ProjectInput = {
   samplePosts: string[]
   customInstructions: string
   officialLinks: OfficialLink[]
-  xPremium: boolean
   /** Files picked in the form, uploaded after the project row exists (or after save). */
   newAssets: File[]
   /** Asset kind per file in newAssets (same order); defaults to 'other'. */
@@ -99,7 +97,6 @@ export const EMPTY_PROJECT_INPUT: ProjectInput = {
   samplePosts: [],
   customInstructions: '',
   officialLinks: [],
-  xPremium: false,
   newAssets: [],
   newAssetKinds: [],
   newLogoIndex: null,
@@ -116,7 +113,6 @@ export function projectInputOf(project: Project): ProjectInput {
     samplePosts: project.sample_posts ?? [],
     customInstructions: project.custom_instructions ?? '',
     officialLinks: project.official_links ?? [],
-    xPremium: project.x_premium ?? false,
     newAssets: [],
     newAssetKinds: [],
     newLogoIndex: null,

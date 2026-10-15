@@ -186,7 +186,6 @@ export type ProjectWrite = {
   description?: string
   brand_voice?: unknown
   x_username?: string
-  x_premium?: boolean
   website_url?: string
   content_pillars?: string[]
   sample_posts?: string[]
@@ -197,7 +196,7 @@ export type ProjectWrite = {
 function projectProfileFields(input: ProjectWrite): Record<string, unknown> {
   const fields: Record<string, unknown> = {}
   if (input.x_username !== undefined) fields.x_username = input.x_username.trim().replace(/^@/, '') || null
-  if (input.x_premium !== undefined) fields.x_premium = input.x_premium === true
+  // x_premium is a user-level Settings toggle now; projects can't set it.
   if (input.website_url !== undefined) fields.website_url = input.website_url.trim() || null
   if (input.content_pillars !== undefined) fields.content_pillars = input.content_pillars.map((c) => c.trim()).filter(Boolean)
   if (input.sample_posts !== undefined) fields.sample_posts = input.sample_posts.map((c) => c.trim()).filter(Boolean)

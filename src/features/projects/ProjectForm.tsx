@@ -319,33 +319,8 @@ export default function ProjectForm({
               />
             </Field>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={draft.xPremium}
-            onClick={() => set({ xPremium: !draft.xPremium })}
-            className="flex w-full items-center gap-3 rounded-[18px] bg-white/45 px-4 py-3 text-left transition hover:bg-white/60"
-          >
-            <span
-              className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition ${
-                draft.xPremium ? 'justify-end bg-ink' : 'justify-start bg-ink/20'
-              }`}
-            >
-              <span className="h-5 w-5 rounded-full bg-white shadow" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-bold text-ink">X Premium account</span>
-              <span className="block text-[11px] font-semibold text-ink-soft">
-                {draft.xPremium
-                  ? 'Long posts allowed — up to 25,000 chars (composer + agent).'
-                  : 'Free account — posts capped at 280 chars. Turn on if @handle has Premium.'}
-              </span>
-            </span>
-          </button>
         </div>
       ) : null}
-
-      {/* X Premium lives with Identity in step 1, rendered there below */}
 
       {/* ── Step 2 · About ── */}
       {step === 1 ? (

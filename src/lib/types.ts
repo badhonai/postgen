@@ -15,6 +15,8 @@ export type OfficialLink = { label: string; url: string }
 export type Profile = {
   id: string
   display_name: string | null
+  /** User-level X Premium (Settings) — drives the char limit everywhere. Default ON. */
+  x_premium?: boolean
   created_at: string
   updated_at: string
 }

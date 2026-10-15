@@ -54,7 +54,6 @@ export type ShareProjectPayload = {
     sample_posts: string[]
     custom_instructions: string | null
     official_links: unknown[]
-    x_premium: boolean
     /** Logo files travel with the project (posts/other media never do). */
     logos: ShareAssetPayload[]
     /** r2_key of the primary logo (projects.logo_asset_id), if any. */
@@ -175,7 +174,7 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
   const { data: project, error: pErr } = await supa
     .from('projects')
     .select(
-      'name, slug, description, brand_voice, x_username, website_url, content_pillars, sample_posts, custom_instructions, official_links, x_premium, logo_asset_id',
+      'name, slug, description, brand_voice, x_username, website_url, content_pillars, sample_posts, custom_instructions, official_links, logo_asset_id',
     )
     .eq('id', itemId)
     .single()
@@ -220,7 +219,6 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
       sample_posts: (project.sample_posts as string[]) ?? [],
       custom_instructions: (project.custom_instructions as string | null) ?? null,
       official_links: (project.official_links as unknown[]) ?? [],
-      x_premium: Boolean(project.x_premium),
       logos: [...logoAssets.values()],
       logo_r2_key: logoR2Key,
     },
@@ -500,7 +498,6 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
         sample_posts: p.project.sample_posts ?? [],
         custom_instructions: p.project.custom_instructions,
         official_links: p.project.official_links ?? [],
-        x_premium: p.project.x_premium ?? false,
       })
       .select('id')
       .single()

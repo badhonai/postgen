@@ -20,7 +20,6 @@ export function onRequestPatch(ctx: Ctx): Promise<Response> {
       description: body.description as string | undefined,
       brand_voice: body.brand_voice,
       x_username: body.x_username as string | undefined,
-      x_premium: body.x_premium as boolean | undefined,
       website_url: body.website_url as string | undefined,
       content_pillars: body.content_pillars as string[] | undefined,
       sample_posts: body.sample_posts as string[] | undefined,
