@@ -12,84 +12,11 @@ import {
   type SavePostInput,
 } from '../features/posts/api'
 import { useProject } from '../features/projects/api'
-import { useQuery } from '@tanstack/react-query'
 import { getSignedUrl } from '../lib/media'
-import { fetchXProfile } from '../lib/xprofile'
-import { useAuth } from '../features/auth/context'
 import type { Asset } from '../lib/types'
-import { useAssetUrl } from '../lib/media'
 import PostForm from '../features/posts/PostForm'
 import DuplicateDialog from '../features/posts/DuplicateDialog'
 import { Button, ErrorBox, Spinner } from '../components/ui'
-
-/**
- * The identity the post will go out under: the X handle saved on the profile,
- * with its real display name and profile picture. Falls back to the handle
- * itself when the profile lookup is unavailable.
- */
-function XIdentity() {
-  const { user } = useAuth()
-  const handle = String((user?.user_metadata as { x_username?: string } | undefined)?.x_username ?? '').replace(/^@/, '')
-  const profile = useQuery({
-    queryKey: ['x-profile', handle],
-    enabled: !!handle,
-    queryFn: () => fetchXProfile(handle),
-    staleTime: 5 * 60 * 1000,
-  })
-  const avatar = profile.data?.avatarUrl || (handle ? `https://unavatar.io/x/${encodeURIComponent(handle)}?fallback=false` : null)
-  const name = profile.data?.name || handle || 'Your account'
-
-  if (!handle) {
-    return (
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/70 font-display text-lg font-semibold text-ink-soft">
-          ?
-        </div>
-        <div className="min-w-0">
-          <p className="text-[14px] font-extrabold text-ink">No X handle yet</p>
-          <Link to="/profile" className="text-[12px] font-bold text-ink-soft underline">
-            Add it in your profile
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex items-center gap-3">
-      {avatar ? (
-        <img
-          src={avatar}
-          alt=""
-          onError={(e) => {
-            e.currentTarget.style.visibility = 'hidden'
-          }}
-          className="h-11 w-11 rounded-full bg-white/70 object-cover ring-1 ring-white/70"
-        />
-      ) : (
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-mint font-display text-lg font-semibold text-ink">
-          {name.slice(0, 1).toUpperCase()}
-        </div>
-      )}
-      <div className="min-w-0">
-        <p className="truncate text-[14px] font-extrabold text-ink">{name}</p>
-        <p className="truncate text-[12px] font-bold text-ink-soft">@{handle}</p>
-      </div>
-    </div>
-  )
-}
-
-/** One attached image inside the preview sheet. */
-function PreviewImage({ asset }: { asset: { r2_key: string; mime_type: string; filename: string } }) {
-  const url = useAssetUrl(asset.r2_key)
-  if (!url.data) return <div className="aspect-video w-full rounded-[16px] bg-white/60" />
-  if (asset.mime_type.startsWith('video/')) {
-    return <video src={url.data} controls className="h-auto w-full rounded-[16px] bg-black/5" />
-  }
-  // Full image, natural aspect — never cropped, so the whole picture is
-  // always visible next to the editor.
-  return <img src={url.data} alt={asset.filename} className="h-auto w-full rounded-[16px] bg-white/50" />
-}
 
 export default function PostEditorPage() {
   const { id } = useParams()
@@ -111,7 +38,6 @@ export default function PostEditorPage() {
   const [pendingInput, setPendingInput] = useState<SavePostInput | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
-  const [liveSnap, setLiveSnap] = useState<SavePostInput | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [similarBanner, setSimilarBanner] = useState<SimilarPost[] | null>(null)
@@ -198,9 +124,6 @@ export default function PostEditorPage() {
 
   const onFormChange = (snap: SavePostInput) => {
     latestRef.current = snap
-    // The inline preview is live: mirror every snapshot (serialized compare
-    // keeps this to real changes only).
-    setLiveSnap((prev) => (prev && serialize(prev) === serialize(snap) ? prev : snap))
     // first emission for THIS post = pristine form state → baseline, no autosave
     const snapKey = snap.postId ?? `new:${snap.projectId}`
     if (hydratedForRef.current !== snapKey) {
@@ -352,17 +275,24 @@ export default function PostEditorPage() {
     window.setTimeout(() => setCopied(null), 1500)
   }
 
-  /** Live form snapshot when it belongs to this post, else the saved post. */
-  const draft =
-    liveSnap && (isNew ? !liveSnap.postId : liveSnap.postId === editId) ? liveSnap : null
-  const previewTweets = draft?.tweets?.length ? draft.tweets : (postData?.post_tweets ?? []).map((t) => t.content)
-  const previewText =
-    previewTweets.length === 1 ? previewTweets[0] : numberedTweets(previewTweets)
-  // the form snapshot only exists once you touch a field, so fall back to the
-  // saved post's attachments — otherwise a freshly opened post previews bare
-  const savedMedia = Object.values(postData?.mediaByTweet ?? {}).flat()
-  const previewMedia: Array<{ asset: Asset }> =
-    draft?.media?.map((m) => ({ asset: m.asset })) ?? savedMedia.map((asset) => ({ asset }))
+  // What Post on X sends: the live form snapshot when it belongs to this
+  // post, else the saved post.
+  const shareContent = () => {
+    const snap =
+      latestRef.current &&
+      (isNew ? !latestRef.current.postId : latestRef.current.postId === editId)
+        ? latestRef.current
+        : null
+    const tweets = snap?.tweets?.length
+      ? snap.tweets
+      : (postData?.post_tweets ?? []).map((t) => t.content)
+    const savedMedia = Object.values(postData?.mediaByTweet ?? {}).flat()
+    const media: Asset[] = snap ? snap.media.map((m) => m.asset) : savedMedia
+    return {
+      text: tweets.length === 1 ? tweets[0] : numberedTweets(tweets),
+      media,
+    }
+  }
 
   /**
    * Send the post to X. X's intent URL carries text only, so on phones we use
@@ -373,21 +303,22 @@ export default function PostEditorPage() {
   const shareToX = async () => {
     setMenuOpen(false)
     setSharing(true)
+    const { text: shareText, media: shareMedia } = shareContent()
     let done = false
     try {
       const files: File[] = []
-      for (const m of previewMedia.slice(0, 4)) {
-        if (!m.asset.mime_type.startsWith('image/')) continue
+      for (const asset of shareMedia.slice(0, 4)) {
+        if (!asset.mime_type.startsWith('image/')) continue
         try {
-          const url = await getSignedUrl(m.asset.r2_key)
+          const url = await getSignedUrl(asset.r2_key)
           const blob = await (await fetch(url)).blob()
-          files.push(new File([blob], m.asset.filename || 'image.png', { type: m.asset.mime_type }))
+          files.push(new File([blob], asset.filename || 'image.png', { type: asset.mime_type }))
         } catch {
           /* one unreadable asset shouldn't sink the whole share */
         }
       }
       if (files.length > 0 && typeof navigator.canShare === 'function' && navigator.canShare({ files })) {
-        await navigator.share({ files, text: previewText })
+        await navigator.share({ files, text: shareText })
         done = true
         if (postData && postData.status !== 'published') setPostedAsk(true)
       }
@@ -398,7 +329,7 @@ export default function PostEditorPage() {
       setSharing(false)
     }
     if (done) return
-    window.open(`https://x.com/intent/post?text=${encodeURIComponent(previewText)}`, '_blank', 'noopener')
+    window.open(`https://x.com/intent/post?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener')
     // X opened in a new tab — when the user comes back, ask whether it
     // actually went out so the board stays truthful.
     if (postData && postData.status !== 'published') setPostedAsk(true)
@@ -555,27 +486,7 @@ export default function PostEditorPage() {
           </nav>
         ) : null}
 
-        {/* ── live preview: always inline, full image, updates as you edit ── */}
-        <section aria-label="Post preview" className="mt-5">
-          <div className="mb-2 flex items-baseline justify-between px-1">
-            <h2 className="pg-title text-lg text-ink">Preview</h2>
-            <span className="text-[11px] font-bold text-ink-soft">Updates as you edit</span>
-          </div>
-          <div className="rounded-[22px] bg-white p-4 shadow-[0_14px_34px_rgba(70,60,130,0.12)]">
-            <XIdentity />
-            <p className="mt-3 text-[15px] leading-relaxed font-semibold whitespace-pre-wrap text-ink">
-              {previewText.trim() ? previewText : 'Start writing below — your post will appear here.'}
-            </p>
-            {previewMedia.length > 0 ? (
-              <div className="mt-3 space-y-2">
-                {previewMedia.slice(0, 4).map((m) => (
-                  <PreviewImage key={m.asset.id} asset={m.asset} />
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </section>
-
+        {/* ── one card: live preview + editor together (PostForm) ── */}
         <div className="mt-6">
           <PostForm
             key={initial.postId ?? `new:${initial.projectId}`}

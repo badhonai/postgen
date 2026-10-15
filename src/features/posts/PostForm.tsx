@@ -35,45 +35,6 @@ function csvToList(value: string): string[] {
     .filter(Boolean)
 }
 
-function AttachmentChip({ asset, onRemove }: { asset: Asset; onRemove: () => void }) {
-  const url = useAssetUrl(asset.r2_key)
-  const isImage = asset.mime_type.startsWith('image/')
-  return (
-    <span className="flex items-center gap-1.5 rounded-full bg-white/65 py-1 pr-1 pl-1.5 text-xs font-bold text-ink">
-      {isImage && url.data ? (
-        <a
-          href={url.data}
-          target="_blank"
-          rel="noreferrer"
-          title="Open full size to attach on X"
-          className="shrink-0"
-        >
-          <img src={url.data} alt="" className="h-5 w-5 rounded-full object-cover" />
-        </a>
-      ) : (
-        <span>{isImage ? '🖼' : '🎬'}</span>
-      )}
-      <a
-        href={url.data ?? '#'}
-        target="_blank"
-        rel="noreferrer"
-        title="Open full size to attach on X"
-        className="max-w-32 truncate hover:underline"
-      >
-        {asset.filename}
-      </a>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="rounded-full px-1.5 text-ink-soft hover:bg-white hover:text-ink"
-        aria-label={`Remove ${asset.filename}`}
-      >
-        ✕
-      </button>
-    </span>
-  )
-}
-
 function PreviewAvatar({ project }: { project?: Pick<Project, 'name' | 'x_username' | 'logo'> | null }) {
   const url = useAssetUrl(project?.logo?.r2_key)
   if (url.data) {
@@ -493,9 +454,9 @@ export default function PostForm({
             />
 
             {mediaHere.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-3 space-y-2">
                 {mediaHere.map((m) => (
-                  <AttachmentChip
+                  <AttachedImage
                     key={m.asset.id}
                     asset={m.asset}
                     onRemove={() => setAttachments((a) => a.filter((x) => x.asset.id !== m.asset.id))}
@@ -582,23 +543,28 @@ export default function PostForm({
   )
 }
 
-/** 16:9 artwork tile with a remove button. */
+/** Full-size attached media inside the preview/edit card — natural aspect, never cropped. */
 function AttachedImage({ asset, onRemove }: { asset: Asset; onRemove: () => void }) {
   const url = useAssetUrl(asset.r2_key)
+  const isVideo = asset.mime_type.startsWith('video/')
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-[18px] bg-white/50">
+    <div className="relative w-full overflow-hidden rounded-[18px] bg-white/50 ring-1 ring-white/60">
       {url.data ? (
-        <a
-          href={url.data}
-          target="_blank"
-          rel="noreferrer"
-          title="Open full size to attach on X"
-          className="block h-full w-full"
-        >
-          <img src={url.data} alt={asset.alt_text ?? asset.filename} className="h-full w-full object-cover" />
-        </a>
+        isVideo ? (
+          <video src={url.data} controls className="h-auto w-full bg-black/5" />
+        ) : (
+          <a
+            href={url.data}
+            target="_blank"
+            rel="noreferrer"
+            title="Open full size to attach on X"
+            className="block"
+          >
+            <img src={url.data} alt={asset.alt_text ?? asset.filename} className="h-auto w-full" />
+          </a>
+        )
       ) : (
-        <div className="flex h-full w-full items-center justify-center text-3xl">🎨</div>
+        <div className="flex aspect-video w-full items-center justify-center text-3xl">{isVideo ? '🎬' : '🎨'}</div>
       )}
       <button
         type="button"
