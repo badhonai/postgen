@@ -353,6 +353,19 @@ Posts writes (`POST /api/v1/posts`, `PUT /api/v1/posts/:id/tweets`,
 `POST /api/v1/posts/:id/tweets`) are **hard-capped to `idea`/`draft`** — approving,
 scheduling and publishing stay human-only in the web app (403 otherwise).
 
+## Accounts 👥
+
+One live Supabase session per device, but **Settings → Accounts** (top of
+Settings) keeps every added account's refresh token in `localStorage`
+(`postgen.accounts.v1`, max 8, this device only) so users can jump
+between accounts with one tap — no password re-entry. "Add another
+account" signs the new account in through a throwaway non-persisted
+client (the live session is never disturbed; the fresh client is never
+signed out, which would revoke the stored token). Switching uses
+`auth.setSession` and reloads into that account's dashboard; signing
+out forgets that account (its token is revoked anyway). Switching to
+an account whose token died drops the entry with a clear message.
+
 ## Sharing (send → accept) ✉️
 
 Users can send a **project**, a **post**, or an **image prompt** to another

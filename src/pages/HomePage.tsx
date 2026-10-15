@@ -153,15 +153,6 @@ export default function HomePage() {
         <footer className="mt-auto pt-9 text-center text-[11px] font-semibold text-ink-soft">
           React + Vite · Cloudflare Pages &amp; R2 · Supabase · MIT ·{' '}
           <strong className="text-ink">$0 forever</strong>
-          <br />
-          <a
-            href="https://github.com/badhonai/postgen"
-            target="_blank"
-            rel="noreferrer"
-            className="underline underline-offset-2"
-          >
-            GitHub
-          </a>
         </footer>
       </div>
     </main>

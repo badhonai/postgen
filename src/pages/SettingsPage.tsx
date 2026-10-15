@@ -9,6 +9,7 @@ import {
   useRevokeApiKey,
 } from '../features/agents/keys'
 import { Button, ErrorBox, Input, Spinner } from '../components/ui'
+import { addAccount, forgetAccount, loadAccounts, switchAccount, type StoredAccount } from '../lib/accounts'
 import { useProjects, useReorderProjects } from '../features/projects/api'
 import { buildAgentSetupText, buildMcpConfig } from '../features/agents/agentSetup'
 import { ACCENTS, applyAccent, applyTheme, getAccent, getTheme, type AccentId, type ThemeMode } from '../lib/theme'
@@ -158,6 +159,38 @@ export default function SettingsPage() {
   }
   const [open, setOpen] = useState<'agent' | 'keys' | 'mcp' | 'rest' | null>(null)
 
+  // ── account switching ──
+  const [accounts, setAccounts] = useState<StoredAccount[]>(() => loadAccounts())
+  const [showAdd, setShowAdd] = useState(false)
+  const [addEmail, setAddEmail] = useState('')
+  const [addPassword, setAddPassword] = useState('')
+  const [addBusy, setAddBusy] = useState(false)
+  const [accountError, setAccountError] = useState<string | null>(null)
+  const [switchingId, setSwitchingId] = useState<string | null>(null)
+  const submitAddAccount = () => {
+    if (!addEmail.trim() || !addPassword) return
+    setAddBusy(true)
+    setAccountError(null)
+    void addAccount(addEmail, addPassword)
+      .then(() => {
+        setAccounts(loadAccounts())
+        setShowAdd(false)
+        setAddEmail('')
+        setAddPassword('')
+      })
+      .catch((err: unknown) => setAccountError(err instanceof Error ? err.message : 'Could not add that account'))
+      .finally(() => setAddBusy(false))
+  }
+  const doSwitch = (acc: StoredAccount) => {
+    setSwitchingId(acc.id)
+    setAccountError(null)
+    void switchAccount(acc).catch((err: unknown) => {
+      setAccounts(loadAccounts())
+      setAccountError(err instanceof Error ? err.message : 'Could not switch accounts')
+      setSwitchingId(null)
+    })
+  }
+
   const origin = window.location.origin
   const toggle = (id: 'agent' | 'keys' | 'mcp' | 'rest') => setOpen((o) => (o === id ? null : id))
 
@@ -235,6 +268,102 @@ export default function SettingsPage() {
           </button>
           <h1 className="pg-title mt-3 text-[2.6rem] leading-none text-ink">Settings</h1>
         </header>
+
+        {/* ── Accounts: switch between signed-in accounts ── */}
+        <section className="mt-7">
+          <div className="pg-glass overflow-hidden rounded-[22px]">
+            <GroupTitle>Accounts</GroupTitle>
+            <div className="divide-y divide-white/50">
+              {user ? (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-extrabold text-white">
+                    {(user.email ?? '?').slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-ink">{user.email}</span>
+                    <span className="block text-[11px] font-semibold text-ink-soft">This device is signed in as this account</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-butter/80 px-2.5 py-1 text-[10px] font-extrabold text-ink">CURRENT</span>
+                </div>
+              ) : null}
+              {accounts
+                .filter((a) => a.id !== user?.id)
+                .map((acc) => (
+                  <div key={acc.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/60 text-sm font-extrabold text-ink">
+                      {acc.email.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-ink">{acc.email}</span>
+                      <span className="block text-[11px] font-semibold text-ink-soft">Saved on this device</span>
+                    </span>
+                    <Button
+                      variant="ghost"
+                      className="shrink-0 px-3 py-1.5 text-xs"
+                      disabled={switchingId !== null}
+                      onClick={() => doSwitch(acc)}
+                    >
+                      {switchingId === acc.id ? 'Switching…' : 'Switch'}
+                    </Button>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${acc.email} from this device`}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/55 text-xs text-ink-soft transition hover:text-ink"
+                      onClick={() => {
+                        forgetAccount(acc.id)
+                        setAccounts(loadAccounts())
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+            </div>
+            {showAdd ? (
+              <div className="space-y-2 border-t border-white/50 px-4 py-3">
+                <Input
+                  type="email"
+                  placeholder="Email of the other account"
+                  value={addEmail}
+                  onChange={(e) => setAddEmail(e.target.value)}
+                  autoComplete="email"
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={addPassword}
+                  onChange={(e) => setAddPassword(e.target.value)}
+                  autoComplete="current-password"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') submitAddAccount()
+                  }}
+                />
+                <div className="flex items-center gap-2 pt-1">
+                  <Button className="px-4 py-2 text-xs" disabled={addBusy || !addEmail.trim() || !addPassword} onClick={submitAddAccount}>
+                    {addBusy ? 'Adding…' : 'Add account'}
+                  </Button>
+                  <Button variant="ghost" className="px-3 py-2 text-xs" onClick={() => setShowAdd(false)}>
+                    Cancel
+                  </Button>
+                </div>
+                <p className="text-[11px] leading-relaxed font-semibold text-ink-soft">
+                  The account is saved on this device only, so you can switch back and forth without
+                  passwords. Don't add accounts on shared devices.
+                </p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAdd(true)}
+                className="flex w-full items-center gap-2 border-t border-white/50 px-4 py-3 text-left text-sm font-bold text-ink transition hover:bg-white/35"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/55 text-base leading-none">+</span>
+                Add another account
+              </button>
+            )}
+            {accountError ? <p className="px-4 pb-3 text-[11px] font-bold text-rose-700">{accountError}</p> : null}
+          </div>
+        </section>
 
         {/* ── Appearance ── */}
         <section className="mt-7">
