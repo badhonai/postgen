@@ -55,7 +55,6 @@ export type ShareProjectPayload = {
     custom_instructions: string | null
     official_links: unknown[]
     x_premium: boolean
-    logo: ShareAssetPayload | null
   }
   knowledge: Array<{
     kind: string
@@ -64,7 +63,6 @@ export type ShareProjectPayload = {
     url: string | null
     notes: string | null
   }>
-  posts: SharePostPayload[]
 }
 
 export type SharePromptPayload = {
@@ -167,7 +165,9 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
     return postPayload(row, media.get(row.id) ?? [], row.projects?.name) as unknown as Record<string, unknown>
   }
 
-  // project: profile + knowledge + every post (with media)
+  // project: ONLY the project shell — profile/brand + knowledge.
+  // Posts and media never travel with a project share; posts are
+  // shared individually (with their media) via a post share.
   const { data: project, error: pErr } = await supa
     .from('projects')
     .select(
@@ -177,28 +177,12 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
     .single()
   if (pErr) throw pErr
 
-  let logo: ShareAssetPayload | null = null
-  const logoId = (project as { logo_asset_id?: string | null }).logo_asset_id
-  if (logoId) {
-    const { data: logoRow } = await supa.from('assets').select('*').eq('id', logoId).maybeSingle()
-    if (logoRow) logo = assetPayload(logoRow as Asset)
-  }
-
   const { data: knowledge, error: kErr } = await supa
     .from('knowledge')
     .select('kind, title, content, url, notes')
     .eq('project_id', itemId)
     .order('created_at')
   if (kErr) throw kErr
-
-  const { data: postRows, error: postErr } = await supa
-    .from('posts')
-    .select(POST_SELECT)
-    .eq('project_id', itemId)
-    .order('created_at')
-  if (postErr) throw postErr
-  const rows = (postRows ?? []) as unknown as RawPostRow[]
-  const media = await mediaForPosts(rows)
 
   const payload: ShareProjectPayload = {
     project: {
@@ -213,10 +197,8 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
       custom_instructions: (project.custom_instructions as string | null) ?? null,
       official_links: (project.official_links as unknown[]) ?? [],
       x_premium: Boolean(project.x_premium),
-      logo,
     },
     knowledge: (knowledge ?? []) as ShareProjectPayload['knowledge'],
-    posts: rows.map((r) => postPayload(r, media.get(r.id) ?? [])),
   }
   return payload as unknown as Record<string, unknown>
 }
@@ -499,31 +481,16 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
     if (error) throw error
     const projectId = (created as { id: string }).id
 
-    const allAssets = [
-      ...(p.project.logo ? [p.project.logo] : []),
-      ...p.posts.flatMap((post) => post.media.map((m) => m.asset)),
-    ]
-    const assetIds = await importAssets(userId, projectId, allAssets)
-    if (p.project.logo) {
-      const logoId = assetIds.get(p.project.logo.r2_key)
-      if (logoId) await supa.from('projects').update({ logo_asset_id: logoId }).eq('id', projectId)
-    }
-
-    if (p.knowledge.length > 0) {
+    // Project-only accept: profile/brand + knowledge. Posts/media in an
+    // older pending payload are deliberately ignored here.
+    if (p.knowledge?.length > 0) {
       const { error: kErr } = await supa.from('knowledge').insert(
         p.knowledge.map((k) => ({ user_id: userId, project_id: projectId, ...k })),
       )
       if (kErr) throw kErr
     }
 
-    let importedPosts = 0
-    let skippedPosts = 0
-    for (const post of p.posts) {
-      const r = await importPost(post, projectId, assetIds)
-      if (r.skipped) skippedPosts += 1
-      else importedPosts += 1
-    }
-    result = { kind: 'project', projectId, importedPosts, skippedPosts }
+    result = { kind: 'project', projectId }
   }
 
   const { error: updErr } = await supa

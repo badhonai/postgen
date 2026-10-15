@@ -323,8 +323,10 @@ page). Recipients are found by account email
 the recipient gets exactly what was sent. Nothing appears in the
 recipient's account until they **accept** from **Shares → Received**
 (dashboard card shows the pending count): accepting imports their own
-independent copy — a project arrives with its knowledge + posts + media
-rows, a post lands in a project they choose (or a new one), a prompt joins
+independent copy — a project arrives with only its profile/brand +
+knowledge (never its posts or media; posts travel only when sent as
+posts, with their media), a post lands in a project they choose (or a
+new one), a prompt joins
 their library (reference images stay with the sender). Declining,
 cancelling and clearing are all in Shares → Sent/Received. Schema:
 `supabase/migrations/20261016000001_sharing.sql` (`shares` table, RLS:

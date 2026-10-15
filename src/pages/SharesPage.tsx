@@ -26,8 +26,8 @@ function excerpt(share: Share): string {
   }
   if (share.item_type === 'project') {
     const p = share.payload as unknown as ShareProjectPayload
-    const n = p.posts?.length ?? 0
-    return `${n} post${n === 1 ? '' : 's'}${p.project?.description ? ` · ${p.project.description.slice(0, 90)}` : ''}`
+    const k = p.knowledge?.length ?? 0
+    return `Project only — profile & brand${k ? ` · ${k} knowledge item${k === 1 ? '' : 's'}` : ''}. No posts or media included.`
   }
   const p = share.payload as unknown as SharePromptPayload
   return p.prompt?.slice(0, 140) ?? ''
