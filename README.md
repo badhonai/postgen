@@ -345,6 +345,11 @@ my copy** button, and posts from one source project always land in
 ONE local project, never one project per post. Re-sending also
 supersedes a still-pending earlier send of the same item, so the
 recipient sees one pending share per item, at its newest version.
+Project identity also matches across doors: post payloads carry the
+source project's slug + @handle, post-accept links that source
+project to the local one, and project-accept **adopts** an existing
+project on a slug OR @handle match — so accepting a post first and
+the project later (or vice versa) still converges on ONE project.
 
 ## Keyboard shortcuts & autosave ⌨️
 
