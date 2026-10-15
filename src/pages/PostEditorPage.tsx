@@ -15,6 +15,7 @@ import { useProject } from '../features/projects/api'
 import { getSignedUrl } from '../lib/media'
 import type { Asset } from '../lib/types'
 import PostForm from '../features/posts/PostForm'
+import ShareDialog from '../features/shares/ShareDialog'
 import DuplicateDialog from '../features/posts/DuplicateDialog'
 import { Button, ErrorBox, Spinner } from '../components/ui'
 
@@ -39,6 +40,7 @@ export default function PostEditorPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [similarBanner, setSimilarBanner] = useState<SimilarPost[] | null>(null)
   const [postedAsk, setPostedAsk] = useState(false)
@@ -545,6 +547,17 @@ export default function PostEditorPage() {
               </div>
             </div>
           </div>
+        ) : null}
+
+        {shareOpen && postData ? (
+          <ShareDialog
+            target={{
+              itemType: 'post',
+              itemId: postData.id,
+              title: postData.title || postData.post_tweets[0]?.content?.slice(0, 60) || 'Untitled post',
+            }}
+            onClose={() => setShareOpen(false)}
+          />
         ) : null}
 
         {dupCheck && pendingInput ? (

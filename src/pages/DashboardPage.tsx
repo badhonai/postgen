@@ -14,6 +14,7 @@ import { HeroTile, PromptLibraryTile, SmallTile, type PostSummary } from '../fea
 import { TILE_COLORS } from '../lib/types'
 import ProjectForm from '../features/projects/ProjectForm'
 import { useImagePrompts } from '../features/prompts/api'
+import { usePendingShareCount } from '../features/shares/api'
 import TabBar from '../components/TabBar'
 import { Button, ErrorBox, Skeleton, SparkleLogo } from '../components/ui'
 
@@ -61,6 +62,7 @@ export default function DashboardPage() {
   const projects = useProjects()
   const createProject = useCreateProject()
   const prompts = useImagePrompts()
+  const pendingShares = usePendingShareCount()
   const [creating, setCreating] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
 
@@ -132,6 +134,32 @@ export default function DashboardPage() {
         <h1 className="pg-title mt-5 text-[2.35rem] leading-none whitespace-nowrap text-ink">
           Your Projects
         </h1>
+
+        {/* ── shares inbox shortcut ── */}
+        <button
+          type="button"
+          onClick={() => navigate('/shares')}
+          className="pg-glass mt-4 flex w-full items-center gap-3 rounded-[20px] px-4 py-3 text-left transition active:scale-[0.98]"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-butter text-lg shadow-[0_6px_16px_rgba(242,193,78,0.45)]">
+            ✉️
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-extrabold text-ink">Shares</span>
+            <span className="block truncate text-xs font-semibold text-ink-soft">
+              {(pendingShares.data ?? 0) > 0
+                ? `${pendingShares.data} waiting for you to accept`
+                : 'Send & receive projects, posts, prompts'}
+            </span>
+          </span>
+          {(pendingShares.data ?? 0) > 0 ? (
+            <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-extrabold text-white">
+              {pendingShares.data}
+            </span>
+          ) : (
+            <span className="shrink-0 text-ink-soft">→</span>
+          )}
+        </button>
 
         {/* ── filter pills ── */}
         <div className="pg-glass mt-5 flex gap-1 rounded-full p-1.5">

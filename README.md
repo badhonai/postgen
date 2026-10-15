@@ -314,6 +314,22 @@ Posts writes (`POST /api/v1/posts`, `PUT /api/v1/posts/:id/tweets`,
 `POST /api/v1/posts/:id/tweets`) are **hard-capped to `idea`/`draft`** — approving,
 scheduling and publishing stay human-only in the web app (403 otherwise).
 
+## Sharing (send → accept) ✉️
+
+Users can send a **project**, a **post**, or an **image prompt** to another
+PostGen user (Send buttons on each, plus the compose form on the Shares
+page). Recipients are found by account email
+(`find_recipient_by_email`); the share stores a frozen payload snapshot, so
+the recipient gets exactly what was sent. Nothing appears in the
+recipient's account until they **accept** from **Shares → Received**
+(dashboard card shows the pending count): accepting imports their own
+independent copy — a project arrives with its knowledge + posts + media
+rows, a post lands in a project they choose (or a new one), a prompt joins
+their library (reference images stay with the sender). Declining,
+cancelling and clearing are all in Shares → Sent/Received. Schema:
+`supabase/migrations/20261016000001_sharing.sql` (`shares` table, RLS:
+only sender + recipient can see a share).
+
 ## Keyboard shortcuts & autosave ⌨️
 
 - **⌘K / Ctrl+K** — quick switcher (jump to projects, posts, pages)

@@ -171,6 +171,34 @@ export const ASSET_KIND_LABEL: Record<string, string> = {
   other: 'Other',
 }
 
+/** ── sharing (send → accept) ── */
+export type ShareItemType = 'project' | 'post' | 'prompt'
+export type ShareStatus = 'pending' | 'accepted' | 'declined' | 'cancelled'
+
+export const SHARE_ITEM_LABEL: Record<ShareItemType, string> = {
+  project: 'Project',
+  post: 'Post',
+  prompt: 'Prompt',
+}
+
+export type Share = {
+  id: string
+  sender_id: string
+  recipient_id: string
+  item_type: ShareItemType
+  item_id: string
+  title: string
+  payload: Record<string, unknown>
+  message: string
+  status: ShareStatus
+  result: Record<string, unknown> | null
+  created_at: string
+  responded_at: string | null
+  /** Joined via profiles FK for display. */
+  sender?: { display_name: string | null; email: string | null } | null
+  recipient?: { display_name: string | null; email: string | null } | null
+}
+
 export const TILE_COLORS = ['bg-mint', 'bg-lilac', 'bg-cream', 'bg-peach', 'bg-sky', 'bg-rose-soft'] as const
 
 export const STATUS_DOT: Record<string, string> = {

@@ -32,6 +32,7 @@ import {
   type PostFilters,
 } from '../features/posts/api'
 import SwipeRow, { type SwipeAction } from '../features/posts/SwipeRow'
+import ShareDialog from '../features/shares/ShareDialog'
 import { Button, ErrorBox, Input, Select, Skeleton, Spinner } from '../components/ui'
 import { cn } from '../lib/cn'
 
@@ -99,6 +100,7 @@ export default function ProjectDetailPage() {
   const [category, setCategory] = useState<PostCategory | ''>('')
   const [type, setType] = useState<PostType | ''>('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const bulkStatus = useBulkSetStatus()
@@ -668,6 +670,13 @@ export default function ProjectDetailPage() {
                 if (file) void handleImport(file)
               }}
             />
+
+            {shareOpen ? (
+              <ShareDialog
+                target={{ itemType: 'project', itemId: p.id, title: p.name }}
+                onClose={() => setShareOpen(false)}
+              />
+            ) : null}
 
             {posts.isPending ? (
               <div className="space-y-2.5">

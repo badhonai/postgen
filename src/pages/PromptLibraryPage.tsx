@@ -14,6 +14,7 @@ import PromptDetailSheet from '../features/prompts/PromptDetailSheet'
 import ReferenceMediaPicker from '../features/prompts/ReferenceMediaPicker'
 import RefThumb from '../features/prompts/RefThumb'
 import { ErrorBox, Spinner } from '../components/ui'
+import ShareDialog from '../features/shares/ShareDialog'
 import { useProjects } from '../features/projects/api'
 
 const EMPTY: ComposerForm = { name: '', prompt: '', notes: '' }
@@ -35,6 +36,7 @@ export default function PromptLibraryPage() {
   const projectName = (id: string) => projectList.find((pr) => pr.id === id)?.name ?? 'Project'
   const [picking, setPicking] = useState(false)
   const [viewing, setViewing] = useState<ImagePrompt | null>(null)
+  const [sharing, setSharing] = useState<ImagePrompt | null>(null)
 
   const closeSheet = () => setSheetOpen(false)
 
@@ -170,6 +172,17 @@ export default function PromptLibraryPage() {
           onClose={() => setViewing(null)}
           onEdit={() => openEdit(viewing)}
           onDelete={() => void remove(viewing.id)}
+          onSend={() => {
+            setSharing(viewing)
+            setViewing(null)
+          }}
+        />
+      ) : null}
+
+      {sharing ? (
+        <ShareDialog
+          target={{ itemType: 'prompt', itemId: sharing.id, title: sharing.name }}
+          onClose={() => setSharing(null)}
         />
       ) : null}
 

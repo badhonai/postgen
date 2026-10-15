@@ -8,6 +8,7 @@ import PostEditorPage from './pages/PostEditorPage'
 import SettingsPage from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
 import PromptLibraryPage from './pages/PromptLibraryPage'
+import SharesPage from './pages/SharesPage'
 import CommandPalette from './components/CommandPalette'
 
 export default function App() {
@@ -54,6 +55,14 @@ export default function App() {
         element={
           <RequireAuth>
             <PromptLibraryPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/shares"
+        element={
+          <RequireAuth>
+            <SharesPage />
           </RequireAuth>
         }
       />

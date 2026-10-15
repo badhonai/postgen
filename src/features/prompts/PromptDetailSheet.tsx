@@ -10,6 +10,7 @@ type Props = {
   onClose: () => void
   onEdit: () => void
   onDelete: () => void
+  onSend?: () => void
 }
 
 /**
@@ -23,6 +24,7 @@ export default function PromptDetailSheet({
   onClose,
   onEdit,
   onDelete,
+  onSend,
 }: Props) {
   const refs = prompt.reference_asset_ids ?? []
   const [confirming, setConfirming] = useState(false)
@@ -123,6 +125,11 @@ export default function PromptDetailSheet({
             <Button variant="danger" onClick={() => setConfirming(true)}>
               Delete
             </Button>
+            {onSend ? (
+              <Button variant="ghost" onClick={onSend}>
+                Send ✉️
+              </Button>
+            ) : null}
             <Button className="ml-auto" onClick={onEdit}>
               Edit
             </Button>

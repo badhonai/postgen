@@ -1,4 +1,4 @@
-import { getUserFromRequest } from '../../_lib/auth'
+import { getUserFromRequest, serviceClient } from '../../_lib/auth'
 import { jsonError, type Env } from '../../_lib/env'
 import { keyBelongsToUser, signAsset } from '../../_lib/signing'
 
@@ -20,7 +20,18 @@ export async function onRequestGet(
   const url = new URL(request.url)
   const key = url.searchParams.get('key') ?? ''
   if (!key) return jsonError('missing key')
-  if (!keyBelongsToUser(key, user.id)) return jsonError('forbidden', 403)
+  if (!keyBelongsToUser(key, user.id)) {
+    // Shared copies own an `assets` row for someone else's R2 object
+    // (accepted shares) — owning the row is ownership enough to view it.
+    const db = serviceClient(env)
+    const { data: owned } = await db
+      .from('assets')
+      .select('id')
+      .eq('r2_key', key)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!owned) return jsonError('forbidden', 403)
+  }
 
   const ttl = Math.min(Number(url.searchParams.get('ttl')) || DEFAULT_TTL, MAX_TTL)
   const exp = Math.floor(Date.now() / 1000) + ttl

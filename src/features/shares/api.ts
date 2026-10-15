@@ -1,0 +1,566 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '../../lib/supabase'
+import { sha256Hex, threadToContentText } from '../../lib/text'
+import { findExactDuplicate } from '../../lib/dedupe'
+import type {
+  Asset,
+  PostCategory,
+  PostStatus,
+  PostType,
+  Share,
+  ShareItemType,
+} from '../../lib/types'
+
+/**
+ * Sharing: send a project / post / prompt to another PostGen user.
+ * The share row carries a frozen payload snapshot; accepting imports an
+ * independent copy into the recipient's account. Nothing shows up for
+ * the recipient until they accept.
+ */
+
+export type ShareAssetPayload = {
+  r2_key: string
+  filename: string
+  mime_type: string
+  size_bytes: number
+  width: number | null
+  height: number | null
+  alt_text: string | null
+  kind: string
+}
+
+export type SharePostPayload = {
+  title: string
+  type: PostType
+  category: PostCategory
+  status: PostStatus
+  tweets: string[]
+  tags: string[]
+  meta: Record<string, unknown>
+  /** tweet_index is 0-based into `tweets`. */
+  media: Array<{ tweet_index: number; asset: ShareAssetPayload }>
+  project_name?: string
+}
+
+export type ShareProjectPayload = {
+  project: {
+    name: string
+    slug: string
+    description: string | null
+    brand_voice: Record<string, unknown>
+    x_username: string | null
+    website_url: string | null
+    content_pillars: string[]
+    sample_posts: string[]
+    custom_instructions: string | null
+    official_links: unknown[]
+    x_premium: boolean
+    logo: ShareAssetPayload | null
+  }
+  knowledge: Array<{
+    kind: string
+    title: string
+    content: string | null
+    url: string | null
+    notes: string | null
+  }>
+  posts: SharePostPayload[]
+}
+
+export type SharePromptPayload = {
+  name: string
+  prompt: string
+  notes: string
+}
+
+const assetPayload = (a: Asset): ShareAssetPayload => ({
+  r2_key: a.r2_key,
+  filename: a.filename,
+  mime_type: a.mime_type,
+  size_bytes: a.size_bytes,
+  width: a.width,
+  height: a.height,
+  alt_text: a.alt_text,
+  kind: a.kind ?? 'other',
+})
+
+type RawPostRow = {
+  id: string
+  title: string
+  post_type: PostType
+  category: PostCategory
+  status: PostStatus
+  meta: Record<string, unknown> | null
+  post_tweets: Array<{ id: string; position: number; content: string }>
+  post_tags: Array<{ tags: { name: string } | null }>
+}
+
+/** Media for a set of posts, keyed by post id → tweet index → assets. */
+async function mediaForPosts(
+  rows: RawPostRow[],
+): Promise<Map<string, Array<{ tweet_index: number; asset: ShareAssetPayload }>>> {
+  const out = new Map<string, Array<{ tweet_index: number; asset: ShareAssetPayload }>>()
+  const tweetOwner = new Map<string, { postId: string; index: number }>()
+  for (const row of rows) {
+    const tweets = [...row.post_tweets].sort((a, b) => a.position - b.position)
+    tweets.forEach((t, i) => tweetOwner.set(t.id, { postId: row.id, index: i }))
+  }
+  const tweetIds = [...tweetOwner.keys()]
+  if (tweetIds.length === 0) return out
+  const { data, error } = await supabase!
+    .from('post_media')
+    .select('post_tweet_id, position, assets(*)')
+    .in('post_tweet_id', tweetIds)
+    .order('position')
+  if (error) throw error
+  for (const r of (data ?? []) as unknown as Array<{ post_tweet_id: string; assets: Asset | null }>) {
+    const owner = tweetOwner.get(r.post_tweet_id)
+    if (!owner || !r.assets) continue
+    const list = out.get(owner.postId) ?? []
+    list.push({ tweet_index: owner.index, asset: assetPayload(r.assets) })
+    out.set(owner.postId, list)
+  }
+  return out
+}
+
+const postPayload = (
+  row: RawPostRow,
+  media: Array<{ tweet_index: number; asset: ShareAssetPayload }>,
+  projectName?: string,
+): SharePostPayload => ({
+  title: row.title,
+  type: row.post_type ?? 'post',
+  category: row.category,
+  status: row.status,
+  tweets: [...row.post_tweets].sort((a, b) => a.position - b.position).map((t) => t.content),
+  tags: row.post_tags.map((pt) => pt.tags?.name).filter((n): n is string => !!n),
+  meta: row.meta ?? {},
+  media,
+  project_name: projectName,
+})
+
+const POST_SELECT = 'id, title, post_type, category, status, meta, post_tweets(id, position, content), post_tags(tags(name))'
+
+export async function buildPayload(itemType: ShareItemType, itemId: string): Promise<Record<string, unknown>> {
+  const supa = supabase!
+  if (itemType === 'prompt') {
+    const { data, error } = await supa
+      .from('image_prompts')
+      .select('name, prompt, notes')
+      .eq('id', itemId)
+      .single()
+    if (error) throw error
+    // Reference images belong to the sender's projects — the text recipe
+    // travels, the reference files don't.
+    return { ...(data as SharePromptPayload) } as Record<string, unknown>
+  }
+
+  if (itemType === 'post') {
+    const { data, error } = await supa
+      .from('posts')
+      .select(`${POST_SELECT}, projects(name)`)
+      .eq('id', itemId)
+      .single()
+    if (error) throw error
+    const row = data as unknown as RawPostRow & { projects: { name: string } | null }
+    const media = await mediaForPosts([row])
+    return postPayload(row, media.get(row.id) ?? [], row.projects?.name) as unknown as Record<string, unknown>
+  }
+
+  // project: profile + knowledge + every post (with media)
+  const { data: project, error: pErr } = await supa
+    .from('projects')
+    .select(
+      'name, slug, description, brand_voice, x_username, website_url, content_pillars, sample_posts, custom_instructions, official_links, x_premium, logo_asset_id',
+    )
+    .eq('id', itemId)
+    .single()
+  if (pErr) throw pErr
+
+  let logo: ShareAssetPayload | null = null
+  const logoId = (project as { logo_asset_id?: string | null }).logo_asset_id
+  if (logoId) {
+    const { data: logoRow } = await supa.from('assets').select('*').eq('id', logoId).maybeSingle()
+    if (logoRow) logo = assetPayload(logoRow as Asset)
+  }
+
+  const { data: knowledge, error: kErr } = await supa
+    .from('knowledge')
+    .select('kind, title, content, url, notes')
+    .eq('project_id', itemId)
+    .order('created_at')
+  if (kErr) throw kErr
+
+  const { data: postRows, error: postErr } = await supa
+    .from('posts')
+    .select(POST_SELECT)
+    .eq('project_id', itemId)
+    .order('created_at')
+  if (postErr) throw postErr
+  const rows = (postRows ?? []) as unknown as RawPostRow[]
+  const media = await mediaForPosts(rows)
+
+  const payload: ShareProjectPayload = {
+    project: {
+      name: project.name as string,
+      slug: project.slug as string,
+      description: (project.description as string | null) ?? null,
+      brand_voice: (project.brand_voice as Record<string, unknown>) ?? {},
+      x_username: (project.x_username as string | null) ?? null,
+      website_url: (project.website_url as string | null) ?? null,
+      content_pillars: (project.content_pillars as string[]) ?? [],
+      sample_posts: (project.sample_posts as string[]) ?? [],
+      custom_instructions: (project.custom_instructions as string | null) ?? null,
+      official_links: (project.official_links as unknown[]) ?? [],
+      x_premium: Boolean(project.x_premium),
+      logo,
+    },
+    knowledge: (knowledge ?? []) as ShareProjectPayload['knowledge'],
+    posts: rows.map((r) => postPayload(r, media.get(r.id) ?? [])),
+  }
+  return payload as unknown as Record<string, unknown>
+}
+
+// ── queries ──────────────────────────────────────────────────────────────
+
+const SHARE_SELECT = '*, sender:profiles!shares_sender_id_fkey(display_name, email), recipient:profiles!shares_recipient_id_fkey(display_name, email)'
+
+export function useReceivedShares() {
+  const { userId } = useCurrentUserId()
+  return useQuery({
+    queryKey: ['shares', 'received', userId],
+    enabled: !!supabase && !!userId,
+    queryFn: async (): Promise<Share[]> => {
+      const { data, error } = await supabase!
+        .from('shares')
+        .select(SHARE_SELECT)
+        .eq('recipient_id', userId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as unknown as Share[]
+    },
+  })
+}
+
+export function useSentShares() {
+  const { userId } = useCurrentUserId()
+  return useQuery({
+    queryKey: ['shares', 'sent', userId],
+    enabled: !!supabase && !!userId,
+    queryFn: async (): Promise<Share[]> => {
+      const { data, error } = await supabase!
+        .from('shares')
+        .select(SHARE_SELECT)
+        .eq('sender_id', userId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as unknown as Share[]
+    },
+  })
+}
+
+export function usePendingShareCount() {
+  const { userId } = useCurrentUserId()
+  return useQuery({
+    queryKey: ['shares', 'pending-count', userId],
+    enabled: !!supabase && !!userId,
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await supabase!
+        .from('shares')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', userId)
+        .eq('status', 'pending')
+      if (error) return 0
+      return count ?? 0
+    },
+  })
+}
+
+function useCurrentUserId() {
+  const query = useQuery({
+    queryKey: ['shares', 'me'],
+    enabled: !!supabase,
+    queryFn: async () => (await supabase!.auth.getUser()).data.user?.id ?? null,
+  })
+  return { userId: query.data ?? null }
+}
+
+// ── send ─────────────────────────────────────────────────────────────────
+
+export function useSendShare() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      itemType: ShareItemType
+      itemId: string
+      title: string
+      recipientEmail: string
+      message?: string
+    }): Promise<void> => {
+      const supa = supabase!
+      const { data: me } = await supa.auth.getUser()
+      if (!me.user) throw new Error('You are signed out.')
+
+      const { data: found, error: lookupErr } = await supa.rpc('find_recipient_by_email', {
+        p_email: input.recipientEmail.trim(),
+      })
+      if (lookupErr) throw lookupErr
+      const recipient = (found as Array<{ id: string }> | null)?.[0]
+      if (!recipient) {
+        throw new Error(
+          `No PostGen account found for ${input.recipientEmail.trim()}. They need to sign up first — then you can send to them.`,
+        )
+      }
+
+      const payload = await buildPayload(input.itemType, input.itemId)
+      const { error } = await supa.from('shares').insert({
+        sender_id: me.user.id,
+        recipient_id: recipient.id,
+        item_type: input.itemType,
+        item_id: input.itemId,
+        title: input.title,
+        payload,
+        message: (input.message ?? '').trim(),
+      })
+      if (error) throw error
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['shares'] }),
+  })
+}
+
+// ── accept / import ──────────────────────────────────────────────────────
+
+/** Create (or reuse) the recipient's own assets rows for shared media. */
+async function importAssets(
+  userId: string,
+  projectId: string,
+  assets: ShareAssetPayload[],
+): Promise<Map<string, string>> {
+  const byKey = new Map<string, string>()
+  const unique = [...new Map(assets.map((a) => [a.r2_key, a])).values()]
+  for (const a of unique) {
+    const { data: existing } = await supabase!
+      .from('assets')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('project_id', projectId)
+      .eq('r2_key', a.r2_key)
+      .maybeSingle()
+    if (existing) {
+      byKey.set(a.r2_key, (existing as { id: string }).id)
+      continue
+    }
+    const { data, error } = await supabase!
+      .from('assets')
+      .insert({ user_id: userId, project_id: projectId, ...a })
+      .select('id')
+      .single()
+    if (error) throw error
+    byKey.set(a.r2_key, (data as { id: string }).id)
+  }
+  return byKey
+}
+
+async function importPost(
+  payload: SharePostPayload,
+  projectId: string,
+  assetIds: Map<string, string>,
+): Promise<{ postId: string | null; skipped: boolean }> {
+  const tweets = payload.tweets.map((t) => t.trim()).filter(Boolean)
+  if (tweets.length === 0) return { postId: null, skipped: true }
+
+  let contentText = threadToContentText(tweets)
+  if (payload.type === 'quote') {
+    const extra = [String(payload.meta?.source ?? ''), String(payload.meta?.comment ?? '')]
+      .filter(Boolean)
+      .join('\n')
+    if (extra) contentText = `${contentText}\n\n${extra}`
+  }
+  const contentHash = await sha256Hex(contentText)
+  if (await findExactDuplicate(contentHash)) return { postId: null, skipped: true }
+
+  const counters: Record<number, number> = {}
+  const p_media = payload.media
+    .filter((m) => assetIds.has(m.asset.r2_key))
+    .map((m) => {
+      counters[m.tweet_index] = (counters[m.tweet_index] ?? 0) + 1
+      return {
+        tweet_position: m.tweet_index + 1,
+        asset_id: assetIds.get(m.asset.r2_key)!,
+        position: counters[m.tweet_index],
+      }
+    })
+
+  const { data, error } = await supabase!.rpc('save_post_with_tweets', {
+    p_post_id: null,
+    p_project_id: projectId,
+    p_category: payload.category,
+    p_status: payload.status,
+    p_title: payload.title,
+    p_content_text: contentText,
+    p_content_hash: contentHash,
+    p_tweets: tweets,
+    p_tag_names: payload.tags,
+    p_media,
+    p_created_via: 'web',
+    p_post_type: payload.type,
+    p_meta: payload.meta ?? {},
+  })
+  if (error) throw error
+  return { postId: data as string, skipped: false }
+}
+
+async function uniqueSlug(userId: string, base: string, name: string): Promise<string> {
+  const stem = (base || name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project'
+  const { data } = await supabase!.from('projects').select('slug').eq('user_id', userId)
+  const taken = new Set((data ?? []).map((r) => (r as { slug: string }).slug))
+  if (!taken.has(stem)) return stem
+  let n = 2
+  while (taken.has(`${stem}-${n}`)) n += 1
+  return `${stem}-${n}`
+}
+
+export type AcceptResult = {
+  kind: ShareItemType
+  projectId?: string
+  postId?: string
+  promptId?: string
+  importedPosts?: number
+  skippedPosts?: number
+}
+
+async function runAccept(share: Share, targetProjectId: string | null): Promise<AcceptResult> {
+  const supa = supabase!
+  const { data: me } = await supa.auth.getUser()
+  const userId = me.user?.id
+  if (!userId) throw new Error('You are signed out.')
+
+  let result: AcceptResult
+
+  if (share.item_type === 'prompt') {
+    const p = share.payload as unknown as SharePromptPayload
+    const { data, error } = await supa
+      .from('image_prompts')
+      .insert({
+        user_id: userId,
+        name: p.name,
+        prompt: p.prompt,
+        notes: p.notes ?? '',
+        reference_asset_ids: [],
+        project_ids: [],
+      })
+      .select('id')
+      .single()
+    if (error) throw error
+    result = { kind: 'prompt', promptId: (data as { id: string }).id }
+  } else if (share.item_type === 'post') {
+    const p = share.payload as unknown as SharePostPayload
+    let projectId = targetProjectId
+    if (!projectId) {
+      // No destination chosen: create a project named after the source one.
+      const name = p.project_name || 'Shared posts'
+      const slug = await uniqueSlug(userId, name, name)
+      const { data, error } = await supa
+        .from('projects')
+        .insert({ user_id: userId, name, slug, description: 'Posts shared with me on PostGen.' })
+        .select('id')
+        .single()
+      if (error) throw error
+      projectId = (data as { id: string }).id
+    }
+    const assetIds = await importAssets(userId, projectId, p.media.map((m) => m.asset))
+    const imported = await importPost(p, projectId, assetIds)
+    result = { kind: 'post', projectId, postId: imported.postId ?? undefined, skippedPosts: imported.skipped ? 1 : 0 }
+  } else {
+    const p = share.payload as unknown as ShareProjectPayload
+    const slug = await uniqueSlug(userId, p.project.slug, p.project.name)
+    const { data: created, error } = await supa
+      .from('projects')
+      .insert({
+        user_id: userId,
+        name: p.project.name,
+        slug,
+        description: p.project.description,
+        brand_voice: p.project.brand_voice ?? {},
+        x_username: p.project.x_username,
+        website_url: p.project.website_url,
+        content_pillars: p.project.content_pillars ?? [],
+        sample_posts: p.project.sample_posts ?? [],
+        custom_instructions: p.project.custom_instructions,
+        official_links: p.project.official_links ?? [],
+        x_premium: p.project.x_premium ?? false,
+      })
+      .select('id')
+      .single()
+    if (error) throw error
+    const projectId = (created as { id: string }).id
+
+    const allAssets = [
+      ...(p.project.logo ? [p.project.logo] : []),
+      ...p.posts.flatMap((post) => post.media.map((m) => m.asset)),
+    ]
+    const assetIds = await importAssets(userId, projectId, allAssets)
+    if (p.project.logo) {
+      const logoId = assetIds.get(p.project.logo.r2_key)
+      if (logoId) await supa.from('projects').update({ logo_asset_id: logoId }).eq('id', projectId)
+    }
+
+    if (p.knowledge.length > 0) {
+      const { error: kErr } = await supa.from('knowledge').insert(
+        p.knowledge.map((k) => ({ user_id: userId, project_id: projectId, ...k })),
+      )
+      if (kErr) throw kErr
+    }
+
+    let importedPosts = 0
+    let skippedPosts = 0
+    for (const post of p.posts) {
+      const r = await importPost(post, projectId, assetIds)
+      if (r.skipped) skippedPosts += 1
+      else importedPosts += 1
+    }
+    result = { kind: 'project', projectId, importedPosts, skippedPosts }
+  }
+
+  const { error: updErr } = await supa
+    .from('shares')
+    .update({ status: 'accepted', responded_at: new Date().toISOString(), result: { ...result } })
+    .eq('id', share.id)
+  if (updErr) throw updErr
+  return result
+}
+
+export function useAcceptShare() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ share, targetProjectId }: { share: Share; targetProjectId?: string | null }) =>
+      runAccept(share, targetProjectId ?? null),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['shares'] })
+      void qc.invalidateQueries({ queryKey: ['projects'] })
+      void qc.invalidateQueries({ queryKey: ['posts'] })
+      void qc.invalidateQueries({ queryKey: ['image-prompts'] })
+      void qc.invalidateQueries({ queryKey: ['post-summaries'] })
+    },
+  })
+}
+
+export function useRespondShare() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ share, action }: { share: Share; action: 'declined' | 'cancelled' | 'delete' }) => {
+      const supa = supabase!
+      if (action === 'delete') {
+        const { error } = await supa.from('shares').delete().eq('id', share.id)
+        if (error) throw error
+        return
+      }
+      const { error } = await supa
+        .from('shares')
+        .update({ status: action, responded_at: new Date().toISOString() })
+        .eq('id', share.id)
+      if (error) throw error
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['shares'] }),
+  })
+}
