@@ -315,6 +315,8 @@ function SendSomething() {
   const projects = useProjects()
   const posts = usePosts({})
   const prompts = useImagePrompts()
+  const [activeType, setActiveType] = useState<ShareItemType>('project')
+  const [query, setQuery] = useState('')
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
@@ -342,9 +344,15 @@ function SendSomething() {
       items: (prompts.data?.prompts ?? []).map((pr) => ({ itemType: 'prompt' as const, itemId: pr.id, title: pr.name })),
     },
   ]
-  const allItems = groups.flatMap((g) => g.items)
   const keyOf = (i: Pick) => `${i.itemType}:${i.itemId}`
+  const allItems = groups.flatMap((g) => g.items)
   const selectedItems = allItems.filter((i) => selectedKeys.has(keyOf(i)))
+  const selectedCountFor = (t: ShareItemType) => selectedItems.filter((i) => i.itemType === t).length
+  const activeGroup = groups.find((g) => g.type === activeType) ?? groups[0]
+  const visibleItems = activeGroup.items.filter((i) =>
+    i.title.toLowerCase().includes(query.trim().toLowerCase()),
+  )
+  const allVisibleSelected = visibleItems.length > 0 && visibleItems.every((i) => selectedKeys.has(keyOf(i)))
 
   const toggle = (item: Pick) =>
     setSelectedKeys((prev) => {
@@ -352,6 +360,16 @@ function SendSomething() {
       const k = keyOf(item)
       if (next.has(k)) next.delete(k)
       else next.add(k)
+      return next
+    })
+
+  const toggleAllVisible = () =>
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      for (const i of visibleItems) {
+        if (allVisibleSelected) next.delete(keyOf(i))
+        else next.add(keyOf(i))
+      }
       return next
     })
 
@@ -368,71 +386,135 @@ function SendSomething() {
     <section className="pg-glass mt-5 rounded-[24px] p-4">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="pg-title text-[17px] text-ink">Send something</h2>
-        <span className="text-xs font-extrabold text-ink-soft">
-          {selectedItems.length > 0 ? `${selectedItems.length} selected` : 'Tap to select'}
-        </span>
+        {selectedItems.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setSelectedKeys(new Set())}
+            className="text-xs font-extrabold text-ink-soft hover:text-ink"
+          >
+            Clear all
+          </button>
+        ) : null}
       </div>
 
-      {groups.map((g) => (
-        <div key={g.type} className="mt-3">
-          <div className="flex items-center justify-between px-0.5">
-            <span className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
-              {ITEM_ICON[g.type]} {g.label}
-            </span>
-            {g.items.length > 0 ? (
-              <button
-                type="button"
-                className="text-[11px] font-extrabold text-ink-soft hover:text-ink"
-                onClick={() =>
-                  setSelectedKeys((prev) => {
-                    const next = new Set(prev)
-                    const allOn = g.items.every((i) => next.has(keyOf(i)))
-                    for (const i of g.items) {
-                      if (allOn) next.delete(keyOf(i))
-                      else next.add(keyOf(i))
-                    }
-                    return next
-                  })
-                }
-              >
-                {g.items.every((i) => selectedKeys.has(keyOf(i))) ? 'Select none' : 'Select all'}
-              </button>
-            ) : null}
-          </div>
-          {g.items.length === 0 ? (
-            <p className="mt-1.5 px-0.5 text-xs font-semibold text-ink-soft">Nothing here yet.</p>
-          ) : (
-            <ul className="pg-scroll mt-1.5 max-h-44 space-y-1.5 overflow-y-auto pr-0.5">
-              {g.items.map((item) => {
-                const on = selectedKeys.has(keyOf(item))
-                return (
-                  <li key={keyOf(item)}>
-                    <button
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => toggle(item)}
-                      className={cn(
-                        'flex w-full items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left text-sm font-bold transition active:scale-[0.99]',
-                        on ? 'bg-butter text-ink shadow-[0_6px_16px_rgba(242,193,78,0.4)]' : 'bg-white/55 text-ink hover:bg-white/75',
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px]',
-                          on ? 'border-ink bg-ink text-white' : 'border-ink-soft/40 text-transparent',
-                        )}
-                      >
-                        ✓
-                      </span>
-                      <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+      {/* Selected tray — always visible, no matter which tab you're on. */}
+      {selectedItems.length > 0 ? (
+        <div className="pg-scroll mt-3 flex gap-1.5 overflow-x-auto pb-1">
+          {selectedItems.map((item) => (
+            <button
+              key={keyOf(item)}
+              type="button"
+              onClick={() => toggle(item)}
+              title={`Remove ${item.title}`}
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-ink py-1.5 pr-2.5 pl-3 text-xs font-bold text-white transition active:scale-95"
+            >
+              <span aria-hidden>{ITEM_ICON[item.itemType]}</span>
+              <span className="max-w-36 truncate">{item.title}</span>
+              <span aria-hidden className="text-white/70">✕</span>
+            </button>
+          ))}
         </div>
-      ))}
+      ) : (
+        <p className="mt-1.5 text-xs font-semibold text-ink-soft">
+          Pick anything — projects, posts and prompts can travel together.
+        </p>
+      )}
+
+      {/* Type tabs: one list at a time, so long lists never bury the rest. */}
+      <div className="mt-3 flex gap-1 rounded-full bg-white/45 p-1" role="tablist" aria-label="Item type">
+        {groups.map((g) => {
+          const count = selectedCountFor(g.type)
+          return (
+            <button
+              key={g.type}
+              type="button"
+              role="tab"
+              aria-selected={activeType === g.type}
+              onClick={() => {
+                setActiveType(g.type)
+                setQuery('')
+              }}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-extrabold whitespace-nowrap transition active:scale-95',
+                activeType === g.type
+                  ? 'bg-butter text-ink shadow-[0_4px_12px_rgba(242,193,78,0.45)]'
+                  : 'text-ink-soft hover:text-ink',
+              )}
+            >
+              <span aria-hidden>{ITEM_ICON[g.type]}</span>
+              {g.label}
+              <span className="rounded-full bg-white/60 px-1.5 py-0.5 text-[10px] font-extrabold text-ink-soft">
+                {g.items.length}
+              </span>
+              {count > 0 ? (
+                <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-ink px-1 text-[10px] font-extrabold text-white">
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Search + select-all for the visible list. */}
+      <div className="mt-3 flex items-center gap-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Search ${activeGroup.label.toLowerCase()}…`}
+          className="min-w-0 flex-1 py-2"
+        />
+        {visibleItems.length > 0 ? (
+          <button
+            type="button"
+            onClick={toggleAllVisible}
+            className="shrink-0 rounded-full bg-white/55 px-3 py-2 text-[11px] font-extrabold text-ink transition hover:bg-white/75 active:scale-95"
+          >
+            {allVisibleSelected ? 'Select none' : 'Select all'}
+          </button>
+        ) : null}
+      </div>
+
+      {/* Only the active type's list — fixed height, scrolls inside. */}
+      {visibleItems.length === 0 ? (
+        <p className="px-1 py-6 text-center text-sm font-semibold text-ink-soft">
+          {activeGroup.items.length === 0
+            ? `No ${activeGroup.label.toLowerCase()} yet.`
+            : `Nothing matches “${query}”.`}
+        </p>
+      ) : (
+        <ul className="pg-scroll mt-2 max-h-64 space-y-1.5 overflow-y-auto pr-0.5">
+          {visibleItems.map((item) => {
+            const on = selectedKeys.has(keyOf(item))
+            return (
+              <li key={keyOf(item)}>
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggle(item)}
+                  className={cn(
+                    'flex w-full items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left text-sm font-bold transition active:scale-[0.99]',
+                    on
+                      ? 'bg-butter text-ink shadow-[0_6px_16px_rgba(242,193,78,0.4)]'
+                      : 'bg-white/55 text-ink hover:bg-white/75',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px]',
+                      on ? 'border-ink bg-ink text-white' : 'border-ink-soft/40 text-transparent',
+                    )}
+                  >
+                    ✓
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                  {on ? <span className="shrink-0 text-[10px] font-extrabold text-ink/60">SELECTED</span> : null}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
 
       <Input
         type="email"
