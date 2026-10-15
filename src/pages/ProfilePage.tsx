@@ -10,6 +10,7 @@ import {
   xProfileScore,
   type XProfile,
 } from '../lib/xprofile'
+import { fetchSorsaScore, formatSorsaScore, SorsaError, sorsaTier } from '../lib/sorsa'
 
 function Avatar({ handle, name, size }: { handle: string; name: string; size: number }) {
   const [failed, setFailed] = useState(false)
@@ -70,6 +71,119 @@ function StatTile({ label, value, tint }: { label: string; value: string; tint: 
       <p className="pg-title text-lg leading-none text-ink">{value}</p>
       <p className="mt-1 text-[10px] font-extrabold tracking-[0.1em] text-ink-soft uppercase">
         {label}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Sorsa Score card — crypto-X influence (quality of followers), via the
+ * /api/sorsa proxy (key is a server secret). Handles three states honestly:
+ * a real score, "not connected" setup help, and "not indexed yet".
+ */
+function SorsaCard({ handle }: { handle: string }) {
+  const sorsa = useQuery({
+    queryKey: ['sorsa-score', handle],
+    queryFn: () => fetchSorsaScore(handle),
+    staleTime: 24 * 60 * 60 * 1000,
+    retry: false,
+  })
+
+  if (sorsa.isPending) {
+    return (
+      <div className="pg-tile bg-sky p-5">
+        <p className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Sorsa score</p>
+        <div className="mt-3">
+          <Spinner />
+        </div>
+      </div>
+    )
+  }
+
+  if (sorsa.error || !sorsa.data) {
+    const code = sorsa.error instanceof SorsaError ? sorsa.error.code : 'upstream'
+    return (
+      <div className="pg-tile bg-cream p-5">
+        <p className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Sorsa score</p>
+        {code === 'not_configured' ? (
+          <>
+            <p className="pg-title mt-1.5 text-xl text-ink">Not connected yet</p>
+            <p className="mt-1 text-xs leading-relaxed font-semibold text-ink-soft">
+              Sorsa Score measures crypto-X influence — which KOLs, projects and funds follow you.
+              To show it here: get a free API key at{' '}
+              <a href="https://api.sorsa.io/overview" target="_blank" rel="noreferrer" className="text-ink underline underline-offset-2">
+                api.sorsa.io
+              </a>{' '}
+              (100 free requests, no card), then add it as{' '}
+              <code className="font-bold text-ink">SORSA_API_KEY</code> in Cloudflare Pages →
+              Settings → Environment variables and redeploy. Scores update daily, so the card
+              costs at most one request a day.
+            </p>
+          </>
+        ) : code === 'not_indexed' ? (
+          <>
+            <p className="pg-title mt-1.5 text-xl text-ink">Not indexed yet</p>
+            <p className="mt-1 text-xs leading-relaxed font-semibold text-ink-soft">
+              Sorsa hasn't scored @{handle} yet — new accounts appear once notable crypto
+              accounts follow them.{' '}
+              <a
+                href={`https://sorsa.io`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-ink underline underline-offset-2"
+              >
+                Check on Sorsa →
+              </a>
+            </p>
+          </>
+        ) : (
+          <p className="mt-1.5 text-xs leading-relaxed font-semibold text-ink-soft">
+            {sorsa.error instanceof Error ? sorsa.error.message : 'Could not load the Sorsa Score.'}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  const { score } = sorsa.data
+  const tier = sorsaTier(score)
+  const progress = tier.nextAt
+    ? Math.min(100, Math.max(2, ((score - tier.floor) / (tier.nextAt - tier.floor)) * 100))
+    : 100
+
+  return (
+    <div className="pg-tile bg-sky p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-extrabold tracking-[0.14em] text-ink-soft uppercase">Sorsa score</p>
+          <p className="pg-title mt-1 text-4xl leading-none text-ink">{formatSorsaScore(score)}</p>
+          <p className="mt-1.5 text-xs font-bold text-ink">
+            Tier · {tier.label}
+            {tier.nextAt ? (
+              <span className="font-semibold text-ink-soft">
+                {' '}— {formatSorsaScore(tier.nextAt - score)} pts to next tier
+              </span>
+            ) : null}
+          </p>
+        </div>
+        <a
+          href={`https://app.sorsa.io/profile/${encodeURIComponent(handle)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="shrink-0 rounded-full bg-white/60 px-2.5 py-1 text-[11px] font-bold text-ink transition hover:bg-white/80"
+        >
+          Sorsa ↗
+        </a>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/55">
+        <div className="h-full rounded-full bg-butter-deep" style={{ width: `${progress}%` }} />
+      </div>
+      <p className="mt-2.5 text-[11px] leading-relaxed font-semibold text-ink-soft">
+        Crypto-X influence — who follows you (KOLs, projects, funds), not how many. By{' '}
+        <a href="https://sorsa.io" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+          Sorsa
+        </a>{' '}
+        (formerly TweetScout) · updates daily.
       </p>
     </div>
   )
@@ -172,6 +286,8 @@ function ProfileDetails({ handle }: { handle: string }) {
           ))}
         </div>
       </div>
+
+      <SorsaCard handle={p.handle} />
 
       {/* stats */}
       <div className="grid grid-cols-2 gap-3">
@@ -353,7 +469,8 @@ export default function ProfilePage() {
           <a href="https://fxtwitter.com" target="_blank" rel="noreferrer" className="underline underline-offset-2">
             FxTwitter
           </a>{' '}
-          · score computed on your device · no X API, no cost.
+          · score computed on your device · no X API, no cost. Sorsa Score via Sorsa (free API tier)
+          when connected.
           <br />
           <Link to="/" className="underline underline-offset-2">
             Back to home

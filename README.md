@@ -164,6 +164,13 @@ Server-side secrets (Pages Functions) — set in Cloudflare dashboard
   exposes the legacy HS256 secret. New projects use **signing keys (ES256)**;
   verification goes through the project JWKS (`jose`). See PLAN.md §6.
 
+- `SORSA_API_KEY` *(optional)* — free key from
+  <https://api.sorsa.io/overview> (100 free requests, no card) for the
+  **Sorsa Score** card on the Profile page. Served only via the server-side
+  proxy `functions/api/sorsa.ts`, cached 24h (Sorsa scores update daily), so
+  it costs at most one upstream request per account per day. Without it the
+  card shows setup instructions instead of failing.
+
 ### 3. R2 media bucket (free tier)
 
 1. Cloudflare dashboard → R2 → Create bucket `postgen-media`.

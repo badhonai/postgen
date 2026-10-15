@@ -26,6 +26,11 @@ export type Env = {
   MEDIA_URL_SECRET?: string
   /** Legacy HS256 secret — used as HMAC fallback if MEDIA_URL_SECRET unset. */
   SUPABASE_JWT_SECRET?: string
+  /**
+   * Optional Sorsa API key (free tier) for the Profile Sorsa Score card.
+   * Server-side only — set in Cloudflare Pages secrets, never VITE_-prefixed.
+   */
+  SORSA_API_KEY?: string
 }
 
 export function jsonError(message: string, status = 400): Response {
