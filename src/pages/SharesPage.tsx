@@ -5,6 +5,7 @@ import {
   useReceivedShares,
   useRespondShare,
   useSendShare,
+  useShareImports,
   useSentShares,
   type SharePostPayload,
   type ShareProjectPayload,
@@ -35,6 +36,14 @@ function excerpt(share: Share): string {
 
 function personLabel(p?: { display_name: string | null; email: string | null } | null): string {
   return p?.display_name || p?.email || 'A PostGen user'
+}
+
+function UpdateChip() {
+  return (
+    <span className="shrink-0 rounded-full bg-butter px-2 py-0.5 text-[10px] font-extrabold text-ink">
+      ↻ Updated version
+    </span>
+  )
 }
 
 function StatusChip({ status }: { status: Share['status'] }) {
@@ -68,6 +77,10 @@ export default function SharesPage() {
   const received = useReceivedShares()
   const sent = useSentShares()
   const respond = useRespondShare()
+  const imports = useShareImports()
+  const importBySource = new Map(
+    (imports.data ?? []).map((i) => [`${i.sender_id}:${i.item_type}:${i.source_item_id}`, i]),
+  )
   const accept = useAcceptShare()
   const projects = useProjects()
   const [destinations, setDestinations] = useState<Record<string, string>>({})
@@ -152,6 +165,9 @@ export default function SharesPage() {
             ) : (
               receivedList.map((share) => {
                 const link = share.status === 'accepted' ? openLink(share) : null
+                const myImport = importBySource.get(`${share.sender_id}:${share.item_type}:${share.item_id}`)
+                const isUpdate = !!myImport && share.status === 'pending'
+                const wasUpdated = share.status === 'accepted' && !!(share.result as { updated?: boolean } | null)?.updated
                 return (
                   <article key={share.id} className="pg-glass rounded-[24px] p-4">
                     <div className="flex items-center gap-2">
@@ -159,7 +175,8 @@ export default function SharesPage() {
                       <span className="text-[11px] font-extrabold tracking-[0.1em] text-ink-soft uppercase">
                         {SHARE_ITEM_LABEL[share.item_type]}
                       </span>
-                      <span className="ml-auto">
+                      <span className="ml-auto flex items-center gap-1.5">
+                        {isUpdate ? <UpdateChip /> : null}
                         <StatusChip status={share.status} />
                       </span>
                     </div>
@@ -178,7 +195,11 @@ export default function SharesPage() {
 
                     {share.status === 'pending' ? (
                       <>
-                        {share.item_type === 'post' ? (
+                        {isUpdate && share.item_type === 'post' ? (
+                          <p className="mt-3 rounded-[14px] bg-butter/60 px-3 py-2 text-xs font-bold text-ink">
+                            You already have this post — accepting updates your copy where it lives. No duplicate, no new project.
+                          </p>
+                        ) : share.item_type === 'post' ? (
                           <label className="mt-3 block">
                             <span className="text-[11px] font-extrabold tracking-[0.1em] text-ink-soft uppercase">
                               Add to project
@@ -207,7 +228,7 @@ export default function SharesPage() {
                             disabled={accept.isPending}
                             onClick={() => void doAccept(share)}
                           >
-                            {accept.isPending ? 'Accepting…' : 'Accept'}
+                            {accept.isPending ? 'Accepting…' : isUpdate ? 'Update my copy' : 'Accept'}
                           </Button>
                           <Button
                             variant="ghost"
@@ -219,11 +240,17 @@ export default function SharesPage() {
                           </Button>
                         </div>
                         <p className="mt-2 text-[11px] font-semibold text-ink-soft">
-                          Accepting adds your own copy — it won't show in your account until you do.
+                          {isUpdate
+                            ? 'This updates the copy you already have — nothing new is created.'
+                            : "Accepting adds your own copy — it won't show in your account until you do."}
                         </p>
                       </>
                     ) : (
-                      <div className="mt-3 flex items-center gap-2">
+                      <div className="mt-3">
+                        {wasUpdated ? (
+                          <p className="mb-2 text-xs font-bold text-ink">↻ This updated your existing copy — no duplicate was created.</p>
+                        ) : null}
+                      <div className="flex items-center gap-2">
                         {link ? (
                           <Link
                             to={link}
@@ -239,6 +266,7 @@ export default function SharesPage() {
                         >
                           Clear
                         </button>
+                      </div>
                       </div>
                     )}
                   </article>

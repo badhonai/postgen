@@ -15,7 +15,9 @@ import type {
  * Sharing: send a project / post / prompt to another PostGen user.
  * The share row carries a frozen payload snapshot; accepting imports an
  * independent copy into the recipient's account. Nothing shows up for
- * the recipient until they accept.
+ * the recipient until they accept. Accepting the same item again does
+ * NOT duplicate it: share_imports remembers the recipient's copy, and
+ * re-accepting updates that copy in place (flagged as an update).
  */
 
 export type ShareAssetPayload = {
@@ -30,6 +32,9 @@ export type ShareAssetPayload = {
 }
 
 export type SharePostPayload = {
+  source_item_id?: string
+  source_project_id?: string | null
+  source_updated_at?: string | null
   title: string
   type: PostType
   category: PostCategory
@@ -66,9 +71,13 @@ export type ShareProjectPayload = {
     url: string | null
     notes: string | null
   }>
+  source_item_id?: string
+  source_updated_at?: string | null
 }
 
 export type SharePromptPayload = {
+  source_item_id?: string
+  source_updated_at?: string | null
   name: string
   prompt: string
   notes: string
@@ -87,6 +96,8 @@ const assetPayload = (a: Asset): ShareAssetPayload => ({
 
 type RawPostRow = {
   id: string
+  project_id?: string | null
+  updated_at?: string | null
   title: string
   post_type: PostType
   category: PostCategory
@@ -129,6 +140,9 @@ const postPayload = (
   media: Array<{ tweet_index: number; asset: ShareAssetPayload }>,
   projectName?: string,
 ): SharePostPayload => ({
+  source_item_id: row.id,
+  source_project_id: row.project_id ?? null,
+  source_updated_at: row.updated_at ?? null,
   title: row.title,
   type: row.post_type ?? 'post',
   category: row.category,
@@ -140,20 +154,27 @@ const postPayload = (
   project_name: projectName,
 })
 
-const POST_SELECT = 'id, title, post_type, category, status, meta, post_tweets(id, position, content), post_tags(tags(name))'
+const POST_SELECT = 'id, project_id, updated_at, title, post_type, category, status, meta, post_tweets(id, position, content), post_tags(tags(name))'
 
 export async function buildPayload(itemType: ShareItemType, itemId: string): Promise<Record<string, unknown>> {
   const supa = supabase!
   if (itemType === 'prompt') {
     const { data, error } = await supa
       .from('image_prompts')
-      .select('name, prompt, notes')
+      .select('id, name, prompt, notes, updated_at')
       .eq('id', itemId)
       .single()
     if (error) throw error
     // Reference images belong to the sender's projects — the text recipe
     // travels, the reference files don't.
-    return { ...(data as SharePromptPayload) } as Record<string, unknown>
+    const d = data as { id: string; name: string; prompt: string; notes: string; updated_at?: string | null }
+    return {
+      name: d.name,
+      prompt: d.prompt,
+      notes: d.notes,
+      source_item_id: d.id,
+      source_updated_at: d.updated_at ?? null,
+    } as Record<string, unknown>
   }
 
   if (itemType === 'post') {
@@ -174,7 +195,7 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
   const { data: project, error: pErr } = await supa
     .from('projects')
     .select(
-      'name, slug, description, brand_voice, x_username, website_url, content_pillars, sample_posts, custom_instructions, official_links, logo_asset_id',
+      'name, slug, description, brand_voice, x_username, website_url, content_pillars, sample_posts, custom_instructions, official_links, logo_asset_id, updated_at',
     )
     .eq('id', itemId)
     .single()
@@ -223,6 +244,8 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
       logo_r2_key: logoR2Key,
     },
     knowledge: (knowledge ?? []) as ShareProjectPayload['knowledge'],
+    source_item_id: itemId,
+    source_updated_at: ((project as { updated_at?: string | null }).updated_at ?? null) as string | null,
   }
   return payload as unknown as Record<string, unknown>
 }
@@ -331,6 +354,15 @@ export function useSendShare() {
           message: (input.message ?? '').trim(),
         })
       }
+      // Re-sending an item replaces its still-pending earlier send, so
+      // the recipient sees ONE (newest) share per item, never a pile.
+      await supa
+        .from('shares')
+        .delete()
+        .eq('sender_id', me.user.id)
+        .eq('recipient_id', recipient.id)
+        .eq('status', 'pending')
+        .in('item_id', input.items.map((i) => i.itemId))
       const { error } = await supa.from('shares').insert(rows)
       if (error) throw error
     },
@@ -375,6 +407,7 @@ async function importPost(
   payload: SharePostPayload,
   projectId: string,
   assetIds: Map<string, string>,
+  existing?: { id: string; status: PostStatus } | null,
 ): Promise<{ postId: string | null; skipped: boolean }> {
   const tweets = payload.tweets.map((t) => t.trim()).filter(Boolean)
   if (tweets.length === 0) return { postId: null, skipped: true }
@@ -387,7 +420,17 @@ async function importPost(
     if (extra) contentText = `${contentText}\n\n${extra}`
   }
   const contentHash = await sha256Hex(contentText)
-  if (await findExactDuplicate(contentHash)) return { postId: null, skipped: true }
+  if (existing) {
+    // Updating a copy: the post may match ITSELF — exclude it from the
+    // exact-duplicate check, but still refuse to clone another post.
+    const { data: dup } = await supabase!.rpc('find_duplicate_post', {
+      p_content_hash: contentHash,
+      p_exclude_post_id: existing.id,
+    })
+    if (dup) return { postId: null, skipped: true }
+  } else if (await findExactDuplicate(contentHash)) {
+    return { postId: null, skipped: true }
+  }
 
   const counters: Record<number, number> = {}
   const p_media = payload.media
@@ -402,10 +445,13 @@ async function importPost(
     })
 
   const { data, error } = await supabase!.rpc('save_post_with_tweets', {
-    p_post_id: null,
+    p_post_id: existing?.id ?? null,
     p_project_id: projectId,
     p_category: payload.category,
-    p_status: payload.status,
+    // An update refreshes the content but keeps the recipient's own
+    // workflow status (a post they already approved/published must not
+    // silently drop back to the sender's status).
+    p_status: existing ? existing.status : payload.status,
     p_title: payload.title,
     p_content_text: contentText,
     p_content_hash: contentHash,
@@ -430,8 +476,100 @@ async function uniqueSlug(userId: string, base: string, name: string): Promise<s
   return `${stem}-${n}`
 }
 
+// ── no-duplicate import mapping ─────────────────────────────────────────
+
+export type ShareImport = {
+  recipient_id: string
+  sender_id: string
+  item_type: ShareItemType
+  source_item_id: string
+  source_project_id: string | null
+  local_id: string
+  local_project_id: string | null
+  source_updated_at: string | null
+  last_share_id: string | null
+}
+
+/** All items the current user has ever imported, keyed for lookup. */
+export function useShareImports() {
+  const { userId } = useCurrentUserId()
+  return useQuery({
+    queryKey: ['share-imports', userId],
+    enabled: !!supabase && !!userId,
+    queryFn: async (): Promise<ShareImport[]> => {
+      const { data, error } = await supabase!
+        .from('share_imports')
+        .select('*')
+        .eq('recipient_id', userId)
+      if (error) return []
+      return (data ?? []) as ShareImport[]
+    },
+  })
+}
+
+async function getImport(
+  userId: string,
+  senderId: string,
+  itemType: ShareItemType,
+  sourceItemId: string,
+): Promise<ShareImport | null> {
+  const { data } = await supabase!
+    .from('share_imports')
+    .select('*')
+    .eq('recipient_id', userId)
+    .eq('sender_id', senderId)
+    .eq('item_type', itemType)
+    .eq('source_item_id', sourceItemId)
+    .maybeSingle()
+  return (data as ShareImport | null) ?? null
+}
+
+async function recordImport(
+  userId: string,
+  share: Share,
+  local: { localId: string; localProjectId?: string | null; sourceProjectId?: string | null; sourceUpdatedAt?: string | null },
+): Promise<void> {
+  await supabase!.from('share_imports').upsert(
+    {
+      recipient_id: userId,
+      sender_id: share.sender_id,
+      item_type: share.item_type,
+      source_item_id: share.item_id,
+      source_project_id: local.sourceProjectId ?? null,
+      local_id: local.localId,
+      local_project_id: local.localProjectId ?? null,
+      source_updated_at: local.sourceUpdatedAt ?? share.created_at,
+      last_share_id: share.id,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'recipient_id,sender_id,item_type,source_item_id' },
+  )
+}
+
+/** The recipient's local project that already holds items from a source project. */
+async function localProjectForSourceProject(
+  userId: string,
+  senderId: string,
+  sourceProjectId: string,
+): Promise<string | null> {
+  const { data } = await supabase!
+    .from('share_imports')
+    .select('local_id, local_project_id')
+    .eq('recipient_id', userId)
+    .eq('sender_id', senderId)
+    .or(`source_project_id.eq.${sourceProjectId},source_item_id.eq.${sourceProjectId}`)
+    .limit(5)
+  for (const r of (data ?? []) as Array<{ local_id: string; local_project_id: string | null }>) {
+    const pid = r.local_project_id ?? r.local_id
+    if (pid) return pid
+  }
+  return null
+}
+
 export type AcceptResult = {
   kind: ShareItemType
+  /** true when an existing copy was updated instead of duplicated. */
+  updated?: boolean
   projectId?: string
   postId?: string
   promptId?: string
@@ -449,25 +587,84 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
 
   if (share.item_type === 'prompt') {
     const p = share.payload as unknown as SharePromptPayload
-    const { data, error } = await supa
-      .from('image_prompts')
-      .insert({
-        user_id: userId,
-        name: p.name,
-        prompt: p.prompt,
-        notes: p.notes ?? '',
-        reference_asset_ids: [],
-        project_ids: [],
-      })
-      .select('id')
-      .single()
-    if (error) throw error
-    result = { kind: 'prompt', promptId: (data as { id: string }).id }
+    // Already have this prompt (from an earlier accept)? Update it.
+    let existingId: string | null = null
+    let existingProjects: string[] = []
+    const imp = await getImport(userId, share.sender_id, 'prompt', share.item_id)
+    if (imp) {
+      const { data } = await supa.from('image_prompts').select('id, project_ids').eq('id', imp.local_id).maybeSingle()
+      if (data) {
+        existingId = (data as { id: string }).id
+        existingProjects = (data as { project_ids: string[] }).project_ids ?? []
+      }
+    }
+    if (!existingId) {
+      // Copies imported before import-tracking existed: same name = same prompt.
+      const { data } = await supa
+        .from('image_prompts')
+        .select('id, project_ids')
+        .eq('user_id', userId)
+        .eq('name', p.name)
+        .limit(1)
+      const hit = (data ?? [])[0] as { id: string; project_ids: string[] } | undefined
+      if (hit) {
+        existingId = hit.id
+        existingProjects = hit.project_ids ?? []
+      }
+    }
+    if (existingId) {
+      const { error } = await supa
+        .from('image_prompts')
+        .update({ name: p.name, prompt: p.prompt, notes: p.notes ?? '' })
+        .eq('id', existingId)
+      if (error) throw error
+      await recordImport(userId, share, { localId: existingId, sourceUpdatedAt: p.source_updated_at })
+      result = { kind: 'prompt', promptId: existingId, updated: true }
+      void existingProjects
+    } else {
+      const { data, error } = await supa
+        .from('image_prompts')
+        .insert({
+          user_id: userId,
+          name: p.name,
+          prompt: p.prompt,
+          notes: p.notes ?? '',
+          reference_asset_ids: [],
+          project_ids: [],
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+      const promptId = (data as { id: string }).id
+      await recordImport(userId, share, { localId: promptId, sourceUpdatedAt: p.source_updated_at })
+      result = { kind: 'prompt', promptId, updated: false }
+    }
   } else if (share.item_type === 'post') {
     const p = share.payload as unknown as SharePostPayload
+    const sourceProjectId = p.source_project_id ?? null
+
+    // Already have this post? Find the copy (mapping first, title second).
+    const imp = await getImport(userId, share.sender_id, 'post', share.item_id)
+    let existingPost: { id: string; status: PostStatus } | null = null
+    if (imp) {
+      const { data } = await supa.from('posts').select('id, status').eq('id', imp.local_id).maybeSingle()
+      if (data) existingPost = data as { id: string; status: PostStatus }
+    }
+
+    // Destination project: explicit choice → the project this post's copy
+    // already lives in → the local project matching the SOURCE project
+    // (one project per source project, never one per post) → a project
+    // with the same name → only then create a new one.
     let projectId = targetProjectId
+    if (!projectId && imp?.local_project_id) projectId = imp.local_project_id
+    if (!projectId && sourceProjectId) {
+      projectId = await localProjectForSourceProject(userId, share.sender_id, sourceProjectId)
+    }
+    if (!projectId && p.project_name) {
+      const { data } = await supa.from('projects').select('id').eq('user_id', userId).eq('name', p.project_name).limit(1)
+      projectId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+    }
     if (!projectId) {
-      // No destination chosen: create a project named after the source one.
       const name = p.project_name || 'Shared posts'
       const slug = await uniqueSlug(userId, name, name)
       const { data, error } = await supa
@@ -478,31 +675,87 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
       if (error) throw error
       projectId = (data as { id: string }).id
     }
+
+    if (!existingPost && projectId) {
+      const { data } = await supa
+        .from('posts')
+        .select('id, status')
+        .eq('project_id', projectId)
+        .eq('title', p.title)
+        .limit(1)
+      const hit = (data ?? [])[0] as { id: string; status: PostStatus } | undefined
+      if (hit) existingPost = hit
+    }
+
     const assetIds = await importAssets(userId, projectId, p.media.map((m) => m.asset))
-    const imported = await importPost(p, projectId, assetIds)
-    result = { kind: 'post', projectId, postId: imported.postId ?? undefined, skippedPosts: imported.skipped ? 1 : 0 }
+    const imported = await importPost(p, projectId, assetIds, existingPost)
+    const localPostId = imported.postId ?? existingPost?.id
+    if (localPostId) {
+      await recordImport(userId, share, {
+        localId: localPostId,
+        localProjectId: projectId,
+        sourceProjectId,
+        sourceUpdatedAt: p.source_updated_at,
+      })
+    }
+    result = {
+      kind: 'post',
+      projectId,
+      postId: localPostId ?? undefined,
+      skippedPosts: imported.skipped ? 1 : 0,
+      updated: !!existingPost && !imported.skipped,
+    }
   } else {
     const p = share.payload as unknown as ShareProjectPayload
-    const slug = await uniqueSlug(userId, p.project.slug, p.project.name)
-    const { data: created, error } = await supa
-      .from('projects')
-      .insert({
-        user_id: userId,
-        name: p.project.name,
-        slug,
-        description: p.project.description,
-        brand_voice: p.project.brand_voice ?? {},
-        x_username: p.project.x_username,
-        website_url: p.project.website_url,
-        content_pillars: p.project.content_pillars ?? [],
-        sample_posts: p.project.sample_posts ?? [],
-        custom_instructions: p.project.custom_instructions,
-        official_links: p.project.official_links ?? [],
-      })
-      .select('id')
-      .single()
-    if (error) throw error
-    const projectId = (created as { id: string }).id
+
+    // Already have this project? Update it in place — posts inside the
+    // recipient's copy are theirs and are never touched by an update.
+    let projectId: string | null = null
+    let updated = false
+    const imp = await getImport(userId, share.sender_id, 'project', share.item_id)
+    if (imp) {
+      const { data } = await supa.from('projects').select('id').eq('id', imp.local_id).eq('user_id', userId).maybeSingle()
+      if (data) projectId = (data as { id: string }).id
+    }
+    if (!projectId && p.project.x_username) {
+      // Pre-tracking copies: same slug AND same @handle = the same project.
+      const { data } = await supa
+        .from('projects')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('slug', p.project.slug)
+        .eq('x_username', p.project.x_username)
+        .limit(1)
+      projectId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+    }
+
+    const fields = {
+      name: p.project.name,
+      description: p.project.description,
+      brand_voice: p.project.brand_voice ?? {},
+      x_username: p.project.x_username,
+      website_url: p.project.website_url,
+      content_pillars: p.project.content_pillars ?? [],
+      sample_posts: p.project.sample_posts ?? [],
+      custom_instructions: p.project.custom_instructions,
+      official_links: p.project.official_links ?? [],
+    }
+    if (projectId) {
+      const { error } = await supa.from('projects').update(fields).eq('id', projectId)
+      if (error) throw error
+      updated = true
+      // Knowledge is replaced with the sender's latest snapshot.
+      await supa.from('knowledge').delete().eq('project_id', projectId)
+    } else {
+      const slug = await uniqueSlug(userId, p.project.slug, p.project.name)
+      const { data: created, error } = await supa
+        .from('projects')
+        .insert({ user_id: userId, slug, ...fields })
+        .select('id')
+        .single()
+      if (error) throw error
+      projectId = (created as { id: string }).id
+    }
 
     // Logos travel with the project: recreate their asset rows here and
     // point the project's primary logo at the matching copy.
@@ -518,8 +771,6 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
       }
     }
 
-    // Profile/brand + knowledge. Posts/media in an older pending payload
-    // are deliberately ignored here.
     if (p.knowledge?.length > 0) {
       const { error: kErr } = await supa.from('knowledge').insert(
         p.knowledge.map((k) => ({ user_id: userId, project_id: projectId, ...k })),
@@ -527,7 +778,13 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
       if (kErr) throw kErr
     }
 
-    result = { kind: 'project', projectId }
+    await recordImport(userId, share, {
+      localId: projectId,
+      localProjectId: projectId,
+      sourceProjectId: share.item_id,
+      sourceUpdatedAt: p.source_updated_at,
+    })
+    result = { kind: 'project', projectId, updated }
   }
 
   const { error: updErr } = await supa
@@ -545,6 +802,7 @@ export function useAcceptShare() {
       runAccept(share, targetProjectId ?? null),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['shares'] })
+      void qc.invalidateQueries({ queryKey: ['share-imports'] })
       void qc.invalidateQueries({ queryKey: ['projects'] })
       void qc.invalidateQueries({ queryKey: ['posts'] })
       void qc.invalidateQueries({ queryKey: ['image-prompts'] })
