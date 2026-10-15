@@ -14,6 +14,19 @@ export function getAccent(): AccentId {
   return (ACCENTS.some((a) => a.id === saved) ? saved : 'emerald') as AccentId
 }
 
+/** Keep the mobile browser chrome tint matched to the shell. */
+function syncThemeColor(): void {
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+  if (!meta) {
+    meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    document.head.appendChild(meta)
+  }
+  const dark = document.documentElement.dataset.theme === 'dark'
+  const top = getComputedStyle(document.documentElement).getPropertyValue('--shell-1').trim()
+  meta.content = dark ? '#17142f' : top || '#cfe0f7'
+}
+
 export function applyAccent(id: AccentId): void {
   document.documentElement.dataset.accent = id
   localStorage.setItem(STORAGE_KEY, id)
@@ -38,6 +51,7 @@ export function getTheme(): ThemeMode {
 
 export function applyTheme(mode: ThemeMode): void {
   document.documentElement.dataset.theme = mode
+  syncThemeColor()
   try {
     localStorage.setItem(THEME_KEY, mode)
   } catch {

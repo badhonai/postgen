@@ -756,7 +756,13 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* ── floating new post ── */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-[#e6e2f8] via-[#e6e2f8]/80 to-transparent pt-8 pb-[max(env(safe-area-inset-bottom),14px)]">
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 pt-8 pb-[max(env(safe-area-inset-bottom),14px)]"
+        style={{
+          backgroundImage:
+            'linear-gradient(to top, var(--shell-bottom), color-mix(in srgb, var(--shell-bottom) 80%, transparent) 55%, transparent)',
+        }}
+      >
         <div className="mx-auto flex max-w-[440px] px-5">
           <Button
             className="pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full py-4 text-[15px] font-extrabold"

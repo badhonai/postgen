@@ -21,6 +21,7 @@
      Emerald keeps the classic butter-yellow so the stock look is unchanged. */
   --accent-butter: #ffe68a;
   --accent-butter-deep: #f2c14e;
+  --shell-bottom: var(--shell-4);
   --shell-1: #cfe0f7;
   --shell-2: #dcd6f6;
   --shell-3: #e9d8ef;
@@ -93,9 +94,10 @@ kbd {
 }
 
 html {
-  /* Paints the overscroll/canvas area so no dark browser canvas shows
-     behind the page on mobile scroll (old rule left body near-black). */
-  background-color: #d8dff2;
+  /* Paints the overscroll/canvas area with the shell's bottom color so
+     mobile overscroll blends into the page whatever accent is active
+     (hard-coded lavender here clashed with e.g. the amber accent). */
+  background-color: var(--shell-bottom);
 }
 
 body {
@@ -103,7 +105,7 @@ body {
   color: var(--color-ink);
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -246,6 +248,7 @@ body {
    dark glass instead of glowing white boxes.
    ══════════════════════════════════════════════════════════════════ */
 [data-theme='dark'] {
+  --shell-bottom: #121a30;
   --color-ink: #efedff;
   --color-ink-soft: #aaa6cf;
   --color-mint: #17453a;
