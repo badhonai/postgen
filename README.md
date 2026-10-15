@@ -333,6 +333,19 @@ cancelling and clearing are all in Shares → Sent/Received. Schema:
 `supabase/migrations/20261016000001_sharing.sql` (`shares` table, RLS:
 only sender + recipient can see a share).
 
+**No duplicates:** `share_imports` (migration
+`20261016000005_share_imports.sql`) remembers, per recipient, which
+local copy came from which sender item. Re-sending the same
+project/post/prompt and accepting again **updates that copy in
+place** — project profile/brand/knowledge/logos refresh (the
+recipient's posts are never touched), a post's content/media refresh
+(its local status is preserved), a prompt's text refreshes. The
+Received card flags these as **↻ Updated version** with an **Update
+my copy** button, and posts from one source project always land in
+ONE local project, never one project per post. Re-sending also
+supersedes a still-pending earlier send of the same item, so the
+recipient sees one pending share per item, at its newest version.
+
 ## Keyboard shortcuts & autosave ⌨️
 
 - **⌘K / Ctrl+K** — quick switcher (jump to projects, posts, pages)
