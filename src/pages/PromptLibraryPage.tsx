@@ -163,7 +163,7 @@ export default function PromptLibraryPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-2 items-start gap-3.5">
               {list.map((p, i) => (
                 <PromptCard
                   key={p.id}
