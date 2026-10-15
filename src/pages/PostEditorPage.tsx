@@ -6,6 +6,7 @@ import { numberedTweets } from '../lib/text'
 import {
   useDeletePost,
   usePost,
+  usePosts,
   useSavePost,
   useSetPostStatus,
   type SavePostInput,
@@ -82,13 +83,12 @@ function XIdentity() {
 function PreviewImage({ asset }: { asset: { r2_key: string; mime_type: string; filename: string } }) {
   const url = useAssetUrl(asset.r2_key)
   if (!url.data) return <div className="aspect-video w-full rounded-[16px] bg-white/60" />
-  return (
-    <img
-      src={url.data}
-      alt=""
-      className="aspect-video w-full rounded-[16px] object-cover"
-    />
-  )
+  if (asset.mime_type.startsWith('video/')) {
+    return <video src={url.data} controls className="h-auto w-full rounded-[16px] bg-black/5" />
+  }
+  // Full image, natural aspect — never cropped, so the whole picture is
+  // always visible next to the editor.
+  return <img src={url.data} alt={asset.filename} className="h-auto w-full rounded-[16px] bg-white/50" />
 }
 
 export default function PostEditorPage() {
@@ -111,7 +111,7 @@ export default function PostEditorPage() {
   const [pendingInput, setPendingInput] = useState<SavePostInput | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
-  const [preview, setPreview] = useState(false)
+  const [liveSnap, setLiveSnap] = useState<SavePostInput | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [similarBanner, setSimilarBanner] = useState<SimilarPost[] | null>(null)
@@ -122,7 +122,7 @@ export default function PostEditorPage() {
   const latestRef = useRef<SavePostInput | null>(null)
   const lastSavedRef = useRef<string>('')
   const timerRef = useRef<number | undefined>(undefined)
-  const hydratedRef = useRef(false)
+  const hydratedForRef = useRef<string | null>(null)
 
   const projectId = isNew
     ? onNewProjectRoute
@@ -131,10 +131,39 @@ export default function PostEditorPage() {
     : (post.data?.project_id ?? '')
   const postData = post.data ?? null
   const project = useProject(projectId)
+  const siblings = usePosts(!isNew && projectId ? { projectId } : {})
+  const siblingList = siblings.data ?? []
+  const siblingIndex = !isNew ? siblingList.findIndex((s) => s.id === editId) : -1
+  const prevPost = siblingIndex > 0 ? siblingList[siblingIndex - 1] : null
+  const nextPost =
+    siblingIndex >= 0 && siblingIndex < siblingList.length - 1
+      ? siblingList[siblingIndex + 1]
+      : null
+
+  const goToPost = (targetId: string) => {
+    const snap = latestRef.current
+    if (
+      snap?.postId === editId &&
+      serialize(snap) !== lastSavedRef.current &&
+      !window.confirm('You have unsaved changes on this post. Move to another post anyway?')
+    ) {
+      return
+    }
+    navigate(`/posts/${targetId}`)
+  }
 
   // ── autosave (existing drafts only): silent save + non-blocking similar banner ──
   const serialize = (snap: SavePostInput) =>
-    JSON.stringify([snap.title, snap.status, snap.category, snap.tagNames, snap.tweets, snap.media.map((m) => m.asset.id)])
+    JSON.stringify([
+      snap.type,
+      snap.title,
+      snap.status,
+      snap.category,
+      snap.tagNames,
+      snap.tweets,
+      snap.meta ?? {},
+      snap.media.map((m) => m.asset.id),
+    ])
 
   useEffect(() => {
     return () => window.clearTimeout(timerRef.current)
@@ -169,9 +198,13 @@ export default function PostEditorPage() {
 
   const onFormChange = (snap: SavePostInput) => {
     latestRef.current = snap
-    // first emission = pristine form state → baseline, no autosave
-    if (!hydratedRef.current) {
-      hydratedRef.current = true
+    // The inline preview is live: mirror every snapshot (serialized compare
+    // keeps this to real changes only).
+    setLiveSnap((prev) => (prev && serialize(prev) === serialize(snap) ? prev : snap))
+    // first emission for THIS post = pristine form state → baseline, no autosave
+    const snapKey = snap.postId ?? `new:${snap.projectId}`
+    if (hydratedForRef.current !== snapKey) {
+      hydratedForRef.current = snapKey
       if (snap.postId) lastSavedRef.current = serialize(snap)
       return
     }
@@ -319,8 +352,9 @@ export default function PostEditorPage() {
     window.setTimeout(() => setCopied(null), 1500)
   }
 
-  /** Live form snapshot when there is one, else the saved post. */
-  const draft = latestRef.current
+  /** Live form snapshot when it belongs to this post, else the saved post. */
+  const draft =
+    liveSnap && (isNew ? !liveSnap.postId : liveSnap.postId === editId) ? liveSnap : null
   const previewTweets = draft?.tweets?.length ? draft.tweets : (postData?.post_tweets ?? []).map((t) => t.content)
   const previewText =
     previewTweets.length === 1 ? previewTweets[0] : numberedTweets(previewTweets)
@@ -328,7 +362,7 @@ export default function PostEditorPage() {
   // saved post's attachments — otherwise a freshly opened post previews bare
   const savedMedia = Object.values(postData?.mediaByTweet ?? {}).flat()
   const previewMedia: Array<{ asset: Asset }> =
-    draft?.media ?? savedMedia.map((asset) => ({ asset }))
+    draft?.media?.map((m) => ({ asset: m.asset })) ?? savedMedia.map((asset) => ({ asset }))
 
   /**
    * Send the post to X. X's intent URL carries text only, so on phones we use
@@ -338,7 +372,6 @@ export default function PostEditorPage() {
    */
   const shareToX = async () => {
     setMenuOpen(false)
-    setPreview(false)
     setSharing(true)
     let done = false
     try {
@@ -467,9 +500,6 @@ export default function PostEditorPage() {
               >
                 {sharing ? 'Opening…' : 'Post on X'}
               </Button>
-              <Button variant="ghost" className="py-3 text-[15px]" onClick={() => setPreview(true)}>
-                Preview
-              </Button>
             </div>
           ) : null}
         </header>
@@ -500,8 +530,55 @@ export default function PostEditorPage() {
           </div>
         ) : null}
 
+        {/* ── prev / next post (same project, newest first) ── */}
+        {!isNew && postData ? (
+          <nav aria-label="Posts" className="pg-glass mt-5 flex items-center gap-2 rounded-full p-1.5">
+            <button
+              type="button"
+              disabled={!prevPost}
+              onClick={() => prevPost && goToPost(prevPost.id)}
+              className="flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ink transition hover:bg-white/60 active:scale-95 disabled:opacity-35 disabled:hover:bg-transparent"
+            >
+              ← Previous
+            </button>
+            <span className="shrink-0 text-xs font-extrabold text-ink-soft">
+              {siblingIndex >= 0 ? `${siblingIndex + 1} of ${siblingList.length}` : '…'}
+            </span>
+            <button
+              type="button"
+              disabled={!nextPost}
+              onClick={() => nextPost && goToPost(nextPost.id)}
+              className="flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ink transition hover:bg-white/60 active:scale-95 disabled:opacity-35 disabled:hover:bg-transparent"
+            >
+              Next →
+            </button>
+          </nav>
+        ) : null}
+
+        {/* ── live preview: always inline, full image, updates as you edit ── */}
+        <section aria-label="Post preview" className="mt-5">
+          <div className="mb-2 flex items-baseline justify-between px-1">
+            <h2 className="pg-title text-lg text-ink">Preview</h2>
+            <span className="text-[11px] font-bold text-ink-soft">Updates as you edit</span>
+          </div>
+          <div className="rounded-[22px] bg-white p-4 shadow-[0_14px_34px_rgba(70,60,130,0.12)]">
+            <XIdentity />
+            <p className="mt-3 text-[15px] leading-relaxed font-semibold whitespace-pre-wrap text-ink">
+              {previewText.trim() ? previewText : 'Start writing below — your post will appear here.'}
+            </p>
+            {previewMedia.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {previewMedia.slice(0, 4).map((m) => (
+                  <PreviewImage key={m.asset.id} asset={m.asset} />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </section>
+
         <div className="mt-6">
           <PostForm
+            key={initial.postId ?? `new:${initial.projectId}`}
             initial={initial}
             busy={savePost.isPending}
             error={formError ?? (savePost.error instanceof Error ? savePost.error.message : null)}
@@ -514,61 +591,6 @@ export default function PostEditorPage() {
             onChange={onFormChange}
           />
         </div>
-
-        {/* ── preview: how this post will read once it is live ── */}
-        {preview && !isNew ? (
-          <div
-            className="fixed inset-0 z-50 flex items-end bg-ink/45 px-3 pt-10 pb-6"
-            onClick={() => setPreview(false)}
-          >
-            <div
-              className="pg-glass-strong mx-auto w-full max-w-[440px] rounded-[26px] p-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="pg-title text-lg text-ink">Preview</h2>
-                <button
-                  type="button"
-                  aria-label="Close preview"
-                  onClick={() => setPreview(false)}
-                  className="pg-glass flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-ink transition active:scale-95"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="rounded-[20px] bg-white p-4">
-                <XIdentity />
-
-                <p className="mt-3 text-[15px] leading-relaxed font-semibold whitespace-pre-wrap text-ink">
-                  {previewText || 'Nothing to preview yet.'}
-                </p>
-
-                {previewMedia.length > 0 ? (
-                  <div className="mt-3 space-y-2">
-                    {previewMedia.slice(0, 4).map((m) => (
-                      <PreviewImage key={m.asset.id} asset={m.asset} />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="mt-3 flex gap-2">
-                <Button
-                  variant="accent"
-                  className="flex-1 py-3 text-[15px]"
-                  disabled={sharing}
-                  onClick={() => void shareToX()}
-                >
-                  {sharing ? 'Opening…' : 'Post on X'}
-                </Button>
-                <Button variant="ghost" className="py-3 text-[15px]" onClick={() => setPreview(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : null}
 
         {postedAsk && postData ? (
           <div className="fixed inset-0 z-50 flex items-end bg-ink/45 px-3 pt-10 pb-6" onClick={() => setPostedAsk(false)}>
