@@ -36,6 +36,10 @@ export type SharePostPayload = {
   source_item_id?: string
   source_project_id?: string | null
   source_updated_at?: string | null
+  /** Source project's identity — lets the recipient match the local
+   *  project that already represents it (no duplicate projects). */
+  project_slug?: string | null
+  project_x_username?: string | null
   title: string
   type: PostType
   category: PostCategory
@@ -181,13 +185,18 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
   if (itemType === 'post') {
     const { data, error } = await supa
       .from('posts')
-      .select(`${POST_SELECT}, projects(name)`)
+      .select(`${POST_SELECT}, projects(name, slug, x_username)`)
       .eq('id', itemId)
       .single()
     if (error) throw error
-    const row = data as unknown as RawPostRow & { projects: { name: string } | null }
+    const row = data as unknown as RawPostRow & {
+      projects: { name: string; slug: string | null; x_username: string | null } | null
+    }
     const media = await mediaForPosts([row])
-    return postPayload(row, media.get(row.id) ?? [], row.projects?.name) as unknown as Record<string, unknown>
+    const payload = postPayload(row, media.get(row.id) ?? [], row.projects?.name)
+    payload.project_slug = row.projects?.slug ?? null
+    payload.project_x_username = row.projects?.x_username ?? null
+    return payload as unknown as Record<string, unknown>
   }
 
   // project: ONLY the project shell — profile/brand + knowledge.
@@ -533,13 +542,14 @@ async function recordImport(
   userId: string,
   share: Share,
   local: { localId: string; localProjectId?: string | null; sourceProjectId?: string | null; sourceUpdatedAt?: string | null },
+  override?: { itemType: ShareItemType; sourceItemId: string },
 ): Promise<void> {
   await supabase!.from('share_imports').upsert(
     {
       recipient_id: userId,
       sender_id: share.sender_id,
-      item_type: share.item_type,
-      source_item_id: share.item_id,
+      item_type: override?.itemType ?? share.item_type,
+      source_item_id: override?.sourceItemId ?? share.item_id,
       source_project_id: local.sourceProjectId ?? null,
       local_id: local.localId,
       local_project_id: local.localProjectId ?? null,
@@ -665,9 +675,25 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
     if (!projectId && sourceProjectId) {
       projectId = await localProjectForSourceProject(userId, share.sender_id, sourceProjectId)
     }
+    // Same source project under a different door: a project the recipient
+    // already has with this @handle or slug IS that project (per-user
+    // slugs are unique). Older payloads only carry the name.
+    if (!projectId && p.project_x_username) {
+      const { data } = await supa.from('projects').select('id').eq('user_id', userId).eq('x_username', p.project_x_username).limit(1)
+      projectId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+    }
+    if (!projectId && p.project_slug) {
+      const { data } = await supa.from('projects').select('id').eq('user_id', userId).eq('slug', p.project_slug).limit(1)
+      projectId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+    }
     if (!projectId && p.project_name) {
       const { data } = await supa.from('projects').select('id').eq('user_id', userId).eq('name', p.project_name).limit(1)
       projectId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+    }
+    if (projectId) {
+      // A mapped project may have been deleted since — don't aim at air.
+      const { data } = await supa.from('projects').select('id').eq('id', projectId).eq('user_id', userId).maybeSingle()
+      if (!data) projectId = null
     }
     if (!projectId) {
       const name = p.project_name || 'Shared posts'
@@ -690,6 +716,20 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
         .limit(1)
       const hit = (data ?? [])[0] as { id: string; status: PostStatus } | undefined
       if (hit) existingPost = hit
+    }
+
+    // Link the source PROJECT to this local project too, so accepting
+    // the project itself later updates this one instead of duplicating.
+    if (sourceProjectId) {
+      const link = await getImport(userId, share.sender_id, 'project', sourceProjectId)
+      if (!link) {
+        await recordImport(
+          userId,
+          share,
+          { localId: projectId, localProjectId: projectId, sourceProjectId, sourceUpdatedAt: p.source_updated_at },
+          { itemType: 'project', sourceItemId: sourceProjectId },
+        )
+      }
     }
 
     const assetIds = await importAssets(userId, projectId, p.media.map((m) => m.asset))
@@ -722,13 +762,25 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
       const { data } = await supa.from('projects').select('id').eq('id', imp.local_id).eq('user_id', userId).maybeSingle()
       if (data) projectId = (data as { id: string }).id
     }
-    if (!projectId && p.project.x_username) {
-      // Pre-tracking copies: same slug AND same @handle = the same project.
+    if (!projectId) {
+      // Adopt an existing same-identity project instead of duplicating:
+      // per-user slugs are unique, and @handles identify a project — so
+      // a slug match OR a handle match is decisive. This also catches
+      // the bare project a post-accept created earlier (it has the
+      // slug but no @handle yet), and the recipient's own original.
       const { data } = await supa
         .from('projects')
         .select('id')
         .eq('user_id', userId)
         .eq('slug', p.project.slug)
+        .limit(1)
+      projectId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+    }
+    if (!projectId && p.project.x_username) {
+      const { data } = await supa
+        .from('projects')
+        .select('id')
+        .eq('user_id', userId)
         .eq('x_username', p.project.x_username)
         .limit(1)
       projectId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
