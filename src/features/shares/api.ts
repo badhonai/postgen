@@ -707,7 +707,17 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
         if (cErr) throw cErr
         homeId = (data as { id: string }).id
       }
-      const byKey = await importAssets(userId, homeId, covers)
+      const byKey = await importAssets(
+        userId,
+        homeId,
+        covers.map((c) => {
+          const { source_project_name: _n, source_project_slug: _s, source_project_x_username: _x, ...a } = c
+          void _n
+          void _s
+          void _x
+          return a
+        }),
+      )
       localRefIds = covers.map((c) => byKey.get(c.r2_key)).filter((x): x is string => !!x)
     }
 
