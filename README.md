@@ -395,6 +395,14 @@ logo & assets upload is the first section of the form):
 The whole profile is served to connected AIs via `GET /api/v1/projects/:id` and the MCP
 resource `project://<id>/context`, so every external agent drafts with full brand context.
 
+**Display order:** users can arrange their projects in any order in
+**Settings → Projects** (up/down arrows). The order (`projects.sort_order`,
+migration `20261016000007_project_sort_order.sql`; lower first, backfilled
+to preserve the previous newest-first order) is applied in the shared
+`useProjects` hook, so dashboard grids, pickers and lists all follow it.
+New projects append at the end; unordered rows (e.g. freshly imported)
+sort last.
+
 ## No-repeat posts 🔁
 
 Every write (web app **and** agent API) is checked against your own posts:

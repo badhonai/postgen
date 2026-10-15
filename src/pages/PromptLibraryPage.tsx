@@ -39,6 +39,8 @@ export default function PromptLibraryPage() {
   const [picking, setPicking] = useState(false)
   const [viewing, setViewing] = useState<ImagePrompt | null>(null)
   const [sharing, setSharing] = useState<ImagePrompt | null>(null)
+  /** Library filter: everything, global-only, or one project's prompts. */
+  const [filter, setFilter] = useState<'all' | 'global' | string>('all')
 
   const closeSheet = () => setSheetOpen(false)
 
@@ -94,6 +96,15 @@ export default function PromptLibraryPage() {
 
   const busy = createPrompt.isPending || updatePrompt.isPending
   const list = prompts.data?.prompts ?? []
+  const globalCount = list.filter((p) => (p.project_ids ?? []).length === 0).length
+  const countForProject = (id: string) => list.filter((p) => (p.project_ids ?? []).includes(id)).length
+  const filterableProjects = projectList.filter((pr) => countForProject(pr.id) > 0)
+  const visible =
+    filter === 'all'
+      ? list
+      : filter === 'global'
+        ? list.filter((p) => (p.project_ids ?? []).length === 0)
+        : list.filter((p) => (p.project_ids ?? []).includes(filter))
   const missingTable = prompts.data?.missing === true
   // only stringify once a write has actually failed — errorMessage() falls back
   // to its default, which would otherwise render an empty error box on open
@@ -132,6 +143,33 @@ export default function PromptLibraryPage() {
           </button>
         </header>
 
+        {/* ── filter by project ── */}
+        {list.length > 0 ? (
+          <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Filter prompts by project">
+            {[
+              { id: 'all' as const, label: 'All', count: list.length },
+              { id: 'global' as const, label: 'Global', count: globalCount },
+              ...filterableProjects.map((pr) => ({ id: pr.id, label: pr.name, count: countForProject(pr.id) })),
+            ].map((chip) => {
+              const active = filter === chip.id
+              return (
+                <button
+                  key={chip.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setFilter(chip.id)}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-extrabold transition active:scale-95 ${
+                    active ? 'bg-ink text-white shadow-[0_8px_18px_rgba(47,43,94,0.3)]' : 'bg-white/55 text-ink hover:bg-white/75'
+                  }`}
+                >
+                  {chip.label}
+                  <span className={active ? 'text-white/70' : 'text-ink-soft'}> · {chip.count}</span>
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
+
         {/* ── bento grid ── */}
         <section className="mt-6">
           {missingTable ? (
@@ -156,9 +194,20 @@ export default function PromptLibraryPage() {
                 agent can start using it.
               </p>
             </div>
+          ) : visible.length === 0 ? (
+            <div className="pg-glass rounded-[22px] p-7 text-center">
+              <p className="text-sm font-semibold text-ink-soft">Nothing under this filter yet.</p>
+              <button
+                type="button"
+                onClick={() => setFilter('all')}
+                className="mt-2 text-xs font-extrabold text-ink underline underline-offset-2"
+              >
+                Show all prompts
+              </button>
+            </div>
           ) : (
             <div className="grid grid-cols-2 items-start gap-3.5">
-              {list.map((p, i) => (
+              {visible.map((p, i) => (
                 <PromptCard
                   key={p.id}
                   prompt={p}
