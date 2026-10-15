@@ -132,12 +132,6 @@ export default function PromptLibraryPage() {
           </button>
         </header>
 
-        <p className="pg-glass mt-5 rounded-[20px] p-4 text-xs leading-relaxed font-semibold text-ink-soft">
-          A prompt is a reusable recipe for art. Its <strong className="text-ink">cover image</strong> shows
-          how the output looks — the agent uses it as a generation reference{' '}
-          <em>only if you turn that on</em> in the prompt. Color codes pin the palette when you want one.
-        </p>
-
         {/* ── bento grid ── */}
         <section className="mt-6">
           {missingTable ? (
