@@ -52,7 +52,7 @@ function CardHead({
   status,
   badge,
 }: {
-  project?: Pick<Project, 'name' | 'x_username' | 'logo' | 'x_premium'> | null
+  project?: Pick<Project, 'name' | 'x_username' | 'logo'> | null
   status: PostStatus
   badge?: string
 }) {
@@ -105,7 +105,7 @@ export default function PostForm({
   /** Project blacklist entries — hits warn (not block) while writing. */
   blacklist?: string[]
   /** For the preview header (name, @handle, logo). */
-  project?: Pick<Project, 'name' | 'x_username' | 'logo' | 'x_premium'> | null
+  project?: Pick<Project, 'name' | 'x_username' | 'logo'> | null
   onSubmit: (input: SavePostInput) => void
   onCancel: () => void
   /** Fires on every edit with the current snapshot (used for autosave + ⌘S). */
@@ -153,7 +153,7 @@ export default function PostForm({
   }
 
   // ── derived ──
-  const limit = postTypeLimit(type, project?.x_premium ?? false)
+  const limit = postTypeLimit(type)
   const current = tweets[focus] ?? ''
   const count = weightedLength(current)
   const overLimit = count > limit
@@ -221,7 +221,7 @@ export default function PostForm({
         overLimit ? 'bg-rose-soft text-rose-700' : 'bg-white/55 text-ink-soft'
       }`}
     >
-      {type === 'article' ? `${words} words` : `${count}/${limit}${project?.x_premium ? ' ✦' : ''}`}
+      {type === 'article' ? `${words} words` : `${count}/${limit}`}
     </span>
   )
 
@@ -255,7 +255,7 @@ export default function PostForm({
             </button>
           ))}
         </div>
-        <p className="mt-1.5 px-1 text-[11px] font-bold text-ink-soft">{POST_TYPE_HINT[type]}{project?.x_premium && type !== 'article' ? ' X Premium: up to 25,000 chars.' : ''}</p>
+        <p className="mt-1.5 px-1 text-[11px] font-bold text-ink-soft">{POST_TYPE_HINT[type]}</p>
       </div>
 
       {/* title */}

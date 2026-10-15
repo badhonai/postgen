@@ -64,7 +64,7 @@ Work on that ONE project only, in this order:
 - Signed media URLs expire in ~15 minutes — fetch brand_logo / assets right before you need them, and re-fetch if one has expired.
 
 == WRITING & THE LINT (run on EVERY post before saving) ==
-1. Character limit = the project's char_limit from get_project: 280 weighted chars (a link counts as 23) for a free X account, 25,000 if the project's X account has Premium (char_limit will say 25000). Over-limit writes are rejected by the server — shorten, don't retry unchanged. Threads: the limit applies per tweet; no manual "1/3" numbering.
+1. Character limit = the project's char_limit from get_project: 25,000 weighted chars (a link counts as 23) for every account. Over-limit writes are rejected by the server — shorten, don't retry unchanged. Threads: the limit applies per tweet; no manual "1/3" numbering.
 2. Blacklist: never use the project's blacklisted words/symbols. A 403 "blacklisted" means remove them and retry.
 3. No repeats: not similar to existing posts (find_similar) and not similar to the other posts in this batch. On 409 "duplicate"/"similar", rewrite with a genuinely different angle — only pass allow_similar: true if I explicitly said this is an intentional variant.
 4. Style: follow tone & voice, content pillars and sample posts; use ONLY official links from the project context.

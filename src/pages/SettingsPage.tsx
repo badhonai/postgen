@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react'
 import { useAuth } from '../features/auth/context'
-import { useSetXPremium, useXPremium } from '../features/profile/api'
 import {
   useAgentActivity,
   useApiKeys,
@@ -136,9 +135,6 @@ function shortDate(iso: string): string {
 
 export default function SettingsPage() {
   const { user } = useAuth()
-  const xPremium = useXPremium()
-  const setXPremium = useSetXPremium()
-  const premiumOn = xPremium.data ?? true
   const keys = useApiKeys()
   const createKey = useCreateApiKey()
   const revokeKey = useRevokeApiKey()
@@ -479,51 +475,6 @@ export default function SettingsPage() {
             ) : reorderProjects.isSuccess ? (
               <p className="px-4 pb-3 text-[11px] font-bold text-ink-soft">Order saved ✓</p>
             ) : null}
-          </div>
-        </section>
-
-        {/* ── X account ── */}
-        <section className="mt-7">
-          <div className="pg-glass divide-y divide-white/50 overflow-hidden rounded-[22px]">
-            <GroupTitle>X account</GroupTitle>
-            <div className="px-4 py-3.5">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={premiumOn}
-                disabled={setXPremium.isPending}
-                onClick={() => setXPremium.mutate(!premiumOn)}
-                className="flex w-full items-center gap-3 text-left transition disabled:opacity-60"
-              >
-                <span
-                  className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition ${
-                    premiumOn ? 'justify-end bg-ink' : 'justify-start bg-ink/20'
-                  }`}
-                >
-                  <span className="h-5 w-5 rounded-full bg-white shadow" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-ink">X Premium</span>
-                  <span className="block text-[11px] font-semibold text-ink-soft">
-                    {premiumOn
-                      ? 'On — long posts up to 25,000 chars, for you and your agents.'
-                      : 'Off — free account, posts capped at 280 chars.'}
-                  </span>
-                </span>
-                <span className={`shrink-0 text-xs font-extrabold ${premiumOn ? 'text-ink' : 'text-ink-soft'}`}>
-                  {premiumOn ? 'ON' : 'OFF'}
-                </span>
-              </button>
-              <p className="mt-2 text-[11px] leading-relaxed font-semibold text-ink-soft">
-                This is about <strong className="text-ink">your</strong> X account, so one switch covers
-                every project you own — the composer counter and the agent character limit follow it.
-              </p>
-              {setXPremium.error ? (
-                <p className="mt-2 text-xs font-bold text-rose-700">
-                  {setXPremium.error instanceof Error ? setXPremium.error.message : 'Could not save'}
-                </p>
-              ) : null}
-            </div>
           </div>
         </section>
 

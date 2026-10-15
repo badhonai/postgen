@@ -15,8 +15,6 @@ export type OfficialLink = { label: string; url: string }
 export type Profile = {
   id: string
   display_name: string | null
-  /** User-level X Premium (Settings) — drives the char limit everywhere. Default ON. */
-  x_premium?: boolean
   created_at: string
   updated_at: string
 }
@@ -37,8 +35,6 @@ export type Project = {
   logo_asset_id: string | null
   /** User-chosen display order from Settings (lower first; null = unordered, goes last). */
   sort_order: number | null
-  /** The project's X account has Premium → long posts (25k chars), not 280. */
-  x_premium: boolean
   /** Populated via FK embed when listed (`logo:assets!projects_logo_asset_id_fkey(r2_key)`). */
   logo?: { r2_key: string } | null
   created_at: string
@@ -78,20 +74,19 @@ export const POST_TYPE_LABEL: Record<PostType, string> = {
 
 /** Character cap for the main content block (UI-only; the DB stores any length). */
 export const POST_TYPE_LIMIT: Record<PostType, number> = {
-  post: 280,
-  thread: 280,
+  post: 25000,
+  thread: 25000,
   article: 25000,
-  artwork: 280,
-  quote: 280,
+  artwork: 25000,
+  quote: 25000,
 }
 
-/** X Premium long-post cap — applies to every type when the account has Premium. */
+/** Long-post cap — every account, every type (no Premium distinction). */
 export const X_PREMIUM_LIMIT = 25000
 
-/** Effective cap for a post type on this project (Premium → 25k, else 280/article 25k). */
-export function postTypeLimit(type: PostType, xPremium = false): number {
-  if (type === 'article') return X_PREMIUM_LIMIT
-  return xPremium ? X_PREMIUM_LIMIT : POST_TYPE_LIMIT[type]
+/** Effective cap for a post type. Kept as a function so callers stay honest. */
+export function postTypeLimit(type: PostType): number {
+  return POST_TYPE_LIMIT[type]
 }
 
 /** One-line hint shown under the type chips in the composer. */

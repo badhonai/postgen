@@ -170,8 +170,8 @@ export async function getProject(env: Env, userId: string, id: string, origin?: 
   return {
     ...project,
     knowledge: knowledge ?? [],
-    // 280 for free X accounts, 25,000 for Premium — the agent's char lint.
-    char_limit: (project as { x_premium?: boolean }).x_premium ? 25000 : 280,
+    // One limit for everyone: 25,000 weighted chars (no Premium split).
+    char_limit: 25000,
     brand_logo: {
       transparent_name: byKind('logo_transparent_name'),
       full: byKind('logo_full') ?? primary,
@@ -196,7 +196,6 @@ export type ProjectWrite = {
 function projectProfileFields(input: ProjectWrite): Record<string, unknown> {
   const fields: Record<string, unknown> = {}
   if (input.x_username !== undefined) fields.x_username = input.x_username.trim().replace(/^@/, '') || null
-  // x_premium is a user-level Settings toggle now; projects can't set it.
   if (input.website_url !== undefined) fields.website_url = input.website_url.trim() || null
   if (input.content_pillars !== undefined) fields.content_pillars = input.content_pillars.map((c) => c.trim()).filter(Boolean)
   if (input.sample_posts !== undefined) fields.sample_posts = input.sample_posts.map((c) => c.trim()).filter(Boolean)
@@ -351,16 +350,17 @@ async function assertOwnedAssets(env: Env, userId: string, media: Array<{ asset_
 }
 
 /**
- * X character lint (server-side): free accounts 280 weighted chars per
- * post/tweet, Premium accounts 25,000. Articles are always long-form.
+ * X character lint (server-side): 25,000 weighted chars per post/tweet
+ * for every account and type (the old free/Premium split is gone).
  */
-export function assertCharLimit(xPremium: boolean, type: PostType, tweets: string[]): void {
-  const limit = type === 'article' || xPremium ? 25000 : 280
+export function assertCharLimit(type: PostType, tweets: string[]): void {
+  void type
+  const limit = 25000
   const over = tweets.map((t) => weightedLength(t)).filter((n) => n > limit)
   if (over.length > 0) {
     throw new AgentError(400, {
       error: 'too_long',
-      message: `Post exceeds the ${limit}-character limit for this account${xPremium ? ' (X Premium)' : ''}; shorten it.`,
+      message: `Post exceeds the ${limit}-character limit; shorten it.`,
       limit,
       lengths: tweets.map((t) => weightedLength(t)),
     })
@@ -521,7 +521,7 @@ export async function createDraft(
     .maybeSingle()
   if (!project) throw new AgentError(404, { error: 'project not found' })
 
-  assertCharLimit((project as { x_premium?: boolean }).x_premium === true, type, tweets)
+  assertCharLimit(type, tweets)
   assertBlacklist(project.brand_voice, [input.title ?? '', ...tweets, metaText(input.meta)].join('\n'))
   await assertDailyCap(env, auth.userId)
   const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {
@@ -575,7 +575,7 @@ export async function updateDraft(
     .select('brand_voice, x_premium')
     .eq('id', existing.project_id)
     .maybeSingle()
-  assertCharLimit((projectRow as { x_premium?: boolean } | null)?.x_premium === true, type, tweets)
+  assertCharLimit(type, tweets)
   assertBlacklist(projectRow?.brand_voice, [patch.title ?? existing.title, ...tweets, metaText(meta)].join('\n'))
 
   const { contentText, contentHash } = await assertNoRepeat(env, auth.userId, tweets, {

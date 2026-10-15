@@ -19,7 +19,7 @@ const TOOLS = [
   },
   {
     name: 'get_project',
-    description: 'Get ONE project in full: description, brand voice & blacklist, pillars, samples, custom instructions, official links, knowledge, char_limit (280 or 25000 for X Premium) and brand_logo (use brand_logo.transparent_name for generated images unless custom_instructions say otherwise).',
+    description: 'Get ONE project in full: description, brand voice & blacklist, pillars, samples, custom instructions, official links, knowledge, char_limit (25000) and brand_logo (use brand_logo.transparent_name for generated images unless custom_instructions say otherwise).',
     inputSchema: {
       type: 'object',
       properties: { project_id: { type: 'string', description: 'Project UUID' } },
@@ -32,7 +32,7 @@ const TOOLS = [
     description:
       'Create a DRAFT post (single tweet or thread) for a project. Runs the no-repeat ' +
       'guard — on 409 retry with allow_similar=true ONLY if this is an intentional variant. ' +
-      'Status is idea|draft; a human approves/publishes. Respect the project char_limit from get_project (280, or 25000 if the account has X Premium); over-limit writes are rejected.',
+      'Status is idea|draft; a human approves/publishes. Respect the project char_limit from get_project (25000); over-limit writes are rejected.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -472,7 +472,7 @@ export async function onRequestPost(context: {
               'PostGen — draft posts for the user’s web3 projects. You can only create/update ' +
               'drafts (a human approves & publishes). Workflow: list_projects (lite) → get_project ' +
               'for the ONE chosen project → list_posts to see what exists → find_similar before ' +
-              'writing → create_draft (respect char_limit: 280, or 25000 for X Premium). For images ' +
+              'writing → create_draft (respect char_limit: 25000). For images ' +
               'use list_image_prompts with project_id and brand_logo.transparent_name from get_project.',
           }),
         )

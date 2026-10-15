@@ -14,7 +14,7 @@ const spec = {
   security: [{ bearerAuth: [] }],
   paths: {
     '/projects': {
-      get: { summary: 'List my projects (lite: id, name, x_username, x_premium, post_count)', responses: { '200': { description: 'Projects' } } },
+      get: { summary: 'List my projects (lite: id, name, x_username, post_count)', responses: { '200': { description: 'Projects' } } },
       post: {
         summary: 'Create a project',
         requestBody: {

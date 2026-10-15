@@ -316,10 +316,10 @@ External AI tools connect **into** PostGen and draft posts (drafts-only — you 
 `get_project`, which returns `brand_logo` (assets of kind `logo_full` /
 `logo_icon` / `logo_transparent_name`, uploaded from the three labelled slots
 in the project form; the generated-image default is the transparent-with-name
-logo) and `char_limit`: **280**, or **25,000 when the user has X Premium** (a user-level Settings toggle, default ON, applied to all their projects)
-(`profiles.x_premium`, default ON, toggled once in Settings for all of the
-user's projects; `projects.x_premium` is a DB-synced mirror of it, and the
-web composer counter uses the same flag). Image prompts can be tagged to projects
+logo) and `char_limit`: **25,000** for every account (the old free/Premium 280 split was removed — there is no Premium toggle anymore)
+(every account gets the 25,000 cap in the agent lint and the web composer
+counter alike; the retired `profiles/projects.x_premium` columns are kept
+only for backward compatibility and no longer drive anything). Image prompts can be tagged to projects
 (`image_prompts.project_ids`, chips in the prompt composer; empty = global) —
 `list_image_prompts` with a project returns that project's prompts first, then
 globals, and excludes other projects' prompts. The paste-pack teaches the
