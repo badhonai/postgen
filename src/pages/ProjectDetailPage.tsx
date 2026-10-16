@@ -123,6 +123,9 @@ export default function ProjectDetailPage() {
   /** how many selected posts each action would actually change */
   const approveCount = selectedPosts.filter((p) => p.status !== 'approved').length
   const publishCount = selectedPosts.filter((p) => p.status !== 'published').length
+  /** every selected post is already published → "Approve" really means "send back" */
+  const selectedAllPublished =
+    selectedPosts.length > 0 && selectedPosts.every((p) => p.status === 'published')
   const busyBulk = bulkStatus.isPending || bulkDelete.isPending
   const bulkError = bulkStatus.error ?? bulkDelete.error
 
@@ -632,7 +635,11 @@ export default function ProjectDetailPage() {
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-ink px-2 py-2.5 text-[13px] font-bold text-white transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
                   >
                     {busyBulk && bulkStatus.variables?.status === 'approved' ? <Spinner /> : null}
-                    {approveCount > 0 ? `Approve ${approveCount}` : 'Approve'}
+                    {selectedAllPublished
+                      ? `To Approved ${approveCount}`
+                      : approveCount > 0
+                        ? `Approve ${approveCount}`
+                        : 'Approve'}
                   </button>
                   <button
                     type="button"
@@ -725,6 +732,7 @@ export default function ProjectDetailPage() {
                     <PostRow
                       key={post.id}
                       post={post}
+                      fromTab={statusTab}
                       logo={p.logo}
                       selectMode={selectMode}
                       selected={selected.has(post.id)}
@@ -828,6 +836,7 @@ function PostCheck({ checked }: { checked: boolean }) {
 
 function PostRow({
   post,
+  fromTab,
   logo,
   selectMode,
   selected,
@@ -836,6 +845,8 @@ function PostRow({
   swipeRight,
 }: {
   post: PostListItem
+  /** Status tab the row was opened from — the editor's Back returns here. */
+  fromTab: string
   logo?: { r2_key: string } | null
   selectMode: boolean
   selected: boolean
@@ -886,7 +897,7 @@ function PostRow({
   return (
     <SwipeRow left={swipeRight} right={swipeLeft}>
       <Link
-        to={`/posts/${post.id}`}
+        to={`/posts/${post.id}?from=${fromTab}`}
         draggable={false}
         onDragStart={(e) => e.preventDefault()}
         className="pg-glass-strong pg-cv flex items-center gap-3 rounded-[20px] p-2.5 pr-3.5 transition active:scale-[0.98]"

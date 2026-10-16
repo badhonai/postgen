@@ -7,6 +7,7 @@ import {
   POST_TYPE_LABEL,
   postTypeLimit,
   STATUS_DOT,
+  STATUS_LABEL,
 } from '../../lib/types'
 import { blacklistHits } from '../../lib/blacklist'
 import { weightedLength } from '../../lib/text'
@@ -98,6 +99,7 @@ export default function PostForm({
   onSubmit,
   onCancel,
   onChange,
+  statusValue,
 }: {
   initial?: SavePostInput
   busy: boolean
@@ -110,6 +112,12 @@ export default function PostForm({
   onCancel: () => void
   /** Fires on every edit with the current snapshot (used for autosave + ⌘S). */
   onChange?: (snapshot: SavePostInput) => void
+  /**
+   * The post's status as last saved on the server. The editor's Approve /
+   * Publish buttons change status outside the form; this pulls the form's
+   * own status field along so a later save can't silently revert it.
+   */
+  statusValue?: PostStatus
 }) {
   const meta = (initial?.meta ?? {}) as { source?: string; comment?: string }
   const [type, setType] = useState<PostType>(initial?.type ?? 'post')
@@ -125,6 +133,10 @@ export default function PostForm({
   )
   const [attachFor, setAttachFor] = useState<number | null>(null)
   const [focus, setFocus] = useState(0)
+  // Type / category / status / tags live in a collapsible "Post details"
+  // section so the card itself stays the focus. Open for brand-new posts
+  // (type matters there), closed when editing an existing one.
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(!initial?.postId)
 
   const snapshot = (): SavePostInput => ({
     postId: initial?.postId,
@@ -146,6 +158,12 @@ export default function PostForm({
     onChange?.(snapshot())
     // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot mirrors form state
   }, [type, title, category, status, tagNames, tweets, source, comment, attachments])
+
+  // follow status changes made outside the form (Approve / Publish buttons)
+  useEffect(() => {
+    if (statusValue && statusValue !== status) setStatus(statusValue)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the external value drives this
+  }, [statusValue])
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -235,29 +253,6 @@ export default function PostForm({
         </div>
       ) : null}
 
-      {/* ── type picker ── */}
-      <div>
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-          {POST_TYPES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              aria-pressed={type === t}
-              onClick={() => switchType(t)}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-extrabold whitespace-nowrap transition active:scale-95 ${
-                type === t
-                  ? 'bg-butter text-ink shadow-[0_6px_16px_rgba(242,193,78,0.45)]'
-                  : 'pg-glass text-ink-soft'
-              }`}
-            >
-              <span aria-hidden>{TYPE_ICON[t]}</span>
-              {POST_TYPE_LABEL[t]}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1.5 px-1 text-[11px] font-bold text-ink-soft">{POST_TYPE_HINT[type]}</p>
-      </div>
-
       {/* title */}
       <input
         value={title}
@@ -266,29 +261,85 @@ export default function PostForm({
         className="pg-title w-full bg-transparent text-[1.7rem] text-ink placeholder:text-ink-soft/60 focus:outline-none"
       />
 
-      {/* meta chips */}
-      <div className="flex gap-2">
-        <Select value={category} onChange={(e) => setCategory(e.target.value as PostCategory)} className="flex-1 py-2">
-          {(Object.keys(CATEGORY_LABELS) as PostCategory[]).map((c) => (
-            <option key={c} value={c}>
-              {CATEGORY_LABELS[c]}
-            </option>
-          ))}
-        </Select>
-        <Select value={status} onChange={(e) => setStatus(e.target.value as PostStatus)} className="flex-1 py-2">
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s[0].toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </Select>
+      {/* ── post details: the rarely-touched fields, minimized into one
+            collapsible section so the card stays front and center ── */}
+      <div className="pg-glass overflow-hidden rounded-[22px]">
+        <button
+          type="button"
+          aria-expanded={detailsOpen}
+          onClick={() => setDetailsOpen((v) => !v)}
+          className="flex w-full items-center gap-2 px-4 py-3 text-left transition active:scale-[0.99]"
+        >
+          <span className="shrink-0 text-[13px] font-extrabold text-ink">Post details</span>
+          <span className="min-w-0 flex-1 truncate text-xs font-bold text-ink-soft">
+            {POST_TYPE_LABEL[type]} · {CATEGORY_LABELS[category]} · {STATUS_LABEL[status]}
+            {csvToList(tagNames).length > 0 ? ` · ${csvToList(tagNames).length} tag${csvToList(tagNames).length > 1 ? 's' : ''}` : ''}
+          </span>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`shrink-0 text-ink-soft transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        {detailsOpen ? (
+          <div className="space-y-4 px-4 pb-4">
+            {/* ── type picker ── */}
+            <div>
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+                {POST_TYPES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    aria-pressed={type === t}
+                    onClick={() => switchType(t)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-extrabold whitespace-nowrap transition active:scale-95 ${
+                      type === t
+                        ? 'bg-butter text-ink shadow-[0_6px_16px_rgba(242,193,78,0.45)]'
+                        : 'pg-glass text-ink-soft'
+                    }`}
+                  >
+                    <span aria-hidden>{TYPE_ICON[t]}</span>
+                    {POST_TYPE_LABEL[t]}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 px-1 text-[11px] font-bold text-ink-soft">{POST_TYPE_HINT[type]}</p>
+            </div>
+
+            {/* category + status */}
+            <div className="flex gap-2">
+              <Select value={category} onChange={(e) => setCategory(e.target.value as PostCategory)} className="flex-1 py-2">
+                {(Object.keys(CATEGORY_LABELS) as PostCategory[]).map((c) => (
+                  <option key={c} value={c}>
+                    {CATEGORY_LABELS[c]}
+                  </option>
+                ))}
+              </Select>
+              <Select value={status} onChange={(e) => setStatus(e.target.value as PostStatus)} className="flex-1 py-2">
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s[0].toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Input
+              value={tagNames}
+              onChange={(e) => setTagNames(e.target.value)}
+              placeholder="Tags — comma separated (product, education…)"
+              className="py-2"
+            />
+          </div>
+        ) : null}
       </div>
-      <Input
-        value={tagNames}
-        onChange={(e) => setTagNames(e.target.value)}
-        placeholder="Tags — comma separated (product, education…)"
-        className="py-2"
-      />
 
       {/* ── thread stepper ── */}
       {isThread ? (

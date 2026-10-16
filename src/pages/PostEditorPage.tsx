@@ -13,11 +13,35 @@ import {
 } from '../features/posts/api'
 import { useProject } from '../features/projects/api'
 import { getSignedUrl } from '../lib/media'
-import type { Asset } from '../lib/types'
+import { STATUS_DOT, STATUS_LABEL, type Asset, type PostStatus } from '../lib/types'
 import PostForm from '../features/posts/PostForm'
 import ShareDialog from '../features/shares/ShareDialog'
 import DuplicateDialog from '../features/posts/DuplicateDialog'
 import { Button, ErrorBox, Spinner } from '../components/ui'
+
+/**
+ * The one-tap status moves offered on the edit page, per current status.
+ * Draft → Approve, Approved → Publish, and Published → Send to Approved
+ * so a mistaken publish is one tap to undo. Anything more exotic
+ * (Scheduled, Archived) stays in the Post details status select.
+ */
+const STATUS_ACTIONS: Record<PostStatus, Array<{ to: PostStatus; label: string; primary?: boolean }>> = {
+  idea: [{ to: 'draft', label: 'Move to Draft', primary: true }],
+  draft: [{ to: 'approved', label: 'Approve', primary: true }],
+  approved: [
+    { to: 'published', label: 'Publish', primary: true },
+    { to: 'draft', label: 'Back to Draft' },
+  ],
+  scheduled: [
+    { to: 'published', label: 'Publish now', primary: true },
+    { to: 'approved', label: 'Back to Approved' },
+  ],
+  published: [{ to: 'approved', label: 'Send to Approved', primary: true }],
+  archived: [{ to: 'draft', label: 'Restore to Draft', primary: true }],
+}
+
+/** Status tabs a post row can hand over as `?from=` — Back returns there. */
+const FROM_TABS = ['idea', 'draft', 'approved', 'scheduled', 'published', 'archived', 'all']
 
 export default function PostEditorPage() {
   const { id } = useParams()
@@ -45,6 +69,7 @@ export default function PostEditorPage() {
   const [similarBanner, setSimilarBanner] = useState<SimilarPost[] | null>(null)
   const [postedAsk, setPostedAsk] = useState(false)
   const [postedError, setPostedError] = useState<string | null>(null)
+  const [statusNote, setStatusNote] = useState<string | null>(null)
   const [autosavedAt, setAutosavedAt] = useState<number | null>(null)
 
   const latestRef = useRef<SavePostInput | null>(null)
@@ -59,6 +84,21 @@ export default function PostEditorPage() {
     : (post.data?.project_id ?? '')
   const postData = post.data ?? null
   const project = useProject(projectId)
+
+  // ── where Back goes: the exact tab the post was opened from ──
+  const fromTab = params.get('from')
+  const editorHref = (pid: string) => (fromTab ? `/posts/${pid}?from=${fromTab}` : `/posts/${pid}`)
+  const backTarget = projectId
+    ? fromTab && FROM_TABS.includes(fromTab)
+      ? `/projects/${projectId}?status=${fromTab}`
+      : `/projects/${projectId}`
+    : '/dashboard'
+  const goBack = () => {
+    if (fromTab) navigate(backTarget)
+    else if (window.history.length > 1) navigate(-1)
+    else navigate(backTarget)
+  }
+
   const siblings = usePosts(!isNew && projectId ? { projectId } : {})
   const siblingList = siblings.data ?? []
   const siblingIndex = !isNew ? siblingList.findIndex((s) => s.id === editId) : -1
@@ -77,7 +117,7 @@ export default function PostEditorPage() {
     ) {
       return
     }
-    navigate(`/posts/${targetId}`)
+    navigate(editorHref(targetId))
   }
 
   // ── autosave (existing drafts only): silent save + non-blocking similar banner ──
@@ -229,6 +269,8 @@ export default function PostEditorPage() {
     )
   }
 
+  const statusActions = postData ? (STATUS_ACTIONS[postData.status] ?? []) : []
+
   const persist = async (input: SavePostInput, check: DupCheck) => {
     const savedId = await savePost.mutateAsync({
       ...input,
@@ -236,7 +278,7 @@ export default function PostEditorPage() {
       contentText: check.contentText,
       contentHash: check.contentHash,
     })
-    if (isNew) navigate(`/posts/${savedId}`, { replace: true })
+    if (isNew) navigate(editorHref(savedId), { replace: true })
     else setDupCheck(null)
   }
 
@@ -269,6 +311,21 @@ export default function PostEditorPage() {
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save')
     }
+  }
+
+  /** One-tap status move (Approve / Publish / Send to Approved…). */
+  const changeStatus = (to: PostStatus) => {
+    if (!postData) return
+    setStatusNote(null)
+    setPostStatus.mutate(
+      { id: postData.id, status: to },
+      {
+        onSuccess: () => {
+          setStatusNote(`Moved to ${STATUS_LABEL[to] ?? to} ✓`)
+          window.setTimeout(() => setStatusNote(null), 3000)
+        },
+      },
+    )
   }
 
   const copy = async (text: string, key: string) => {
@@ -346,7 +403,7 @@ export default function PostEditorPage() {
             <button
               type="button"
               aria-label="Back"
-              onClick={() => navigate(projectId ? `/projects/${projectId}` : '/dashboard')}
+              onClick={goBack}
               className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -423,19 +480,49 @@ export default function PostEditorPage() {
             ) : null}
           </div>
 
-          {!isNew && postData ? (
-            <div className="flex gap-2">
-              <Button
-                variant="accent"
-                className="flex-1 py-3 text-[15px]"
-                disabled={sharing}
-                onClick={() => void shareToX()}
-              >
-                {sharing ? 'Opening…' : 'Post on X'}
-              </Button>
-            </div>
-          ) : null}
         </header>
+
+        {/* ── status bar: current state + the one-tap move for it ── */}
+        {!isNew && postData ? (
+          <div className="mt-4">
+            <div className="flex items-center gap-2">
+              <span className="pg-glass flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2.5 text-xs font-extrabold text-ink">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ background: STATUS_DOT[postData.status] ?? '#a09cc4' }}
+                />
+                {STATUS_LABEL[postData.status] ?? postData.status}
+              </span>
+              {statusActions.map((a) => (
+                <Button
+                  key={a.to}
+                  variant={a.primary ? 'accent' : 'ghost'}
+                  className="flex-1 py-2.5"
+                  disabled={setPostStatus.isPending}
+                  onClick={() => changeStatus(a.to)}
+                >
+                  {setPostStatus.isPending && setPostStatus.variables?.status === a.to
+                    ? 'Moving…'
+                    : a.label}
+                </Button>
+              ))}
+            </div>
+            {statusNote ? (
+              <p className="mt-2 text-center text-xs font-extrabold text-emerald-700">{statusNote}</p>
+            ) : null}
+            {setPostStatus.error ? (
+              <div className="mt-2">
+                <ErrorBox
+                  message={
+                    setPostStatus.error instanceof Error
+                      ? setPostStatus.error.message
+                      : 'Could not change status'
+                  }
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* ── similar-post banner (non-blocking, autosave) ── */}
         {similarBanner ? (
@@ -472,38 +559,73 @@ export default function PostEditorPage() {
             error={formError ?? (savePost.error instanceof Error ? savePost.error.message : null)}
             blacklist={projectBlacklist(project.data?.brand_voice)}
             project={project.data}
+            statusValue={postData?.status}
             onSubmit={handleSubmit}
-            onCancel={() =>
-              navigate(projectId ? `/projects/${projectId}` : '/dashboard', { replace: true })
-            }
+            onCancel={() => navigate(backTarget, { replace: true })}
             onChange={onFormChange}
           />
         </div>
 
-        {/* ── prev / next post (same project, newest first) ── */}
-        {!isNew && postData ? (
-          <nav aria-label="Posts" className="pg-glass mt-6 flex items-center gap-2 rounded-full p-1.5">
-            <button
-              type="button"
-              disabled={!prevPost}
-              onClick={() => prevPost && goToPost(prevPost.id)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ink transition hover:bg-white/60 active:scale-95 disabled:opacity-35 disabled:hover:bg-transparent"
-            >
-              ← Previous
-            </button>
-            <span className="shrink-0 text-xs font-extrabold text-ink-soft">
-              {siblingIndex >= 0 ? `${siblingIndex + 1} of ${siblingList.length}` : '…'}
-            </span>
-            <button
-              type="button"
-              disabled={!nextPost}
-              onClick={() => nextPost && goToPost(nextPost.id)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ink transition hover:bg-white/60 active:scale-95 disabled:opacity-35 disabled:hover:bg-transparent"
-            >
-              Next →
-            </button>
-          </nav>
-        ) : null}
+        {/* ── sticky action dock: the most-used actions (Post on X, Save,
+              Previous/Next) stay in thumb reach at all times ── */}
+        <div className="sticky bottom-3 z-30 mt-6">
+          <div className="pg-glass-strong rounded-[26px] p-2 shadow-[0_18px_40px_rgba(70,60,130,0.22)]">
+            {!isNew && postData ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="accent"
+                  className="flex-1 py-3 text-[15px]"
+                  disabled={sharing}
+                  onClick={() => void shareToX()}
+                >
+                  {sharing ? 'Opening…' : 'Post on X'}
+                </Button>
+                <Button
+                  className="flex-1 py-3 text-[15px]"
+                  disabled={savePost.isPending}
+                  onClick={() => {
+                    if (latestRef.current) void handleSubmit(latestRef.current)
+                  }}
+                >
+                  {savePost.isPending ? 'Saving…' : 'Save'}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                className="w-full py-3 text-[15px]"
+                disabled={savePost.isPending}
+                onClick={() => {
+                  if (latestRef.current) void handleSubmit(latestRef.current)
+                }}
+              >
+                {savePost.isPending ? 'Saving…' : 'Save post'}
+              </Button>
+            )}
+            {!isNew && postData ? (
+              <nav aria-label="Posts" className="mt-1.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!prevPost}
+                  onClick={() => prevPost && goToPost(prevPost.id)}
+                  className="flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ink transition hover:bg-white/60 active:scale-95 disabled:opacity-35 disabled:hover:bg-transparent"
+                >
+                  ← Previous
+                </button>
+                <span className="shrink-0 text-xs font-extrabold text-ink-soft">
+                  {siblingIndex >= 0 ? `${siblingIndex + 1} of ${siblingList.length}` : '…'}
+                </span>
+                <button
+                  type="button"
+                  disabled={!nextPost}
+                  onClick={() => nextPost && goToPost(nextPost.id)}
+                  className="flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm font-bold text-ink transition hover:bg-white/60 active:scale-95 disabled:opacity-35 disabled:hover:bg-transparent"
+                >
+                  Next →
+                </button>
+              </nav>
+            ) : null}
+          </div>
+        </div>
 
 
         {postedAsk && postData ? (
