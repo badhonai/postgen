@@ -11,6 +11,22 @@ export type PostSummary = {
   post_type?: string
 }
 
+/** Two small pills: amber drafts · green approved. */
+export function StatusPills({ drafts, approved }: { drafts: number; approved: number }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <span className="flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-[11px] font-extrabold text-ink">
+        <span className="h-2 w-2 rounded-full" style={{ background: STATUS_DOT.draft }} />
+        {drafts} draft{drafts === 1 ? '' : 's'}
+      </span>
+      <span className="flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-[11px] font-extrabold text-ink">
+        <span className="h-2 w-2 rounded-full" style={{ background: STATUS_DOT.approved }} />
+        {approved} approved
+      </span>
+    </div>
+  )
+}
+
 function Logo({ r2Key, size }: { r2Key?: string | null; size: number }) {
   const url = useAssetUrl(r2Key)
   if (!url.data) {
@@ -39,10 +55,14 @@ function Logo({ r2Key, size }: { r2Key?: string | null; size: number }) {
 export function HeroTile({
   project,
   posts,
+  draftCount,
+  approvedCount,
   statusTab,
 }: {
   project: Project
   posts: PostSummary[]
+  draftCount: number
+  approvedCount: number
   statusTab: string
 }) {
   const shown = posts.slice(0, 3)
@@ -78,6 +98,10 @@ export function HeroTile({
         </div>
       ) : null}
 
+      <div className="mt-3.5">
+        <StatusPills drafts={draftCount} approved={approvedCount} />
+      </div>
+
       {shown.length > 0 ? (
         <div className="mt-3.5 space-y-1.5 rounded-[18px] bg-white/45 p-3">
           {shown.map((post) => (
@@ -111,11 +135,15 @@ export function SmallTile({
   project,
   color,
   postCount,
+  draftCount,
+  approvedCount,
   statusTab,
 }: {
   project: Project
   color: (typeof TILE_COLORS)[number]
   postCount: number
+  draftCount: number
+  approvedCount: number
   statusTab: string
 }) {
   return (
@@ -134,6 +162,9 @@ export function SmallTile({
         {project.x_username ? (
           <p className="mt-0.5 truncate text-[11px] font-bold text-ink-soft">@{project.x_username}</p>
         ) : null}
+        <div className="mt-2.5">
+          <StatusPills drafts={draftCount} approved={approvedCount} />
+        </div>
       </div>
     </Link>
   )

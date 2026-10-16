@@ -10,7 +10,12 @@ import {
   useProjects,
   type ProjectInput,
 } from '../features/projects/api'
-import { HeroTile, PromptLibraryTile, SmallTile, type PostSummary } from '../features/projects/BentoTiles'
+import {
+  HeroTile,
+  PromptLibraryTile,
+  SmallTile,
+  type PostSummary,
+} from '../features/projects/BentoTiles'
 import { TILE_COLORS } from '../lib/types'
 import ProjectForm from '../features/projects/ProjectForm'
 import { useImagePrompts } from '../features/prompts/api'
@@ -49,6 +54,19 @@ function UserAvatar({ user }: { user: User | null }) {
       {(handle || email).slice(0, 1).toUpperCase()}
     </span>
   )
+}
+
+type StatusCounts = { drafts: number; approved: number }
+
+/** Ideas count as drafts, like the Tabs do. */
+function statusCounts(posts: PostSummary[]): StatusCounts {
+  let drafts = 0
+  let approved = 0
+  for (const p of posts) {
+    if (p.status === 'draft' || p.status === 'idea') drafts++
+    else if (p.status === 'approved') approved++
+  }
+  return { drafts, approved }
 }
 
 function matchesFilter(status: string, filter: Filter): boolean {
@@ -241,18 +259,30 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              <HeroTile project={hero} posts={postsByProject.get(hero.id) ?? []} statusTab={filter === 'all' ? 'approved' : filter} />
+              <HeroTile
+                project={hero}
+                posts={postsByProject.get(hero.id) ?? []}
+                draftCount={statusCounts(postsByProject.get(hero.id) ?? []).drafts}
+                approvedCount={statusCounts(postsByProject.get(hero.id) ?? []).approved}
+                statusTab={filter === 'all' ? 'approved' : filter}
+              />
               <div className="grid grid-cols-2 gap-3.5">
                 <PromptLibraryTile promptCount={promptCount} />
-                {rest.map((p, i) => (
-                  <SmallTile
-                    key={p.id}
-                    project={p}
-                    color={TILE_COLORS[(i + 1) % TILE_COLORS.length]}
-                    postCount={(postsByProject.get(p.id) ?? []).length}
-                    statusTab={filter === 'all' ? 'approved' : filter}
-                  />
-                ))}
+                {rest.map((p, i) => {
+                  const projectPosts = postsByProject.get(p.id) ?? []
+                  const counts = statusCounts(projectPosts)
+                  return (
+                    <SmallTile
+                      key={p.id}
+                      project={p}
+                      color={TILE_COLORS[(i + 1) % TILE_COLORS.length]}
+                      postCount={projectPosts.length}
+                      draftCount={counts.drafts}
+                      approvedCount={counts.approved}
+                      statusTab={filter === 'all' ? 'approved' : filter}
+                    />
+                  )
+                })}
               </div>
             </>
           )}
