@@ -393,6 +393,9 @@ export default function ProjectForm({
               onChange={(e) => set({ customInstructions: e.target.value })}
               placeholder="e.g. Always mention audits. Never comment on price."
             />
+            <p className="mt-1 text-[11px] font-semibold text-ink-soft">
+              Only what's specific to this project — your global instructions (Settings) always apply too.
+            </p>
           </Field>
 
           <Field label="Official links">

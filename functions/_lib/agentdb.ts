@@ -137,6 +137,18 @@ export async function getProject(env: Env, userId: string, id: string, origin?: 
   if (error) fail(error)
   if (!project) throw new AgentError(404, { error: 'project not found' })
 
+  // Account-wide instructions (Settings → Global instructions). Guarded:
+  // until the migration lands the column may not exist — treat as none.
+  let globalInstructions: string | null = null
+  const { data: profile } = await client
+    .from('profiles')
+    .select('global_instructions')
+    .eq('id', userId)
+    .maybeSingle()
+  if (profile && typeof (profile as { global_instructions?: unknown }).global_instructions === 'string') {
+    globalInstructions = ((profile as { global_instructions: string }).global_instructions ?? '').trim() || null
+  }
+
   const { data: knowledge, error: kErr } = await client
     .from('knowledge')
     .select('*')
@@ -170,6 +182,9 @@ export async function getProject(env: Env, userId: string, id: string, origin?: 
   return {
     ...project,
     knowledge: knowledge ?? [],
+    // Applies to EVERY project of this user; the project's own
+    // custom_instructions add project-specific rules on top.
+    global_instructions: globalInstructions,
     // One limit for everyone: 25,000 weighted chars (no Premium split).
     char_limit: 25000,
     brand_logo: {

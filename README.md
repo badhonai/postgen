@@ -431,6 +431,13 @@ logo & assets upload is the first section of the form):
 The whole profile is served to connected AIs via `GET /api/v1/projects/:id` and the MCP
 resource `project://<id>/context`, so every external agent drafts with full brand context.
 
+**Global instructions:** Settings → Instructions holds account-wide
+writing rules (`profiles.global_instructions`, migration
+`20261016000008_global_instructions.sql`) that apply to *every* project.
+`get_project` serves them to agents as `global_instructions` alongside
+the project's own `custom_instructions` (which should then only carry
+what's specific to that project — the project form says so).
+
 **Display order:** users can arrange their projects in any order in
 **Settings → Projects** (up/down arrows). The order (`projects.sort_order`,
 migration `20261016000007_project_sort_order.sql`; lower first, backfilled

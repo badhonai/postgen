@@ -10,6 +10,7 @@ import {
 import { Button, ErrorBox, Input, Spinner } from '../components/ui'
 import { addAccount, forgetAccount, loadAccounts, switchAccount, type StoredAccount } from '../lib/accounts'
 import { useProjects, useReorderProjects } from '../features/projects/api'
+import { useGlobalInstructions, useSetGlobalInstructions } from '../features/profile/api'
 import { buildAgentSetupText, buildMcpConfig } from '../features/agents/agentSetup'
 import { ACCENTS, applyAccent, applyTheme, getAccent, getTheme, type AccentId, type ThemeMode } from '../lib/theme'
 
@@ -234,6 +235,12 @@ export default function SettingsPage() {
   const projectsQ = useProjects()
   const reorderProjects = useReorderProjects()
   const projectList2 = projectsQ.data ?? []
+  const globalQ = useGlobalInstructions()
+  const setGlobal = useSetGlobalInstructions()
+  const [globalDraft, setGlobalDraft] = useState('')
+  const [globalTouched, setGlobalTouched] = useState(false)
+  const globalSaved = globalQ.data ?? ''
+  const globalValue = globalTouched ? globalDraft : globalSaved
   const moveProject = (index: number, dir: -1 | 1) => {
     const ids = projectList2.map((p) => p.id)
     const j = index + dir
@@ -410,6 +417,54 @@ export default function SettingsPage() {
                 ))}
               </span>
             </Row>
+          </div>
+        </section>
+
+        {/* ── Global instructions ── */}
+        <section className="mt-7">
+          <div className="pg-glass overflow-hidden rounded-[22px]">
+            <GroupTitle>Instructions</GroupTitle>
+            <div className="px-4 pb-4">
+              <p className="text-[11px] leading-relaxed font-semibold text-ink-soft">
+                <strong className="text-ink">Global instructions</strong> apply to{' '}
+                <strong className="text-ink">every project</strong> you own. Put universal writing
+                rules here once: format, length, what to avoid. Each project's own custom
+                instructions then add only what's specific to that project.
+              </p>
+              <textarea
+                value={globalValue}
+                onChange={(e) => {
+                  setGlobalTouched(true)
+                  setGlobalDraft(e.target.value)
+                }}
+                rows={7}
+                maxLength={4000}
+                placeholder={'No emojis. No em dashes. Write between 20,000 and 24,990 characters. Use clean line gaps between sections…'}
+                className="pg-scroll mt-2.5 w-full resize-y rounded-[16px] bg-white/55 px-3.5 py-3 text-sm leading-relaxed font-semibold text-ink placeholder:text-ink-soft/50 focus:ring-2 focus:ring-ink/60 focus:outline-none"
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <Button
+                  className="px-4 py-2 text-xs"
+                  disabled={setGlobal.isPending || globalValue.trim() === globalSaved.trim()}
+                  onClick={() =>
+                    setGlobal.mutate(globalValue, { onSuccess: () => setGlobalTouched(false) })
+                  }
+                >
+                  {setGlobal.isPending ? 'Saving…' : 'Save instructions'}
+                </Button>
+                <span className="text-[11px] font-semibold text-ink-soft">{globalValue.length}/4000</span>
+                {setGlobal.isSuccess && !globalTouched ? (
+                  <span className="text-[11px] font-bold text-ink-soft">Saved ✓ — agents see it on their next project load</span>
+                ) : null}
+              </div>
+              {setGlobal.error ? (
+                <p className="mt-2 text-[11px] font-bold text-rose-700">
+                  {/global_instructions/.test(setGlobal.error instanceof Error ? setGlobal.error.message : '')
+                    ? 'Saving needs a one-time database update — run migration 20261016000008_global_instructions.sql in Supabase.'
+                    : 'Could not save. Try again.'}
+                </p>
+              ) : null}
+            </div>
           </div>
         </section>
 

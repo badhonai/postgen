@@ -19,7 +19,7 @@ const TOOLS = [
   },
   {
     name: 'get_project',
-    description: 'Get ONE project in full: description, brand voice & blacklist, pillars, samples, custom instructions, official links, knowledge, char_limit (25000) and brand_logo (use brand_logo.transparent_name for generated images unless custom_instructions say otherwise).',
+    description: 'Get ONE project in full: description, brand voice & blacklist, pillars, samples, custom instructions PLUS global_instructions (account-wide rules that apply to every project — always follow both), official links, knowledge, char_limit (25000) and brand_logo (use brand_logo.transparent_name for generated images unless custom_instructions say otherwise).',
     inputSchema: {
       type: 'object',
       properties: { project_id: { type: 'string', description: 'Project UUID' } },
