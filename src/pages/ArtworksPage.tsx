@@ -271,13 +271,15 @@ export default function ArtworksPage() {
         </section>
 
         {/* ── Browse, grouped by project ── */}
-        <div className="mt-6 flex items-center gap-2">
-          <h2 className="pg-title flex-1 text-lg text-ink">Your artworks</h2>
+        <div className="mt-6">
+          <h2 className="pg-title text-lg text-ink">Your artworks</h2>
+          {/* Full-width on its own row: Input already carries w-full, and a
+              fractional width next to the heading overflowed the screen. */}
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
-            className="w-36 shrink-0 py-2 text-[13px]"
+            placeholder="Search artworks…"
+            className="mt-2.5 py-2.5 text-[13px]"
           />
         </div>
 
