@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useProjects } from '../features/projects/api'
 import { useDeletePost, usePosts, useSavePost, type PostListItem } from '../features/posts/api'
@@ -7,15 +7,20 @@ import MediaUploader from '../features/media/MediaUploader'
 import { getSignedUrl, useAssetUrl } from '../lib/media'
 import { sha256Hex } from '../lib/text'
 import type { Asset } from '../lib/types'
-import { Button, ErrorBox, Input, Select, Skeleton, Textarea } from '../components/ui'
+import { Button, ErrorBox, Input, Select, Skeleton } from '../components/ui'
 
 /**
- * Artworks hub.
+ * Artworks gallery.
  *
- * Artworks are media-first gallery items: an image plus an optional
- * caption. They are not tweets, so there is no Post on X button and no
- * approve/publish flow anywhere here — Save, Download image and Delete
- * are the whole action set (the editor keeps the same three).
+ * The whole point of this page: get creative images IN, in bulk, and get
+ * them back OUT just as easily. Upload many at once (or pick from the
+ * project library) and each image immediately becomes an artwork. Every
+ * card downloads in one click; after a download the user is asked
+ * whether to delete the gallery copy or keep it. Agents do the same
+ * through the API (upload asset, create a post with type "artwork").
+ *
+ * Artworks are not posts: no Post on X, no approve/publish flow — just
+ * Save / Download / Delete.
  */
 export default function ArtworksPage() {
   const navigate = useNavigate()
@@ -34,14 +39,12 @@ export default function ArtworksPage() {
     projectList[0]?.id ||
     ''
 
-  const [title, setTitle] = useState('')
-  const [caption, setCaption] = useState('')
-  const [asset, setAsset] = useState<Asset | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [uploaderOpen, setUploaderOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [formError, setFormError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [adding, setAdding] = useState(0)
+  const [downloaded, setDownloaded] = useState<PostListItem | null>(null)
+  const addingRef = useRef(0)
 
   const artworks = useMemo(() => artworksQuery.data ?? [], [artworksQuery.data])
   const projectName = useMemo(() => {
@@ -66,7 +69,6 @@ export default function ArtworksPage() {
       list.push(artwork)
       groups.set(artwork.project_id, list)
     }
-    // Keep the user's project order; unknown projects (shared copies) last.
     const ordered = projectList
       .map((p) => [p.id, groups.get(p.id)] as const)
       .filter((entry): entry is readonly [string, PostListItem[]] => !!entry[1]?.length)
@@ -75,39 +77,42 @@ export default function ArtworksPage() {
     return ordered
   }, [filtered, projectList])
 
-  const canSave = !!activeProjectId && !!asset && !savePost.isPending
-
-  const handleSave = async () => {
-    setFormError(null)
-    setNotice(null)
-    if (!activeProjectId) {
-      setFormError('Pick a project first.')
-      return
-    }
-    if (!asset) {
-      setFormError('Add an image first — upload one or pick an existing asset.')
-      return
-    }
-    const cleanCaption = caption.trim()
+  /** One uploaded/picked image becomes one artwork, right away. */
+  const addArtwork = async (asset: Asset) => {
+    if (!activeProjectId) return
+    // A readable title from the filename ("retium_art1_rise.png" →
+    // "retium art1 rise"). It doubles as the caption anchor text so the
+    // image stays attached even before the caption-optional migration.
+    const title =
+      asset.filename
+        .replace(/\.[a-z0-9]+$/i, '')
+        .replace(/[_-]+/g, ' ')
+        .trim() || 'Untitled artwork'
+    addingRef.current += 1
+    setAdding(addingRef.current)
     try {
-      const id = await savePost.mutateAsync({
+      await savePost.mutateAsync({
         projectId: activeProjectId,
         type: 'artwork',
         category: 'promotional',
         status: 'draft',
-        title: title.trim(),
-        tweets: [cleanCaption],
+        title,
+        tweets: [title],
         tagNames: [],
-        contentText: cleanCaption,
-        contentHash: cleanCaption ? await sha256Hex(cleanCaption) : '',
+        contentText: title,
+        contentHash: await sha256Hex(title),
         media: [{ tweetIndex: 0, asset }],
       })
-      navigate(`/posts/${id}?from=artwork`)
+      setNotice(`Added "${title}" to ${projectName(activeProjectId)}.`)
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to save artwork')
+      setNotice(err instanceof Error ? err.message : 'Could not add that image as an artwork.')
+    } finally {
+      addingRef.current -= 1
+      setAdding(addingRef.current)
     }
   }
 
+  /** One click → the file downloads; then ask Delete or Cancel. */
   const download = async (artwork: PostListItem) => {
     const cover = artwork.cover
     if (!cover?.r2_key) return
@@ -122,6 +127,8 @@ export default function ArtworksPage() {
       a.click()
       a.remove()
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000)
+      // Give the browser a beat to hand the file over, then ask.
+      window.setTimeout(() => setDownloaded(artwork), 600)
     } catch {
       setNotice('Could not download that image.')
     }
@@ -135,6 +142,19 @@ export default function ArtworksPage() {
       setNotice('Artwork deleted.')
     } catch {
       setNotice('Could not delete that artwork.')
+    }
+  }
+
+  /** Popup answer: delete the gallery copy after a successful download. */
+  const deleteDownloaded = async () => {
+    if (!downloaded) return
+    const target = downloaded
+    setDownloaded(null)
+    try {
+      await deletePost.mutateAsync(target.id)
+      setNotice('Downloaded and deleted from the gallery.')
+    } catch {
+      setNotice('Downloaded, but the gallery copy could not be deleted.')
     }
   }
 
@@ -153,9 +173,9 @@ export default function ArtworksPage() {
             </svg>
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="pg-title truncate text-2xl text-ink">Artworks</h1>
-            <p className="truncate text-xs font-bold text-ink-soft">
-              Images with optional captions — no posting flow.
+            <h1 className="pg-title text-2xl text-ink">Artworks</h1>
+            <p className="text-xs font-bold text-ink-soft">
+              Upload many, download in one click, delete when done.
             </p>
           </div>
           <span className="pg-glass shrink-0 rounded-full px-3 py-2 text-xs font-extrabold text-ink">
@@ -163,19 +183,12 @@ export default function ArtworksPage() {
           </span>
         </header>
 
-        {/* ── Create ── */}
+        {/* ── Bulk upload: every image becomes an artwork immediately ── */}
         <section className="pg-glass-strong mt-5 rounded-[26px] p-4">
-          <h2 className="pg-title text-lg text-ink">New artwork</h2>
-
-          <label className="mt-4 block">
-            <span className="mb-1.5 block text-xs font-extrabold text-ink-soft">Project</span>
-            <Select
-              value={activeProjectId}
-              onChange={(e) => {
-                setProjectId(e.target.value)
-                setAsset(null)
-              }}
-            >
+          <h2 className="pg-title text-lg text-ink">Add artworks</h2>
+          <label className="mt-3.5 block">
+            <span className="mb-1.5 block text-xs font-extrabold text-ink-soft">Upload into project</span>
+            <Select value={activeProjectId} onChange={(e) => setProjectId(e.target.value)}>
               {projectList.length === 0 ? <option value="">No projects yet</option> : null}
               {projectList.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -185,96 +198,42 @@ export default function ArtworksPage() {
             </Select>
           </label>
 
-          <label className="mt-3 block">
-            <span className="mb-1.5 block text-xs font-extrabold text-ink-soft">Title (optional)</span>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Name this artwork…" />
-          </label>
-
-          <div className="mt-3">
-            <span className="mb-1.5 block text-xs font-extrabold text-ink-soft">Image</span>
-            {asset ? (
-              <div className="overflow-hidden rounded-[20px] bg-white/40">
-                <SelectedAssetPreview asset={asset} />
-                <div className="flex items-center gap-2 p-2.5">
-                  <p className="min-w-0 flex-1 truncate text-xs font-bold text-ink">{asset.filename}</p>
-                  <button
-                    type="button"
-                    onClick={() => setAsset(null)}
-                    className="shrink-0 rounded-full bg-white/70 px-3 py-1.5 text-xs font-bold text-ink"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
+          <div className="mt-3.5">
+            {activeProjectId ? (
+              <MediaUploader
+                key={activeProjectId}
+                projectId={activeProjectId}
+                onUploaded={(asset) => void addArtwork(asset)}
+              />
             ) : (
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  className="flex-1 py-2.5"
-                  disabled={!activeProjectId}
-                  onClick={() => setUploaderOpen((v) => !v)}
-                >
-                  Upload image
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="flex-1 py-2.5"
-                  disabled={!activeProjectId}
-                  onClick={() => setPickerOpen(true)}
-                >
-                  Pick existing
-                </Button>
-              </div>
+              <p className="text-sm font-semibold text-ink-soft">Create a project first, then upload.</p>
             )}
-            {uploaderOpen && activeProjectId && !asset ? (
-              <div className="mt-3">
-                <MediaUploader
-                  projectId={activeProjectId}
-                  onUploaded={(uploaded) => {
-                    setAsset(uploaded)
-                    setUploaderOpen(false)
-                  }}
-                />
-              </div>
-            ) : null}
           </div>
 
-          <label className="mt-3 block">
-            <span className="mb-1.5 block text-xs font-extrabold text-ink-soft">Caption (optional)</span>
-            <Textarea
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Write a caption, or leave this empty…"
-              rows={3}
-            />
-          </label>
-
-          {formError ? (
-            <div className="mt-3">
-              <ErrorBox message={formError} />
-            </div>
-          ) : null}
-          {savePost.error && !formError ? (
-            <div className="mt-3">
-              <ErrorBox message={savePost.error instanceof Error ? savePost.error.message : 'Failed to save artwork'} />
-            </div>
-          ) : null}
-
-          <Button className="mt-4 w-full py-3 text-[15px]" disabled={!canSave} onClick={() => void handleSave()}>
-            {savePost.isPending ? 'Saving…' : 'Save artwork'}
+          <Button
+            variant="ghost"
+            className="mt-3 w-full py-2.5"
+            disabled={!activeProjectId}
+            onClick={() => setPickerOpen(true)}
+          >
+            Or pick from this project's library
           </Button>
-          {!asset ? (
-            <p className="mt-2 text-center text-[11px] font-bold text-ink-soft">
-              An artwork needs an image; the caption can stay empty.
+
+          {adding > 0 ? (
+            <p className="mt-2.5 text-center text-xs font-extrabold text-ink">
+              Adding {adding} image{adding === 1 ? '' : 's'} to the gallery…
             </p>
-          ) : null}
+          ) : (
+            <p className="mt-2.5 text-center text-[11px] font-bold text-ink-soft">
+              Drop as many images as you like — each one lands in the gallery below.
+              Tap any artwork later to add a caption.
+            </p>
+          )}
         </section>
 
-        {/* ── Browse, grouped by project ── */}
+        {/* ── Gallery, grouped by project ── */}
         <div className="mt-6">
           <h2 className="pg-title text-lg text-ink">Your artworks</h2>
-          {/* Full-width on its own row: Input already carries w-full, and a
-              fractional width next to the heading overflowed the screen. */}
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -299,7 +258,7 @@ export default function ArtworksPage() {
         ) : grouped.length === 0 ? (
           <div className="pg-glass mt-4 rounded-[24px] p-7 text-center">
             <p className="text-sm font-semibold text-ink-soft">
-              {search ? 'No artworks match that search.' : 'No artworks yet. Create the first one above.'}
+              {search ? 'No artworks match that search.' : 'No artworks yet. Upload the first batch above.'}
             </p>
           </div>
         ) : (
@@ -309,12 +268,9 @@ export default function ArtworksPage() {
                 <h3 className="min-w-0 flex-1 truncate text-[15px] font-extrabold text-ink">
                   {projectName(pid)}
                 </h3>
-                <Link
-                  to={`/projects/${pid}`}
-                  className="shrink-0 text-[12px] font-bold text-ink-soft underline underline-offset-2"
-                >
-                  Open project
-                </Link>
+                <span className="shrink-0 text-[12px] font-bold text-ink-soft">
+                  {list.length} image{list.length === 1 ? '' : 's'}
+                </span>
               </div>
               <div className="mt-2.5 grid grid-cols-2 gap-2.5">
                 {list.map((artwork) => (
@@ -328,7 +284,7 @@ export default function ArtworksPage() {
                         <p className="mt-0.5 line-clamp-2 min-h-8 text-[11px] leading-snug font-semibold text-ink-soft">
                           {artwork.content_text && artwork.content_text !== artwork.title
                             ? artwork.content_text
-                            : 'No caption'}
+                            : 'Tap to add a caption'}
                         </p>
                       </div>
                     </Link>
@@ -337,7 +293,7 @@ export default function ArtworksPage() {
                         type="button"
                         disabled={!artwork.cover}
                         onClick={() => void download(artwork)}
-                        className="flex-1 rounded-full bg-ink px-2 py-1.5 text-[11px] font-bold text-white transition active:scale-95 disabled:opacity-40"
+                        className="flex-1 rounded-full bg-ink px-2 py-2 text-[11px] font-bold text-white transition active:scale-95 disabled:opacity-40"
                       >
                         Download
                       </button>
@@ -345,7 +301,7 @@ export default function ArtworksPage() {
                         type="button"
                         disabled={deletePost.isPending}
                         onClick={() => void remove(artwork)}
-                        className="flex-1 rounded-full border border-rose-300/70 bg-rose-soft/60 px-2 py-1.5 text-[11px] font-bold text-rose-700 transition active:scale-95 disabled:opacity-40"
+                        className="flex-1 rounded-full border border-rose-300/70 bg-rose-soft/60 px-2 py-2 text-[11px] font-bold text-rose-700 transition active:scale-95 disabled:opacity-40"
                       >
                         Delete
                       </button>
@@ -358,27 +314,44 @@ export default function ArtworksPage() {
         )}
       </div>
 
+      {/* ── after a download: keep it or delete it ── */}
+      {downloaded ? (
+        <div className="fixed inset-0 z-50 flex items-end bg-ink/45 px-3 pt-10 pb-6" onClick={() => setDownloaded(null)}>
+          <div
+            className="pg-glass-strong mx-auto w-full max-w-[440px] rounded-[26px] p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="pg-title text-xl text-ink">Did it download?</h2>
+            <p className="mt-1.5 text-sm leading-relaxed font-semibold text-ink-soft">
+              <strong className="text-ink">{downloaded.title || 'This artwork'}</strong> was sent to your
+              device. If you have it saved, you can delete the gallery copy now — or keep it here.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <Button
+                variant="danger"
+                className="flex-1 py-3"
+                disabled={deletePost.isPending}
+                onClick={() => void deleteDownloaded()}
+              >
+                {deletePost.isPending ? 'Deleting…' : 'Delete'}
+              </Button>
+              <Button variant="ghost" className="flex-1 py-3" onClick={() => setDownloaded(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {pickerOpen && activeProjectId ? (
         <AssetPickerDialog
           projectId={activeProjectId}
-          onSelect={(picked) => setAsset(picked)}
+          onSelect={(picked) => void addArtwork(picked)}
           onClose={() => setPickerOpen(false)}
         />
       ) : null}
     </main>
   )
-}
-
-function SelectedAssetPreview({ asset }: { asset: Asset }) {
-  const url = useAssetUrl(asset.r2_key)
-  if (!asset.mime_type.startsWith('image/') || !url.data) {
-    return (
-      <div className="flex aspect-video w-full items-center justify-center text-sm font-bold text-ink-soft">
-        {asset.filename}
-      </div>
-    )
-  }
-  return <img src={url.data} alt={asset.alt_text ?? asset.filename} className="aspect-video w-full object-cover" />
 }
 
 function ArtworkCover({ artwork }: { artwork: PostListItem }) {

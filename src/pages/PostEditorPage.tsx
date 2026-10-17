@@ -68,6 +68,7 @@ export default function PostEditorPage() {
   const [sharing, setSharing] = useState(false)
   const [similarBanner, setSimilarBanner] = useState<SimilarPost[] | null>(null)
   const [postedAsk, setPostedAsk] = useState(false)
+  const [artworkDownloadedAsk, setArtworkDownloadedAsk] = useState(false)
   const [postedError, setPostedError] = useState<string | null>(null)
   const [statusNote, setStatusNote] = useState<string | null>(null)
   const [autosavedAt, setAutosavedAt] = useState<number | null>(null)
@@ -398,6 +399,9 @@ export default function PostEditorPage() {
       a.click()
       a.remove()
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000)
+      // Give the browser a beat to hand the file over, then ask whether
+      // the gallery copy should be deleted or kept.
+      window.setTimeout(() => setArtworkDownloadedAsk(true), 600)
     } catch {
       setFormError('Could not download this image.')
     }
@@ -689,6 +693,38 @@ export default function PostEditorPage() {
           </div>
         </div>
 
+
+        {artworkDownloadedAsk && postData && isArtworkPost ? (
+          <div className="fixed inset-0 z-50 flex items-end bg-ink/45 px-3 pt-10 pb-6" onClick={() => setArtworkDownloadedAsk(false)}>
+            <div
+              className="pg-glass-strong mx-auto w-full max-w-[440px] rounded-[26px] p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="pg-title text-xl text-ink">Did it download?</h2>
+              <p className="mt-1.5 text-sm leading-relaxed font-semibold text-ink-soft">
+                The image was sent to your device. If you have it saved, you can delete the
+                gallery copy now — or keep it here.
+              </p>
+              <div className="mt-4 flex gap-2">
+                <Button
+                  variant="danger"
+                  className="flex-1 py-3"
+                  disabled={deletePost.isPending}
+                  onClick={() => {
+                    deletePost.mutate(postData.id, {
+                      onSuccess: () => navigate(backTarget, { replace: true }),
+                    })
+                  }}
+                >
+                  {deletePost.isPending ? 'Deleting…' : 'Delete'}
+                </Button>
+                <Button variant="ghost" className="flex-1 py-3" onClick={() => setArtworkDownloadedAsk(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {postedAsk && postData ? (
           <div className="fixed inset-0 z-50 flex items-end bg-ink/45 px-3 pt-10 pb-6" onClick={() => setPostedAsk(false)}>
