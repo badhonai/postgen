@@ -96,6 +96,12 @@ export type SharePromptPayload = {
   >
   use_reference_images?: boolean
   color_codes?: string[]
+  /**
+   * The prompt's project tags. Ids are account-local, so the projects
+   * travel as descriptors and are re-matched on the recipient's side —
+   * without this the imported prompt arrives untagged.
+   */
+  projects?: Array<{ name: string; slug: string | null; x_username: string | null }>
 }
 
 const assetPayload = (a: Asset): ShareAssetPayload => ({
@@ -176,7 +182,7 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
   if (itemType === 'prompt') {
     const { data, error } = await supa
       .from('image_prompts')
-      .select('id, name, prompt, notes, updated_at, reference_asset_ids, use_reference_images, color_codes')
+      .select('id, name, prompt, notes, updated_at, reference_asset_ids, use_reference_images, color_codes, project_ids')
       .eq('id', itemId)
       .single()
     if (error) throw error
@@ -189,6 +195,7 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
       reference_asset_ids?: string[]
       use_reference_images?: boolean
       color_codes?: string[]
+      project_ids?: string[]
     }
     // The cover images travel with the prompt — they ARE how the
     // recipient sees what this prompt produces.
@@ -218,6 +225,25 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
           }
         })
     }
+    // The project tags travel as descriptors (name/slug/handle); the
+    // recipient re-matches them to their own projects on accept.
+    const tagIds = d.project_ids ?? []
+    let tagProjects: NonNullable<SharePromptPayload['projects']> = []
+    if (tagIds.length > 0) {
+      const { data: tagRows } = await supa
+        .from('projects')
+        .select('id, name, slug, x_username')
+        .in('id', tagIds)
+      const byId = new Map(
+        ((tagRows ?? []) as Array<{ id: string; name: string; slug: string; x_username: string | null }>).map(
+          (pr) => [pr.id, pr],
+        ),
+      )
+      tagProjects = tagIds
+        .map((id) => byId.get(id))
+        .filter((pr): pr is NonNullable<typeof pr> => !!pr)
+        .map((pr) => ({ name: pr.name, slug: pr.slug, x_username: pr.x_username }))
+    }
     return {
       name: d.name,
       prompt: d.prompt,
@@ -227,6 +253,7 @@ export async function buildPayload(itemType: ShareItemType, itemId: string): Pro
       reference_assets: referenceAssets,
       use_reference_images: d.use_reference_images ?? false,
       color_codes: d.color_codes ?? [],
+      projects: tagProjects,
     } as Record<string, unknown>
   }
 
@@ -680,6 +707,44 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
         existingProjects = hit.project_ids ?? []
       }
     }
+    // The prompt's project tags travel too: resolve each source project
+    // to the recipient's own matching project (handle → slug → name). If
+    // they don't have that project yet, create a minimal shell so the
+    // tag survives instead of silently vanishing.
+    const tagIds: string[] = []
+    for (const sp of p.projects ?? []) {
+      let localId: string | null = null
+      if (sp.x_username) {
+        const { data } = await supa.from('projects').select('id').eq('user_id', userId).eq('x_username', sp.x_username).limit(1)
+        localId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+      }
+      if (!localId && sp.slug) {
+        const { data } = await supa.from('projects').select('id').eq('user_id', userId).eq('slug', sp.slug).limit(1)
+        localId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+      }
+      if (!localId && sp.name) {
+        const { data } = await supa.from('projects').select('id').eq('user_id', userId).eq('name', sp.name).limit(1)
+        localId = ((data ?? [])[0] as { id: string } | undefined)?.id ?? null
+      }
+      if (!localId) {
+        const slug = await uniqueSlug(userId, sp.slug || sp.name, sp.name)
+        const { data, error: cErr } = await supa
+          .from('projects')
+          .insert({
+            user_id: userId,
+            name: sp.name,
+            slug,
+            x_username: sp.x_username || null,
+            description: 'Created from a shared prompt’s project tag.',
+          })
+          .select('id')
+          .single()
+        if (cErr) throw cErr
+        localId = (data as { id: string }).id
+      }
+      if (localId && !tagIds.includes(localId)) tagIds.push(localId)
+    }
+
     // Covers travel with the prompt: recreate their asset rows in the
     // recipient's account and point the prompt at the local copies.
     // Home for them: the local project matching the cover's source
@@ -741,12 +806,14 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
                 color_codes: p.color_codes ?? [],
               }
             : {}),
+          // Tags merge: shared tags are added, the recipient's own
+          // existing tags on this prompt are never removed.
+          project_ids: [...new Set([...existingProjects, ...tagIds])],
         })
         .eq('id', existingId)
       if (error) throw error
       await recordImport(userId, share, { localId: existingId, sourceUpdatedAt: p.source_updated_at })
       result = { kind: 'prompt', promptId: existingId, updated: true }
-      void existingProjects
     } else {
       const { data, error } = await supa
         .from('image_prompts')
@@ -756,7 +823,7 @@ async function runAccept(share: Share, targetProjectId: string | null): Promise<
           prompt: p.prompt,
           notes: p.notes ?? '',
           reference_asset_ids: localRefIds ?? [],
-          project_ids: [],
+          project_ids: tagIds,
           use_reference_images: p.use_reference_images ?? false,
           color_codes: p.color_codes ?? [],
         })
