@@ -94,7 +94,7 @@ export const POST_TYPE_HINT: Record<PostType, string> = {
   post: 'A single post.',
   thread: 'A thread of posts.',
   article: 'Title + long-form body.',
-  artwork: 'Media first, then a caption.',
+  artwork: 'Media first — caption optional.',
   quote: 'A quote, who said it, your take.',
 }
 

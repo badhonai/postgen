@@ -26,13 +26,14 @@ export type PostFilters = {
   status?: PostStatus | ''
   category?: PostCategory | ''
   type?: PostType | ''
+  postTypes?: PostType[]
   tag?: string
 }
 
 export function usePosts(filters: PostFilters = {}) {
-  const { projectId, search, status, category, type, tag } = filters
+  const { projectId, search, status, category, type, postTypes, tag } = filters
   return useQuery({
-    queryKey: ['posts', { projectId, search, status, category, type, tag }],
+    queryKey: ['posts', { projectId, search, status, category, type, postTypes, tag }],
     enabled: !!supabase,
     queryFn: async (): Promise<PostListItem[]> => {
       let q = supabase!
@@ -47,6 +48,7 @@ export function usePosts(filters: PostFilters = {}) {
       if (status) q = q.eq('status', status)
       if (category) q = q.eq('category', category)
       if (type) q = q.eq('post_type', type)
+      else if (postTypes && postTypes.length > 0) q = q.in('post_type', postTypes)
       if (tag) {
         const { data: tagRow, error: tagErr } = await supabase!
           .from('tags')

@@ -74,7 +74,7 @@ const ICON_STROKE = {
   strokeLinejoin: 'round',
 } as const
 
-type Tab = 'about' | 'posts' | 'media'
+type Tab = 'about' | 'posts' | 'artworks' | 'media'
 
 export default function ProjectDetailPage() {
   const { id = '' } = useParams()
@@ -113,8 +113,13 @@ export default function ProjectDetailPage() {
     status: statusTab === 'all' ? '' : statusTab,
     category,
     type,
+    // Artworks are gallery items, not posts to publish: they live in their
+    // own tab below and stay out of the normal post lists and counts.
+    postTypes: (type ? [type] : POST_TYPES).filter((t) => t !== 'artwork'),
   }
   const posts = usePosts(filters)
+  const artworkQuery = usePosts({ projectId: id, type: 'artwork' })
+  const artworks = artworkQuery.data ?? []
 
   const visiblePosts = posts.data ?? []
   const visibleIds = visiblePosts.map((p) => p.id)
@@ -325,7 +330,7 @@ export default function ProjectDetailPage() {
 
         {/* ── tabs ── */}
         <div className="pg-glass mt-5 flex gap-1 rounded-full p-1.5">
-          {([['posts', 'Posts'], ['media', 'Media'], ['about', 'About']] as Array<[Tab, string]>).map(
+          {([['posts', 'Posts'], ['artworks', 'Artworks'], ['media', 'Media'], ['about', 'About']] as Array<[Tab, string]>).map(
             ([id2, label]) => (
               <button
                 key={id2}
@@ -755,6 +760,61 @@ export default function ProjectDetailPage() {
           </div>
         ) : null}
 
+        {/* ── Artworks ── */}
+        {tab === 'artworks' ? (
+          <div className="mt-5 space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <p className="min-w-0 flex-1 text-[13px] font-bold text-ink-soft">
+                {artworks.length} artwork{artworks.length === 1 ? '' : 's'} in this project
+              </p>
+              <Link
+                to={`/artworks?project=${p.id}`}
+                className="shrink-0 rounded-full bg-ink px-3.5 py-2 text-[12px] font-bold text-white transition active:scale-95"
+              >
+                + New artwork
+              </Link>
+            </div>
+            {artworkQuery.isPending ? (
+              <div className="space-y-2.5">
+                <Skeleton className="h-44 w-full rounded-[22px]" />
+                <Skeleton className="h-44 w-full rounded-[22px]" />
+              </div>
+            ) : artworkQuery.error ? (
+              <ErrorBox message={artworkQuery.error instanceof Error ? artworkQuery.error.message : 'Failed to load artworks'} />
+            ) : artworks.length === 0 ? (
+              <div className="pg-glass rounded-[24px] p-7 text-center">
+                <p className="text-sm font-semibold text-ink-soft">No artworks yet for this project.</p>
+                <Link
+                  to={`/artworks?project=${p.id}`}
+                  className="mt-4 inline-block rounded-full bg-ink px-4 py-2.5 text-[13px] font-bold text-white"
+                >
+                  Create artwork
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5">
+                {artworks.map((artwork) => (
+                  <Link
+                    key={artwork.id}
+                    to={`/posts/${artwork.id}?from=artwork`}
+                    className="pg-glass-strong pg-cv overflow-hidden rounded-[20px] transition active:scale-[0.98]"
+                  >
+                    <PostCover cover={artwork.cover} logo={p.logo} className="w-full" />
+                    <div className="p-2.5">
+                      <p className="truncate text-[13px] font-bold text-ink">
+                        {artwork.title || artwork.content_text || 'Untitled artwork'}
+                      </p>
+                      <p className="mt-0.5 text-[11px] font-bold text-ink-soft">
+                        {artwork.content_text && artwork.content_text !== artwork.title ? 'Caption saved' : 'No caption'}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+
         {/* ── Media ── */}
         {tab === 'media' ? (
           <div className="mt-5">
@@ -915,15 +975,17 @@ function PostRow({
 function PostCover({
   cover,
   logo,
+  className = 'w-[104px] rounded-[14px]',
 }: {
   cover?: PostListItem['cover']
   logo?: { r2_key: string } | null
+  className?: string
 }) {
   const key = cover?.r2_key ?? logo?.r2_key ?? null
   const url = useAssetUrl(key)
   const [broken, setBroken] = useState(false)
   return (
-    <div className="relative aspect-video w-[104px] shrink-0 overflow-hidden rounded-[14px] bg-white/50">
+    <div className={`relative aspect-video shrink-0 overflow-hidden bg-white/50 ${className}`}>
       {url.data && !broken ? (
         <img
           src={url.data}

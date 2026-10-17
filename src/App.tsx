@@ -14,6 +14,7 @@ const PostEditorPage = lazy(() => import('./pages/PostEditorPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const PromptLibraryPage = lazy(() => import('./pages/PromptLibraryPage'))
+const ArtworksPage = lazy(() => import('./pages/ArtworksPage'))
 const SharesPage = lazy(() => import('./pages/SharesPage'))
 const CommandPalette = lazy(() => import('./components/CommandPalette'))
 
@@ -72,6 +73,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <PromptLibraryPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/Artworks"
+            element={
+              <RequireAuth>
+                <ArtworksPage />
               </RequireAuth>
             }
           />

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { checkDuplicates, hasBlockingDuplicates, type DupCheck, type SimilarPost } from '../lib/dedupe'
 import { projectBlacklist } from '../lib/blacklist'
-import { numberedTweets } from '../lib/text'
+import { numberedTweets, sha256Hex } from '../lib/text'
 import {
   useDeletePost,
   usePost,
@@ -13,7 +13,7 @@ import {
 } from '../features/posts/api'
 import { useProject } from '../features/projects/api'
 import { getSignedUrl } from '../lib/media'
-import { STATUS_DOT, STATUS_LABEL, type Asset, type PostStatus } from '../lib/types'
+import { POST_TYPES, STATUS_DOT, STATUS_LABEL, type Asset, type PostStatus } from '../lib/types'
 import PostForm from '../features/posts/PostForm'
 import ShareDialog from '../features/shares/ShareDialog'
 import DuplicateDialog from '../features/posts/DuplicateDialog'
@@ -41,7 +41,7 @@ const STATUS_ACTIONS: Record<PostStatus, Array<{ to: PostStatus; label: string; 
 }
 
 /** Status tabs a post row can hand over as `?from=` — Back returns there. */
-const FROM_TABS = ['idea', 'draft', 'approved', 'scheduled', 'published', 'archived', 'all']
+const FROM_TABS = ['idea', 'draft', 'approved', 'scheduled', 'published', 'archived', 'all', 'artwork']
 
 export default function PostEditorPage() {
   const { id } = useParams()
@@ -89,9 +89,11 @@ export default function PostEditorPage() {
   const fromTab = params.get('from')
   const editorHref = (pid: string) => (fromTab ? `/posts/${pid}?from=${fromTab}` : `/posts/${pid}`)
   const backTarget = projectId
-    ? fromTab && FROM_TABS.includes(fromTab)
-      ? `/projects/${projectId}?status=${fromTab}`
-      : `/projects/${projectId}`
+    ? fromTab === 'artwork'
+      ? `/artworks?project=${projectId}`
+      : fromTab && FROM_TABS.includes(fromTab)
+        ? `/projects/${projectId}?status=${fromTab}`
+        : `/projects/${projectId}`
     : '/dashboard'
   const goBack = () => {
     if (fromTab) navigate(backTarget)
@@ -99,7 +101,14 @@ export default function PostEditorPage() {
     else navigate(backTarget)
   }
 
-  const siblings = usePosts(!isNew && projectId ? { projectId } : {})
+  const isArtworkPost = postData?.post_type === 'artwork'
+  const siblings = usePosts(
+    !isNew && projectId
+      ? isArtworkPost
+        ? { projectId, type: 'artwork' }
+        : { projectId, postTypes: POST_TYPES.filter((t) => t !== 'artwork') }
+      : {},
+  )
   const siblingList = siblings.data ?? []
   const siblingIndex = !isNew ? siblingList.findIndex((s) => s.id === editId) : -1
   const prevPost = siblingIndex > 0 ? siblingList[siblingIndex - 1] : null
@@ -140,6 +149,7 @@ export default function PostEditorPage() {
   const runAutosave = async () => {
     const snap = latestRef.current
     if (!snap?.postId || dupCheck || savePost.isPending) return
+    if (snap.type === 'artwork') return
     if (snap.status !== 'idea' && snap.status !== 'draft') return
     if (serialize(snap) === lastSavedRef.current) return
     const tweets = snap.tweets.map((t) => t.trim()).filter(Boolean)
@@ -269,7 +279,7 @@ export default function PostEditorPage() {
     )
   }
 
-  const statusActions = postData ? (STATUS_ACTIONS[postData.status] ?? []) : []
+  const statusActions = postData && !isArtworkPost ? (STATUS_ACTIONS[postData.status] ?? []) : []
 
   const persist = async (input: SavePostInput, check: DupCheck) => {
     const savedId = await savePost.mutateAsync({
@@ -284,6 +294,25 @@ export default function PostEditorPage() {
 
   const handleSubmit = async (input: SavePostInput) => {
     setFormError(null)
+    // Artworks: caption optional, no no-repeat gate — the image is the
+    // identity. Save as one (possibly empty) anchor block so media sticks.
+    if (input.type === 'artwork') {
+      const caption = input.tweets.map((t) => t.trim()).filter(Boolean)[0] ?? ''
+      try {
+        const savedId = await savePost.mutateAsync({
+          ...input,
+          status: 'draft',
+          tweets: [caption],
+          contentText: caption,
+          contentHash: caption ? await sha256Hex(caption) : '',
+        })
+        lastSavedRef.current = serialize({ ...input, tweets: [caption] })
+        if (isNew) navigate(editorHref(savedId), { replace: true })
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : 'Failed to save artwork')
+      }
+      return
+    }
     const tweets = input.tweets.map((t) => t.trim()).filter(Boolean)
     if (tweets.length === 0) {
       setFormError('Add at least one tweet.')
@@ -353,6 +382,27 @@ export default function PostEditorPage() {
     }
   }
 
+  /** Download the artwork's first image at full size. */
+  const downloadArtwork = async () => {
+    const { media } = shareContent()
+    const asset = media.find((a) => a.mime_type.startsWith('image/')) ?? media[0]
+    if (!asset) return
+    try {
+      const url = await getSignedUrl(asset.r2_key)
+      const blob = await (await fetch(url)).blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = asset.filename || 'artwork.png'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000)
+    } catch {
+      setFormError('Could not download this image.')
+    }
+  }
+
   /**
    * Send the post to X. X's intent URL carries text only, so on phones we use
    * the share sheet instead: it accepts the image files alongside the text, so
@@ -412,13 +462,15 @@ export default function PostEditorPage() {
             </button>
             <div className="min-w-0 flex-1">
               <h1 className="pg-title truncate text-2xl text-ink">
-                {isNew ? 'New post' : 'Edit post'}
+                {isArtworkPost ? 'Edit artwork' : isNew ? 'New post' : 'Edit post'}
               </h1>
               <p className="truncate text-xs font-bold text-ink-soft">
                 {isNew
                   ? 'Repeats are blocked — every save is checked.'
                   : postData
-                    ? `${postData.post_tweets.length} tweet${postData.post_tweets.length > 1 ? 's' : ''} · via ${postData.created_via}${autosavedAt ? ` · autosaved ${new Date(autosavedAt).toLocaleTimeString()}` : ''}`
+                    ? isArtworkPost
+                      ? `Artwork · via ${postData.created_via}`
+                      : `${postData.post_tweets.length} tweet${postData.post_tweets.length > 1 ? 's' : ''} · via ${postData.created_via}${autosavedAt ? ` · autosaved ${new Date(autosavedAt).toLocaleTimeString()}` : ''}`
                     : ''}
               </p>
             </div>
@@ -461,7 +513,7 @@ export default function PostEditorPage() {
                         disabled={deletePost.isPending}
                         onClick={() => {
                           setMenuOpen(false)
-                          if (!window.confirm('Delete this post? This cannot be undone.')) return
+                          if (!window.confirm(isArtworkPost ? 'Delete this artwork? This cannot be undone.' : 'Delete this post? This cannot be undone.')) return
                           deletePost.mutate(postData.id, {
                             onSuccess: () =>
                               navigate(projectId ? `/projects/${projectId}` : '/dashboard', {
@@ -483,7 +535,7 @@ export default function PostEditorPage() {
         </header>
 
         {/* ── status bar: current state + the one-tap move for it ── */}
-        {!isNew && postData ? (
+        {!isNew && postData && !isArtworkPost ? (
           <div className="mt-4">
             <div className="flex items-center gap-2">
               <span className="pg-glass flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2.5 text-xs font-extrabold text-ink">
@@ -572,14 +624,24 @@ export default function PostEditorPage() {
           <div className="pg-glass-strong rounded-[26px] p-2 shadow-[0_18px_40px_rgba(70,60,130,0.22)]">
             {!isNew && postData ? (
               <div className="flex gap-2">
-                <Button
-                  variant="accent"
-                  className="flex-1 py-3 text-[15px]"
-                  disabled={sharing}
-                  onClick={() => void shareToX()}
-                >
-                  {sharing ? 'Opening…' : 'Post on X'}
-                </Button>
+                {isArtworkPost ? (
+                  <Button
+                    variant="accent"
+                    className="flex-1 py-3 text-[15px]"
+                    onClick={() => void downloadArtwork()}
+                  >
+                    Download image
+                  </Button>
+                ) : (
+                  <Button
+                    variant="accent"
+                    className="flex-1 py-3 text-[15px]"
+                    disabled={sharing}
+                    onClick={() => void shareToX()}
+                  >
+                    {sharing ? 'Opening…' : 'Post on X'}
+                  </Button>
+                )}
                 <Button
                   className="flex-1 py-3 text-[15px]"
                   disabled={savePost.isPending}
@@ -598,7 +660,7 @@ export default function PostEditorPage() {
                   if (latestRef.current) void handleSubmit(latestRef.current)
                 }}
               >
-                {savePost.isPending ? 'Saving…' : 'Save post'}
+                {savePost.isPending ? 'Saving…' : initial.type === 'artwork' ? 'Save artwork' : 'Save post'}
               </Button>
             )}
             {!isNew && postData ? (

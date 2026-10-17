@@ -69,11 +69,13 @@ function CardHead({
           {badge}
         </span>
       ) : null}
-      <span
-        className={`h-2.5 w-2.5 shrink-0 rounded-full ${badge ? '' : 'ml-auto'}`}
-        style={{ background: STATUS_DOT[status] ?? '#a09cc4' }}
-        title={status}
-      />
+      {badge !== 'Artwork' ? (
+        <span
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ${badge ? '' : 'ml-auto'}`}
+          style={{ background: STATUS_DOT[status] ?? '#a09cc4' }}
+          title={status}
+        />
+      ) : null}
     </div>
   )
 }
@@ -272,7 +274,8 @@ export default function PostForm({
         >
           <span className="shrink-0 text-[13px] font-extrabold text-ink">Post details</span>
           <span className="min-w-0 flex-1 truncate text-xs font-bold text-ink-soft">
-            {POST_TYPE_LABEL[type]} · {CATEGORY_LABELS[category]} · {STATUS_LABEL[status]}
+            {POST_TYPE_LABEL[type]} · {CATEGORY_LABELS[category]}
+            {type !== 'artwork' ? ` · ${STATUS_LABEL[status]}` : ''}
             {csvToList(tagNames).length > 0 ? ` · ${csvToList(tagNames).length} tag${csvToList(tagNames).length > 1 ? 's' : ''}` : ''}
           </span>
           <svg
@@ -323,13 +326,17 @@ export default function PostForm({
                   </option>
                 ))}
               </Select>
-              <Select value={status} onChange={(e) => setStatus(e.target.value as PostStatus)} className="flex-1 py-2">
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s[0].toUpperCase() + s.slice(1)}
-                  </option>
-                ))}
-              </Select>
+              {/* Artworks are library items (Save / Download / Delete) — no
+                  draft→approved→published flow, so no status field. */}
+              {type !== 'artwork' ? (
+                <Select value={status} onChange={(e) => setStatus(e.target.value as PostStatus)} className="flex-1 py-2">
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s[0].toUpperCase() + s.slice(1)}
+                    </option>
+                  ))}
+                </Select>
+              ) : null}
             </div>
             <Input
               value={tagNames}
@@ -459,7 +466,7 @@ export default function PostForm({
             value={current}
             onChange={(e) => setAt(focus, e.target.value)}
             rows={3}
-            placeholder="Caption…"
+            placeholder="Caption (optional)…"
             className="mt-3 w-full resize-none bg-transparent text-[15px] leading-relaxed font-semibold text-ink placeholder:text-ink-soft/60 focus:outline-none"
           />
           <div className="mt-3 flex items-center gap-1.5 border-t border-white/50 pt-3">{counter}</div>
@@ -573,7 +580,13 @@ export default function PostForm({
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" disabled={busy} className="flex-1">
-          {busy ? 'Saving…' : status === 'draft' ? 'Save draft' : 'Save post'}
+          {busy
+            ? 'Saving…'
+            : type === 'artwork'
+              ? 'Save artwork'
+              : status === 'draft'
+                ? 'Save draft'
+                : 'Save post'}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
           Cancel

@@ -471,8 +471,11 @@ async function importPost(
   assetIds: Map<string, string>,
   existing?: { id: string; status: PostStatus } | null,
 ): Promise<{ postId: string | null; skipped: boolean }> {
-  const tweets = payload.tweets.map((t) => t.trim()).filter(Boolean)
-  if (tweets.length === 0) return { postId: null, skipped: true }
+  const cleanedTweets = payload.tweets.map((t) => t.trim()).filter(Boolean)
+  // Artwork captions are optional: keep one (possibly empty) anchor block
+  // so the shared image still has a post_tweets row to attach to.
+  const tweets = payload.type === 'artwork' ? [cleanedTweets[0] ?? ''] : cleanedTweets
+  if (payload.type !== 'artwork' && tweets.length === 0) return { postId: null, skipped: true }
 
   let contentText = threadToContentText(tweets)
   if (payload.type === 'quote') {
@@ -482,16 +485,18 @@ async function importPost(
     if (extra) contentText = `${contentText}\n\n${extra}`
   }
   const contentHash = await sha256Hex(contentText)
-  if (existing) {
-    // Updating a copy: the post may match ITSELF — exclude it from the
-    // exact-duplicate check, but still refuse to clone another post.
-    const { data: dup } = await supabase!.rpc('find_duplicate_post', {
-      p_content_hash: contentHash,
-      p_exclude_post_id: existing.id,
-    })
-    if (dup) return { postId: null, skipped: true }
-  } else if (await findExactDuplicate(contentHash)) {
-    return { postId: null, skipped: true }
+  if (contentText) {
+    if (existing) {
+      // Updating a copy: the post may match ITSELF — exclude it from the
+      // exact-duplicate check, but still refuse to clone another post.
+      const { data: dup } = await supabase!.rpc('find_duplicate_post', {
+        p_content_hash: contentHash,
+        p_exclude_post_id: existing.id,
+      })
+      if (dup) return { postId: null, skipped: true }
+    } else if (await findExactDuplicate(contentHash)) {
+      return { postId: null, skipped: true }
+    }
   }
 
   const counters: Record<number, number> = {}

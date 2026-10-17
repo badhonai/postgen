@@ -78,6 +78,7 @@ export default function SharesPage() {
   const received = useReceivedShares()
   const sent = useSentShares()
   const respond = useRespondShare()
+  const respondingBusy = respond.isPending
   const imports = useShareImports()
   const importBySource = new Map(
     (imports.data ?? []).map((i) => [`${i.sender_id}:${i.item_type}:${i.source_item_id}`, i]),
@@ -86,6 +87,7 @@ export default function SharesPage() {
   const projects = useProjects()
   const [destinations, setDestinations] = useState<Record<string, string>>({})
   const [acceptError, setAcceptError] = useState<string | null>(null)
+  const [acceptAllProgress, setAcceptAllProgress] = useState<{ done: number; total: number } | null>(null)
 
   const receivedList = received.data ?? []
   const sentList = sent.data ?? []
@@ -97,6 +99,44 @@ export default function SharesPage() {
       await accept.mutateAsync({ share, targetProjectId: destinations[share.id] || null })
     } catch (e) {
       setAcceptError(e instanceof Error ? e.message : 'Could not accept this share')
+    }
+  }
+
+  const acceptingAll = acceptAllProgress !== null
+
+  /**
+   * Accept every pending received share, one at a time. Projects go first
+   * so shared posts/prompts that belong with them land in the right home;
+   * the import logic is duplicate-safe either way.
+   */
+  const doAcceptAll = async () => {
+    const pending = receivedList.filter((share) => share.status === 'pending')
+    if (pending.length === 0 || acceptingAll) return
+    const order: Record<ShareItemType, number> = { project: 0, post: 1, prompt: 2 }
+    const queue = [...pending].sort((a, b) => order[a.item_type] - order[b.item_type])
+
+    setAcceptError(null)
+    setAcceptAllProgress({ done: 0, total: queue.length })
+    const failures: string[] = []
+    try {
+      for (const [index, share] of queue.entries()) {
+        try {
+          await accept.mutateAsync({ share, targetProjectId: destinations[share.id] || null })
+        } catch (e) {
+          failures.push(
+            `${share.title || 'Untitled'}: ${e instanceof Error ? e.message : 'could not accept'}`,
+          )
+        } finally {
+          setAcceptAllProgress({ done: index + 1, total: queue.length })
+        }
+      }
+    } finally {
+      setAcceptAllProgress(null)
+      if (failures.length > 0) {
+        setAcceptError(
+          `Accepted ${queue.length - failures.length} of ${queue.length}. Could not accept: ${failures.join(' · ')}`,
+        )
+      }
     }
   }
 
@@ -151,6 +191,29 @@ export default function SharesPage() {
 
         {tab === 'received' ? (
           <section className="mt-5 space-y-3">
+            {pendingCount > 0 ? (
+              <div className="pg-glass-strong flex items-center gap-3 rounded-[24px] p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-extrabold text-ink">
+                    {pendingCount} item{pendingCount === 1 ? '' : 's'} waiting
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-ink-soft">
+                    {acceptingAll
+                      ? `Accepting ${acceptAllProgress.done} of ${acceptAllProgress.total}…`
+                      : 'Bring everything in at once. Existing items are updated, never duplicated.'}
+                  </p>
+                </div>
+                <Button
+                  className="shrink-0 py-2.5"
+                  disabled={accept.isPending || respondingBusy}
+                  onClick={() => void doAcceptAll()}
+                >
+                  {acceptingAll
+                    ? `Accepting ${acceptAllProgress.done}/${acceptAllProgress.total}…`
+                    : `Accept all${pendingCount > 1 ? ` (${pendingCount})` : ''}`}
+                </Button>
+              </div>
+            ) : null}
             {received.isPending ? (
               <Spinner />
             ) : received.error ? (
@@ -226,7 +289,7 @@ export default function SharesPage() {
                         <div className="mt-3 flex gap-2">
                           <Button
                             className="flex-1 py-2.5"
-                            disabled={accept.isPending}
+                            disabled={accept.isPending || acceptingAll}
                             onClick={() => void doAccept(share)}
                           >
                             {accept.isPending ? 'Accepting…' : isUpdate ? 'Update my copy' : 'Accept'}
@@ -234,7 +297,7 @@ export default function SharesPage() {
                           <Button
                             variant="ghost"
                             className="py-2.5"
-                            disabled={respond.isPending}
+                            disabled={respond.isPending || acceptingAll}
                             onClick={() => respond.mutate({ share, action: 'declined' })}
                           >
                             Decline

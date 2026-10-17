@@ -46,7 +46,7 @@ const TOOLS = [
         type: {
           type: 'string',
           enum: ['post', 'thread', 'article', 'artwork', 'quote'],
-          description: 'post = one post, thread = the tweets array, article = long-form body, artwork = media + caption, quote = quote + source + comment',
+          description: 'post = one post, thread = the tweets array, article = long-form body, artwork = media + optional caption, quote = quote + source + comment',
         },
         meta: {
           type: 'object',
@@ -59,7 +59,7 @@ const TOOLS = [
         tweets: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Thread tweets in order (max 280 weighted chars each)',
+          description: 'Content blocks in order. Required for post/thread/article/quote; for artwork it is one optional caption and may be omitted or [""] when there is no caption.',
         },
         tag_names: { type: 'array', items: { type: 'string' } },
         media: {
@@ -76,7 +76,7 @@ const TOOLS = [
         },
         allow_similar: { type: 'boolean', default: false },
       },
-      required: ['project_id', 'tweets'],
+      required: ['project_id'],
       additionalProperties: false,
     },
   },
@@ -101,7 +101,11 @@ const TOOLS = [
             comment: { type: 'string' },
           },
         },
-        tweets: { type: 'array', items: { type: 'string' } },
+        tweets: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Replacement content blocks. For artwork, use [""] or [] to clear the optional caption.',
+        },
         tag_names: { type: 'array', items: { type: 'string' } },
         media: {
           type: 'array',

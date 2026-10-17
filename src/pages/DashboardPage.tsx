@@ -11,6 +11,7 @@ import {
   type ProjectInput,
 } from '../features/projects/api'
 import {
+  ArtworksTile,
   HeroTile,
   PromptLibraryTile,
   SmallTile,
@@ -97,7 +98,7 @@ export default function DashboardPage() {
     queryFn: async (): Promise<PostSummary[]> => {
       const { data, error } = await supabase!
         .from('posts')
-        .select('id, project_id, title, status')
+        .select('id, project_id, title, status, post_type')
         .order('created_at', { ascending: false })
       if (error) throw error
       return data as PostSummary[]
@@ -107,12 +108,16 @@ export default function DashboardPage() {
   const postsByProject = useMemo(() => {
     const map = new Map<string, PostSummary[]>()
     for (const s of summaries.data ?? []) {
+      // Artworks get their own gallery + dashboard tile; they are not
+      // posts and must not inflate post/draft/approved counts.
+      if (s.post_type === 'artwork') continue
       const list = map.get(s.project_id) ?? []
       list.push(s)
       map.set(s.project_id, list)
     }
     return map
   }, [summaries.data])
+  const artworkCount = (summaries.data ?? []).filter((s) => s.post_type === 'artwork').length
 
   const all = projects.data ?? []
   const visible =
@@ -268,6 +273,7 @@ export default function DashboardPage() {
               />
               <div className="grid grid-cols-2 gap-3.5">
                 <PromptLibraryTile promptCount={promptCount} />
+                <ArtworksTile artworkCount={artworkCount} />
                 {rest.map((p, i) => {
                   const projectPosts = postsByProject.get(p.id) ?? []
                   const counts = statusCounts(projectPosts)

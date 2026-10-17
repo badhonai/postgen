@@ -389,6 +389,21 @@ function assertTweets(tweets: unknown): string[] {
   return tweets.map((t) => String(t).trim()).filter(Boolean)
 }
 
+/**
+ * Artworks are library items, not tweets: the caption is optional.
+ * Normalizes artwork input to exactly one block — the caption, or a
+ * single empty string when there is no caption (the empty row anchors
+ * the artwork's media). Other types go through assertTweets untouched.
+ */
+function artworkTweets(tweets: unknown): string[] {
+  if (tweets === undefined || tweets === null) return ['']
+  if (!Array.isArray(tweets)) {
+    throw new AgentError(400, { error: 'tweets must be an array of strings' })
+  }
+  const cleaned = tweets.map((t) => String(t).trim()).filter(Boolean)
+  return [cleaned[0] ?? '']
+}
+
 /** Runs the no-repeat check; throws 409 unless allowSimilar. */
 async function assertNoRepeat(
   env: Env,
@@ -399,6 +414,8 @@ async function assertNoRepeat(
   const base = threadToContentText(tweets)
   const contentText = opts.extraText?.trim() ? `${base}\n\n${opts.extraText.trim()}` : base
   const contentHash = await sha256Hex(contentText)
+  // No text at all (a captionless artwork) — nothing to repeat.
+  if (!contentText.trim()) return { contentText, contentHash }
   const client = db(env)
 
   const { data: dup, error: dupErr } = await client.rpc('find_duplicate_post', {
@@ -521,7 +538,7 @@ export async function createDraft(
 ) {
   const status = assertDraftsOnly(input.status)
   const type = assertPostType(input.type)
-  const tweets = assertTweets(input.tweets)
+  const tweets = type === 'artwork' ? artworkTweets(input.tweets) : assertTweets(input.tweets)
   if (!input.projectId) throw new AgentError(400, { error: 'project_id is required' })
 
   const media = assertMedia(input.media)
@@ -580,7 +597,11 @@ export async function updateDraft(
   // append_to_thread (which only sends tweets) silently turned every
   // article/artwork/quote into a plain post.
   const type = assertPostType(patch.type ?? (existing as { post_type?: string }).post_type ?? 'post')
-  const tweets = patch.tweets ? assertTweets(patch.tweets) : (existing.tweets as string[])
+  const tweets = patch.tweets
+    ? type === 'artwork'
+      ? artworkTweets(patch.tweets)
+      : assertTweets(patch.tweets)
+    : (existing.tweets as string[])
   const meta = patch.meta ?? ((existing.meta ?? {}) as Record<string, unknown>)
   const media = assertMedia(patch.media)
   await assertOwnedAssets(env, auth.userId, media)

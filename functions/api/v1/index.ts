@@ -75,7 +75,7 @@ const spec = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['project_id', 'tweets'],
+                required: ['project_id'],
                 properties: {
                   project_id: { type: 'string' },
                   title: { type: 'string' },
@@ -84,7 +84,27 @@ const spec = {
                     enum: ['promotional', 'educational', 'announcement', 'other'],
                   },
                   status: { type: 'string', enum: ['idea', 'draft'] },
-                  tweets: { type: 'array', items: { type: 'string' } },
+                  type: {
+                    type: 'string',
+                    enum: ['post', 'thread', 'article', 'artwork', 'quote'],
+                    description: 'For artwork, tweets is one optional caption and may be omitted or [""].',
+                  },
+                  tweets: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Content blocks. Required except for captionless artwork.',
+                  },
+                  media: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        asset_id: { type: 'string' },
+                        tweet_position: { type: 'integer', minimum: 1 },
+                      },
+                      required: ['asset_id'],
+                    },
+                  },
                   tag_names: { type: 'array', items: { type: 'string' } },
                   allow_similar: { type: 'boolean', default: false },
                 },
