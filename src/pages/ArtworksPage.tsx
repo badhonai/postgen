@@ -40,6 +40,7 @@ export default function ArtworksPage() {
     ''
 
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [filterProject, setFilterProject] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [adding, setAdding] = useState(0)
@@ -52,15 +53,25 @@ export default function ArtworksPage() {
     return (id: string) => map.get(id) ?? 'Project'
   }, [projectList])
 
+  /** Projects that have at least one artwork — the filter chips. */
+  const filterProjects = useMemo(() => {
+    const ids = [...new Set(artworks.map((a) => a.project_id))]
+    const known = projectList.filter((p) => ids.includes(p.id))
+    const knownIds = new Set(known.map((p) => p.id))
+    const extra = ids.filter((id) => !knownIds.has(id)).map((id) => ({ id, name: projectName(id) }) as (typeof projectList)[number])
+    return [...known, ...extra]
+  }, [artworks, projectList, projectName])
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return artworks
-    return artworks.filter((a) =>
-      [a.title, a.content_text, projectName(a.project_id)].some((v) =>
+    return artworks.filter((a) => {
+      if (filterProject !== 'all' && a.project_id !== filterProject) return false
+      if (!q) return true
+      return [a.title, a.content_text, projectName(a.project_id)].some((v) =>
         (v ?? '').toLowerCase().includes(q),
-      ),
-    )
-  }, [artworks, projectName, search])
+      )
+    })
+  }, [artworks, projectName, search, filterProject])
 
   const grouped = useMemo(() => {
     const groups = new Map<string, PostListItem[]>()
@@ -234,6 +245,38 @@ export default function ArtworksPage() {
         {/* ── Gallery, grouped by project ── */}
         <div className="mt-6">
           <h2 className="pg-title text-lg text-ink">Your artworks</h2>
+          {filterProjects.length > 1 ? (
+            <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Filter by project">
+              <button
+                type="button"
+                onClick={() => setFilterProject('all')}
+                className={
+                  filterProject === 'all'
+                    ? 'rounded-full bg-ink px-3 py-1.5 text-[12px] font-bold text-white transition active:scale-95'
+                    : 'pg-glass rounded-full px-3 py-1.5 text-[12px] font-bold text-ink transition active:scale-95'
+                }
+              >
+                All projects ({artworks.length})
+              </button>
+              {filterProjects.map((fp) => {
+                const count = artworks.filter((a) => a.project_id === fp.id).length
+                return (
+                  <button
+                    key={fp.id}
+                    type="button"
+                    onClick={() => setFilterProject(fp.id)}
+                    className={
+                      filterProject === fp.id
+                        ? 'rounded-full bg-ink px-3 py-1.5 text-[12px] font-bold text-white transition active:scale-95'
+                        : 'pg-glass rounded-full px-3 py-1.5 text-[12px] font-bold text-ink transition active:scale-95'
+                    }
+                  >
+                    {fp.name} ({count})
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -258,7 +301,7 @@ export default function ArtworksPage() {
         ) : grouped.length === 0 ? (
           <div className="pg-glass mt-4 rounded-[24px] p-7 text-center">
             <p className="text-sm font-semibold text-ink-soft">
-              {search ? 'No artworks match that search.' : 'No artworks yet. Upload the first batch above.'}
+              {search || filterProject !== 'all' ? 'No artworks match that filter.' : 'No artworks yet. Upload the first batch above.'}
             </p>
           </div>
         ) : (
