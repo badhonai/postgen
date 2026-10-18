@@ -36,3 +36,13 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>,
 )
+
+// Register the PWA service worker (production only) so Chrome can offer
+// "Install app" and the installed app shell loads fast from home screen.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* installability is a bonus, never a blocker */
+    })
+  })
+}

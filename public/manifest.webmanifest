@@ -1,0 +1,33 @@
+{
+  "name": "PostGen — X Post Studio",
+  "short_name": "PostGen",
+  "description": "PostGen is the X/Twitter post studio for web3 projects: plan posts, manage media and artworks, share with your team, and let AI agents draft via REST and MCP.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#dfe9f7",
+  "theme_color": "#cfe0f7",
+  "categories": ["productivity", "social", "business"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
