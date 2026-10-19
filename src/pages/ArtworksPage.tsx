@@ -41,10 +41,9 @@ export default function ArtworksPage() {
     ''
 
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [kindFilter, setKindFilter] = useState<'all' | 'artwork' | 'reference' | 'character'>('all')
+  const [tab, setTab] = useState<'artwork' | 'creative'>('artwork')
   const [aiCount, setAiCount] = useState(10)
-  const [addKind, setAddKind] = useState<'artwork' | 'reference' | 'character'>('artwork')
-  const [aiMode, setAiMode] = useState<'reference' | 'creative' | 'character'>('reference')
+  const [addKind, setAddKind] = useState<'artwork' | 'character'>('artwork')
   const allAssets = useAllAssetsByProject()
   const [filterProject, setFilterProject] = useState<string>('all')
   const [search, setSearch] = useState('')
@@ -54,13 +53,16 @@ export default function ArtworksPage() {
   const addingRef = useRef(0)
 
   const artworks = useMemo(() => artworksQuery.data ?? [], [artworksQuery.data])
-  const kindOf = (a: PostListItem): 'artwork' | 'reference' | 'character' =>
-    a.meta?.artwork_kind === 'character' ? 'character' : a.meta?.artwork_kind === 'reference' ? 'reference' : 'artwork'
-  const isReference = (a: PostListItem) => kindOf(a) === 'reference'
+  const kindOf = (a: PostListItem): 'artwork' | 'character' | 'creative' =>
+    a.meta?.artwork_kind === 'creative'
+      ? 'creative'
+      : a.meta?.artwork_kind === 'character'
+        ? 'character'
+        : 'artwork'
   const isCharacter = (a: PostListItem) => kindOf(a) === 'character'
-  const referenceCount = useMemo(() => artworks.filter(isReference).length, [artworks])
-  const characterCount = useMemo(() => artworks.filter(isCharacter).length, [artworks])
-  const artworkCount = artworks.length - referenceCount - characterCount
+  const isCreative = (a: PostListItem) => kindOf(a) === 'creative'
+  const creativeCount = useMemo(() => artworks.filter(isCreative).length, [artworks])
+  const artworkTabCount = artworks.length - creativeCount
   /** This project's permanent character references — AI source material, never deleted. */
   const characters = useMemo(
     () => artworks.filter((a) => a.project_id === activeProjectId && isCharacter(a)),
@@ -73,19 +75,18 @@ export default function ArtworksPage() {
     const group = (allAssets.data ?? []).find((g) => g.projectId === activeProjectId)
     const assets = group?.assets ?? []
     return (
+      assets.find((a) => a.kind === 'logo' || a.kind === 'logo_icon') ??
       assets.find((a) => a.kind === 'logo_transparent_name') ??
-      assets.find((a) => a.kind === 'logo' || a.kind === 'logo_full' || a.kind === 'logo_icon') ??
+      assets.find((a) => a.kind === 'logo_full') ??
       null
     )
   }, [allAssets.data, activeProjectId])
 
   const activeProjectName = projectList.find((x) => x.id === activeProjectId)?.name ?? 'this project'
   const aiBrief =
-    aiMode === 'character'
-      ? `This is my character for ${activeProjectName}: ${characters.length > 0 ? characters.map((c) => `"${c.title || 'Character'}" (artwork ${c.id})`).join(', ') : 'the character reference(s) in this project Artworks'}. Attach the character reference image(s) as the generation reference and keep the character faithful (same face, outfit, colors and style). Make ${aiCount} UNIQUE images with my character: different scenes, poses, moods and compositions, every image clearly the same character. Save EACH image in PostGen Artworks as an artwork (post type "artwork", no artwork_kind meta) for project ${activeProjectId}. Never delete or replace the character reference(s).`
-      : aiMode === 'reference'
-        ? `Create a 1:1 artwork REFERENCE for ${activeProjectName}. Use the project transparent logo${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}")` : ''} as the project mark and attach it as the generation reference. Make a clean reference image an artist can work from: the mark clearly visible, simple background, no extra text. Save the result in PostGen Artworks as a Reference (post type "artwork", meta artwork_kind "reference") for project ${activeProjectId}.`
-        : `Create ANY creative 1:1 AI image for ${activeProjectName} with the project LOGO on something in the scene (a sign, wall, product, flag, jersey, sticker, screen). Use the project transparent logo${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}")` : ''} as the logo and attach it as the generation reference; place the logo naturally on the object, never as a corner watermark. Save the result in PostGen Artworks as an artwork (post type "artwork") for project ${activeProjectId}.`
+    tab === 'artwork'
+      ? `This is my character for ${activeProjectName}: ${characters.length > 0 ? characters.map((c) => `"${c.title || 'Character'}" (artwork ${c.id})`).join(', ') : 'the character reference(s) stored in this project'}. Attach the character reference image(s) as the generation reference and keep the character faithful (same face, outfit, colors and style). Make ${aiCount} UNIQUE images with my character: different scenes, poses, moods and compositions, every image clearly the same character. Save EACH image in PostGen Artworks as an artwork (post type "artwork", no artwork_kind meta) for project ${activeProjectId}. Never delete or replace the character reference(s).`
+      : `Make creative images for ${activeProjectName}. The user does not upload anything: use the project's own logo asset${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}", kind "${markAsset.kind}")` : ''} and attach it as the generation reference. Prefer the project transparent logo; if no transparent logo exists, use the transparent logo with name instead. Create ANY creative 1:1 AI image with the project logo on something in the scene (a sign, wall, product, flag, jersey, sticker, screen), the logo placed naturally on the object, never as a corner watermark. Save EACH image in PostGen Artworks as a creative image (post type "artwork", meta artwork_kind "creative") for project ${activeProjectId}.`
 
   const copyBrief = async () => {
     try {
@@ -100,26 +101,27 @@ export default function ArtworksPage() {
     return (id: string) => map.get(id) ?? 'Project'
   }, [projectList])
 
-  /** Projects that have at least one artwork — the filter chips. */
+  /** Projects that have creative images — the Creative tab filter chips. */
   const filterProjects = useMemo(() => {
-    const ids = [...new Set(artworks.map((a) => a.project_id))]
+    const ids = [...new Set(artworks.filter(isCreative).map((a) => a.project_id))]
     const known = projectList.filter((p) => ids.includes(p.id))
     const knownIds = new Set(known.map((p) => p.id))
     const extra = ids.filter((id) => !knownIds.has(id)).map((id) => ({ id, name: projectName(id) }) as (typeof projectList)[number])
     return [...known, ...extra]
   }, [artworks, projectList, projectName])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return artworks.filter((a) => {
-      if (kindFilter !== 'all' && kindOf(a) !== kindFilter) return false
-      if (filterProject !== 'all' && a.project_id !== filterProject) return false
+      if (tab === 'creative' ? !isCreative(a) : isCreative(a)) return false
+      if (tab === 'creative' && filterProject !== 'all' && a.project_id !== filterProject) return false
       if (!q) return true
       return [a.title, a.content_text, projectName(a.project_id)].some((v) =>
         (v ?? '').toLowerCase().includes(q),
       )
     })
-  }, [artworks, projectName, search, filterProject, kindFilter])
+  }, [artworks, projectName, search, filterProject, tab])
 
   const grouped = useMemo(() => {
     const groups = new Map<string, PostListItem[]>()
@@ -136,7 +138,9 @@ export default function ArtworksPage() {
     return ordered
   }, [filtered, projectList])
 
-  /** One uploaded/picked image becomes one artwork, right away. */
+  const effectiveAddKind = tab === 'creative' ? 'creative' : addKind
+
+  /** One uploaded/picked image becomes one gallery item, right away. */
   const addArtwork = async (asset: Asset) => {
     if (!activeProjectId) return
     // A readable title from the filename ("retium_art1_rise.png" →
@@ -161,9 +165,9 @@ export default function ArtworksPage() {
         contentText: title,
         contentHash: await sha256Hex(title),
         media: [{ tweetIndex: 0, asset }],
-        meta: addKind === 'artwork' ? {} : { artwork_kind: addKind },
+        meta: effectiveAddKind === 'artwork' ? {} : { artwork_kind: effectiveAddKind },
       })
-      setNotice(`Added "${title}" to ${projectName(activeProjectId)} as ${addKind === 'character' ? 'a character reference (kept permanently)' : addKind === 'reference' ? 'a reference' : 'an artwork'}.`)
+      setNotice(`Added "${title}" to ${projectName(activeProjectId)} as ${effectiveAddKind === 'character' ? 'a character (kept permanently)' : effectiveAddKind === 'creative' ? 'a creative image' : 'an artwork'}.`)
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Could not add that image as an artwork.')
     } finally {
@@ -191,17 +195,6 @@ export default function ArtworksPage() {
         // Character references are the AI's source material: kept forever,
         // never auto-deleted and no delete-after-download popup.
         setNotice('Downloaded. Character references are kept and never auto-deleted.')
-        return
-      }
-      if (isReference(artwork)) {
-        // References are working material: once downloaded, the gallery
-        // copy is deleted automatically (the user's chosen flow).
-        window.setTimeout(() => {
-          void deletePost
-            .mutateAsync(artwork.id)
-            .then(() => setNotice('Reference downloaded and deleted from the gallery.'))
-            .catch(() => setNotice('Reference downloaded, but the gallery copy could not be deleted.'))
-        }, 700)
         return
       }
       // Give the browser a beat to hand the file over, then ask.
@@ -255,17 +248,38 @@ export default function ArtworksPage() {
           <div className="min-w-0 flex-1">
             <h1 className="pg-title text-2xl text-ink">Artworks</h1>
             <p className="text-xs font-bold text-ink-soft">
-              Upload many, download in one click, delete when done.
+              Characters make artworks. Logos make creatives.
             </p>
           </div>
           <span className="pg-glass shrink-0 rounded-full px-3 py-2 text-xs font-extrabold text-ink">
-            {artworkCount} art · {referenceCount} ref · {characterCount} char
+            {artworks.length} images
           </span>
         </header>
 
+        {/* ── The only 2 tabs: Artworks and Creative images ── */}
+        <div className="pg-glass-strong mt-5 flex gap-1 rounded-full p-1" role="tablist" aria-label="Artwork sections">
+          {([
+            ['artwork', `Artworks (${artworkTabCount})`],
+            ['creative', `Creative images (${creativeCount})`],
+          ] as const).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={tab === k}
+              onClick={() => setTab(k)}
+              className={`flex-1 rounded-full px-2 py-2.5 text-[12.5px] font-extrabold transition ${
+                tab === k ? 'bg-ink text-white' : 'text-ink-soft'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* ── Bulk upload: every image becomes an artwork immediately ── */}
         <section className="pg-glass-strong mt-5 rounded-[26px] p-4">
-          <h2 className="pg-title text-lg text-ink">Add artworks</h2>
+          <h2 className="pg-title text-lg text-ink">{tab === 'creative' ? 'Add creative images' : 'Add artworks'}</h2>
           <label className="mt-3.5 block">
             <span className="mb-1.5 block text-xs font-extrabold text-ink-soft">Upload into project</span>
             <Select value={activeProjectId} onChange={(e) => setProjectId(e.target.value)}>
@@ -278,8 +292,9 @@ export default function ArtworksPage() {
             </Select>
           </label>
 
+          {tab === 'artwork' ? (
           <div className="pg-glass mt-3.5 flex gap-1 rounded-full p-1" role="group" aria-label="Add images as">
-            {(['artwork', 'reference', 'character'] as const).map((k) => (
+            {(['artwork', 'character'] as const).map((k) => (
               <button
                 key={k}
                 type="button"
@@ -292,11 +307,12 @@ export default function ArtworksPage() {
               </button>
             ))}
           </div>
+          ) : null}
           <p className="mt-1.5 text-center text-[11px] font-bold text-ink-soft">
-            {addKind === 'character'
-              ? 'Characters are permanent AI source material. They are never auto-deleted.'
-              : addKind === 'reference'
-                ? 'References are working material: downloading one deletes it here automatically.'
+            {tab === 'creative'
+              ? 'Uploads here become creative images for this project.'
+              : addKind === 'character'
+                ? 'Characters are permanent: the AI reuses them to make new artworks. Never deleted.'
                 : 'Artworks are finished pieces you keep, download and caption.'}
           </p>
 
@@ -333,44 +349,40 @@ export default function ArtworksPage() {
           )}
         </section>
 
-        {/* ── Create with AI: brief builder (Reference / Creative) ── */}
+        {/* ── Create with AI: the brief follows the active tab ── */}
         <section className="pg-glass-strong mt-4 rounded-[26px] p-4">
           <h2 className="pg-title text-lg text-ink">Create with AI</h2>
           <p className="mt-1 text-[12px] font-semibold text-ink-soft">
-            Pick a mode for <strong className="text-ink">{activeProjectName}</strong>, copy the brief, and your
-            AI agent generates it. Results come back into this gallery.
+            {tab === 'artwork' ? (
+              <>
+                Tell the AI to reuse <strong className="text-ink">{activeProjectName}</strong>'s character.
+                It makes new unique artworks and adds them here. You upload nothing new.
+              </>
+            ) : (
+              <>
+                Tell the AI to make creative images for <strong className="text-ink">{activeProjectName}</strong>.
+                You upload nothing: the AI uses the project's own logo.
+              </>
+            )}
           </p>
-          <div className="pg-glass mt-3 flex gap-1 rounded-full p-1" role="group" aria-label="AI generation mode">
-            {(['reference', 'creative', 'character'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setAiMode(m)}
-                className={`flex-1 rounded-full px-2 py-2 text-[12px] font-extrabold capitalize transition ${
-                  aiMode === m ? 'bg-ink text-white' : 'text-ink-soft'
-                }`}
-              >
-                {m === 'reference' ? 'Reference' : m === 'creative' ? 'Creative' : 'Character'}
-              </button>
-            ))}
-          </div>
           <p className="mt-2.5 text-[12px] leading-relaxed font-semibold text-ink-soft">
-            {aiMode === 'character'
-              ? 'AI reuses your permanent character reference to make many new unique artworks with the same character.'
-              : aiMode === 'reference'
-                ? 'AI makes a clean reference with the project mark. You download it, make your art, and it deletes itself after download.'
-                : 'Any creative image with the project logo on something inside the scene.'}
+            Copy the brief below and give it to your AI agent. Results come back into this tab.
           </p>
-          {markAsset ? (
-            <p className="mt-2 rounded-[14px] bg-white/55 px-3 py-2 text-[12px] font-bold text-ink">
-              Mark: {markAsset.filename} <span className="text-ink-soft">({markAsset.kind === 'logo_transparent_name' ? 'transparent logo' : markAsset.kind})</span>
-            </p>
-          ) : (
-            <p className="mt-2 rounded-[14px] bg-rose-soft/70 px-3 py-2 text-[12px] font-bold text-rose-700">
-              No transparent logo in this project yet. Add one to the project assets (kind: Transparent logo + name) so AI uses the real mark.
-            </p>
-          )}
-          {aiMode === 'character' ? (
+          {tab === 'creative' ? (
+            markAsset ? (
+              <p className="mt-2 rounded-[14px] bg-white/55 px-3 py-2 text-[12px] font-bold text-ink">
+                Logo the AI will use: {markAsset.filename}{' '}
+                <span className="text-ink-soft">
+                  ({markAsset.kind === 'logo_transparent_name' ? 'transparent logo + name' : 'transparent logo'})
+                </span>
+              </p>
+            ) : (
+              <p className="mt-2 rounded-[14px] bg-rose-soft/70 px-3 py-2 text-[12px] font-bold text-rose-700">
+                No logo asset in this project yet. Add a transparent logo (or transparent logo + name) to the project assets so the AI can use the real logo.
+              </p>
+            )
+          ) : null}
+          {tab === 'artwork' ? (
             characters.length > 0 ? (
               <div className="mt-2">
                 <p className="rounded-[14px] bg-white/55 px-3 py-2 text-[12px] font-bold text-ink">
@@ -410,24 +422,8 @@ export default function ArtworksPage() {
 
         {/* ── Gallery, grouped by project ── */}
         <div className="mt-6">
-          <h2 className="pg-title text-lg text-ink">Your artworks</h2>
-          <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Filter by kind">
-            {([['all', `All (${artworks.length})`], ['artwork', `Artworks (${artworkCount})`], ['reference', `References (${referenceCount})`], ['character', `Characters (${characterCount})`]] as const).map(([k, label]) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setKindFilter(k)}
-                className={
-                  kindFilter === k
-                    ? 'rounded-full bg-ink px-3 py-1.5 text-[12px] font-bold text-white transition active:scale-95'
-                    : 'pg-glass rounded-full px-3 py-1.5 text-[12px] font-bold text-ink transition active:scale-95'
-                }
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {filterProjects.length > 1 ? (
+          <h2 className="pg-title text-lg text-ink">{tab === 'creative' ? 'Creative images' : 'Your artworks'}</h2>
+          {tab === 'creative' && filterProjects.length > 1 ? (
             <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Filter by project">
               <button
                 type="button"
@@ -438,10 +434,10 @@ export default function ArtworksPage() {
                     : 'pg-glass rounded-full px-3 py-1.5 text-[12px] font-bold text-ink transition active:scale-95'
                 }
               >
-                All projects ({artworks.length})
+                All projects ({creativeCount})
               </button>
               {filterProjects.map((fp) => {
-                const count = artworks.filter((a) => a.project_id === fp.id).length
+                const count = artworks.filter((a) => a.project_id === fp.id && isCreative(a)).length
                 return (
                   <button
                     key={fp.id}
@@ -462,7 +458,7 @@ export default function ArtworksPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search artworks…"
+            placeholder={tab === 'creative' ? 'Search creative images…' : 'Search artworks…'}
             className="mt-2.5 py-2.5 text-[13px]"
           />
         </div>
@@ -483,7 +479,11 @@ export default function ArtworksPage() {
         ) : grouped.length === 0 ? (
           <div className="pg-glass mt-4 rounded-[24px] p-7 text-center">
             <p className="text-sm font-semibold text-ink-soft">
-              {search || filterProject !== 'all' ? 'No artworks match that filter.' : 'No artworks yet. Upload the first batch above.'}
+              {search || (tab === 'creative' && filterProject !== 'all')
+                ? 'Nothing matches that filter.'
+                : tab === 'creative'
+                  ? 'No creative images yet. Ask the AI to make some, or upload above.'
+                  : 'No artworks yet. Upload a character or artworks above.'}
             </p>
           </div>
         ) : (
@@ -507,10 +507,6 @@ export default function ArtworksPage() {
                           <span className="absolute top-2 left-2 rounded-full bg-violet-600/90 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white uppercase">
                             Character · Keep
                           </span>
-                        ) : isReference(artwork) ? (
-                          <span className="absolute top-2 left-2 rounded-full bg-ink/80 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white uppercase">
-                            Reference
-                          </span>
                         ) : null}
                       </div>
                       <div className="p-2.5 pb-1.5">
@@ -531,7 +527,7 @@ export default function ArtworksPage() {
                         onClick={() => void download(artwork)}
                         className="flex-1 rounded-full bg-ink px-2 py-2 text-[11px] font-bold text-white transition active:scale-95 disabled:opacity-40"
                       >
-                        {isReference(artwork) ? 'Download + delete' : 'Download'}
+                        Download
                       </button>
                       <button
                         type="button"
