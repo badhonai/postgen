@@ -15,6 +15,7 @@ export type PostListItem = Pick<
   | 'created_at'
   | 'updated_at'
   | 'published_at'
+  | 'meta'
 > & {
   /** First image asset attached to the post, for the 16:9 list thumbnail. */
   cover?: { r2_key: string; mime_type: string; filename: string } | null

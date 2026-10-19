@@ -5,6 +5,7 @@ import { useDeletePost, usePosts, useSavePost, type PostListItem } from '../feat
 import AssetPickerDialog from '../features/media/AssetPickerDialog'
 import MediaUploader from '../features/media/MediaUploader'
 import { getSignedUrl, useAssetUrl } from '../lib/media'
+import { useAllAssetsByProject } from '../features/prompts/api'
 import { sha256Hex } from '../lib/text'
 import type { Asset } from '../lib/types'
 import { Button, ErrorBox, Input, Select, Skeleton } from '../components/ui'
@@ -40,6 +41,10 @@ export default function ArtworksPage() {
     ''
 
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [kindFilter, setKindFilter] = useState<'all' | 'artwork' | 'reference'>('all')
+  const [addKind, setAddKind] = useState<'artwork' | 'reference'>('artwork')
+  const [aiMode, setAiMode] = useState<'reference' | 'creative'>('reference')
+  const allAssets = useAllAssetsByProject()
   const [filterProject, setFilterProject] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
@@ -48,6 +53,35 @@ export default function ArtworksPage() {
   const addingRef = useRef(0)
 
   const artworks = useMemo(() => artworksQuery.data ?? [], [artworksQuery.data])
+  const isReference = (a: PostListItem) => a.meta?.artwork_kind === 'reference'
+  const referenceCount = useMemo(() => artworks.filter(isReference).length, [artworks])
+  const artworkCount = artworks.length - referenceCount
+
+  /** The project's transparent logo — the mark used by AI generation. */
+  const markAsset = useMemo(() => {
+    const group = (allAssets.data ?? []).find((g) => g.projectId === activeProjectId)
+    const assets = group?.assets ?? []
+    return (
+      assets.find((a) => a.kind === 'logo_transparent_name') ??
+      assets.find((a) => a.kind === 'logo' || a.kind === 'logo_full' || a.kind === 'logo_icon') ??
+      null
+    )
+  }, [allAssets.data, activeProjectId])
+
+  const activeProjectName = projectList.find((x) => x.id === activeProjectId)?.name ?? 'this project'
+  const aiBrief =
+    aiMode === 'reference'
+      ? `Create a 1:1 artwork REFERENCE for ${activeProjectName}. Use the project transparent logo${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}")` : ''} as the project mark and attach it as the generation reference. Make a clean reference image an artist can work from: the mark clearly visible, simple background, no extra text. Save the result in PostGen Artworks as a Reference (post type "artwork", meta artwork_kind "reference") for project ${activeProjectId}.`
+      : `Create ANY creative 1:1 AI image for ${activeProjectName} with the project LOGO on something in the scene (a sign, wall, product, flag, jersey, sticker, screen). Use the project transparent logo${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}")` : ''} as the logo and attach it as the generation reference; place the logo naturally on the object, never as a corner watermark. Save the result in PostGen Artworks as an artwork (post type "artwork") for project ${activeProjectId}.`
+
+  const copyBrief = async () => {
+    try {
+      await navigator.clipboard.writeText(aiBrief)
+      setNotice('AI brief copied. Give it to your AI agent, the result lands back in this gallery.')
+    } catch {
+      setNotice('Could not copy automatically. Select the brief text and copy it manually.')
+    }
+  }
   const projectName = useMemo(() => {
     const map = new Map(projectList.map((p) => [p.id, p.name]))
     return (id: string) => map.get(id) ?? 'Project'
@@ -65,13 +99,15 @@ export default function ArtworksPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return artworks.filter((a) => {
+      if (kindFilter === 'reference' && !isReference(a)) return false
+      if (kindFilter === 'artwork' && isReference(a)) return false
       if (filterProject !== 'all' && a.project_id !== filterProject) return false
       if (!q) return true
       return [a.title, a.content_text, projectName(a.project_id)].some((v) =>
         (v ?? '').toLowerCase().includes(q),
       )
     })
-  }, [artworks, projectName, search, filterProject])
+  }, [artworks, projectName, search, filterProject, kindFilter])
 
   const grouped = useMemo(() => {
     const groups = new Map<string, PostListItem[]>()
@@ -113,8 +149,9 @@ export default function ArtworksPage() {
         contentText: title,
         contentHash: await sha256Hex(title),
         media: [{ tweetIndex: 0, asset }],
+        meta: addKind === 'reference' ? { artwork_kind: 'reference' } : {},
       })
-      setNotice(`Added "${title}" to ${projectName(activeProjectId)}.`)
+      setNotice(`Added "${title}" to ${projectName(activeProjectId)} as ${addKind === 'reference' ? 'a reference' : 'an artwork'}.`)
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Could not add that image as an artwork.')
     } finally {
@@ -138,6 +175,17 @@ export default function ArtworksPage() {
       a.click()
       a.remove()
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000)
+      if (isReference(artwork)) {
+        // References are working material: once downloaded, the gallery
+        // copy is deleted automatically (the user's chosen flow).
+        window.setTimeout(() => {
+          void deletePost
+            .mutateAsync(artwork.id)
+            .then(() => setNotice('Reference downloaded and deleted from the gallery.'))
+            .catch(() => setNotice('Reference downloaded, but the gallery copy could not be deleted.'))
+        }, 700)
+        return
+      }
       // Give the browser a beat to hand the file over, then ask.
       window.setTimeout(() => setDownloaded(artwork), 600)
     } catch {
@@ -190,7 +238,7 @@ export default function ArtworksPage() {
             </p>
           </div>
           <span className="pg-glass shrink-0 rounded-full px-3 py-2 text-xs font-extrabold text-ink">
-            {artworks.length} total
+            {artworkCount} art · {referenceCount} ref
           </span>
         </header>
 
@@ -209,7 +257,27 @@ export default function ArtworksPage() {
             </Select>
           </label>
 
-          <div className="mt-3.5">
+          <div className="pg-glass mt-3.5 flex gap-1 rounded-full p-1" role="group" aria-label="Add images as">
+            {(['artwork', 'reference'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setAddKind(k)}
+                className={`flex-1 rounded-full px-2 py-2 text-[12px] font-extrabold capitalize transition ${
+                  addKind === k ? 'bg-ink text-white' : 'text-ink-soft'
+                }`}
+              >
+                Add as {k}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-center text-[11px] font-bold text-ink-soft">
+            {addKind === 'reference'
+              ? 'References are working material: downloading one deletes it here automatically.'
+              : 'Artworks are finished pieces you keep, download and caption.'}
+          </p>
+
+          <div className="mt-3">
             {activeProjectId ? (
               <MediaUploader
                 key={activeProjectId}
@@ -242,9 +310,73 @@ export default function ArtworksPage() {
           )}
         </section>
 
+        {/* ── Create with AI: brief builder (Reference / Creative) ── */}
+        <section className="pg-glass-strong mt-4 rounded-[26px] p-4">
+          <h2 className="pg-title text-lg text-ink">Create with AI</h2>
+          <p className="mt-1 text-[12px] font-semibold text-ink-soft">
+            Pick a mode for <strong className="text-ink">{activeProjectName}</strong>, copy the brief, and your
+            AI agent generates it. Results come back into this gallery.
+          </p>
+          <div className="pg-glass mt-3 flex gap-1 rounded-full p-1" role="group" aria-label="AI generation mode">
+            {(['reference', 'creative'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setAiMode(m)}
+                className={`flex-1 rounded-full px-2 py-2 text-[12px] font-extrabold capitalize transition ${
+                  aiMode === m ? 'bg-ink text-white' : 'text-ink-soft'
+                }`}
+              >
+                {m === 'reference' ? 'Artwork reference' : 'Creative image'}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2.5 text-[12px] leading-relaxed font-semibold text-ink-soft">
+            {aiMode === 'reference'
+              ? 'AI makes a clean reference with the project mark. You download it, make your art, and it deletes itself after download.'
+              : 'Any creative image with the project logo on something inside the scene.'}
+          </p>
+          {markAsset ? (
+            <p className="mt-2 rounded-[14px] bg-white/55 px-3 py-2 text-[12px] font-bold text-ink">
+              Mark: {markAsset.filename} <span className="text-ink-soft">({markAsset.kind === 'logo_transparent_name' ? 'transparent logo' : markAsset.kind})</span>
+            </p>
+          ) : (
+            <p className="mt-2 rounded-[14px] bg-rose-soft/70 px-3 py-2 text-[12px] font-bold text-rose-700">
+              No transparent logo in this project yet. Add one to the project assets (kind: Transparent logo + name) so AI uses the real mark.
+            </p>
+          )}
+          <div className="mt-3 max-h-32 overflow-y-auto rounded-[16px] bg-white/45 p-3 text-[12px] leading-relaxed font-semibold text-ink-soft select-text">
+            {aiBrief}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Button className="flex-1 py-2.5" disabled={!activeProjectId} onClick={() => void copyBrief()}>
+              Copy AI brief
+            </Button>
+            <Button variant="ghost" className="flex-1 py-2.5" onClick={() => navigate('/prompts')}>
+              Prompt library
+            </Button>
+          </div>
+        </section>
+
         {/* ── Gallery, grouped by project ── */}
         <div className="mt-6">
           <h2 className="pg-title text-lg text-ink">Your artworks</h2>
+          <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Filter by kind">
+            {([['all', `All (${artworks.length})`], ['artwork', `Artworks (${artworkCount})`], ['reference', `References (${referenceCount})`]] as const).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKindFilter(k)}
+                className={
+                  kindFilter === k
+                    ? 'rounded-full bg-ink px-3 py-1.5 text-[12px] font-bold text-white transition active:scale-95'
+                    : 'pg-glass rounded-full px-3 py-1.5 text-[12px] font-bold text-ink transition active:scale-95'
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {filterProjects.length > 1 ? (
             <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Filter by project">
               <button
@@ -319,7 +451,14 @@ export default function ArtworksPage() {
                 {list.map((artwork) => (
                   <article key={artwork.id} className="pg-glass-strong pg-cv overflow-hidden rounded-[20px]">
                     <Link to={`/posts/${artwork.id}?from=artwork`} className="block">
-                      <ArtworkCover artwork={artwork} />
+                      <div className="relative">
+                        <ArtworkCover artwork={artwork} />
+                        {isReference(artwork) ? (
+                          <span className="absolute top-2 left-2 rounded-full bg-ink/80 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white uppercase">
+                            Reference
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="p-2.5 pb-1.5">
                         <p className="truncate text-[13px] font-bold text-ink">
                           {artwork.title || artwork.content_text || 'Untitled artwork'}
@@ -338,7 +477,7 @@ export default function ArtworksPage() {
                         onClick={() => void download(artwork)}
                         className="flex-1 rounded-full bg-ink px-2 py-2 text-[11px] font-bold text-white transition active:scale-95 disabled:opacity-40"
                       >
-                        Download
+                        {isReference(artwork) ? 'Download + delete' : 'Download'}
                       </button>
                       <button
                         type="button"
