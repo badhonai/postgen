@@ -5,10 +5,9 @@ import { useDeletePost, usePosts, useSavePost, type PostListItem } from '../feat
 import AssetPickerDialog from '../features/media/AssetPickerDialog'
 import MediaUploader from '../features/media/MediaUploader'
 import { getSignedUrl, useAssetUrl } from '../lib/media'
-import { useAllAssetsByProject } from '../features/prompts/api'
 import { sha256Hex } from '../lib/text'
 import type { Asset } from '../lib/types'
-import { Button, ErrorBox, Input, Select, Skeleton } from '../components/ui'
+import { Button, ErrorBox, Select, Skeleton } from '../components/ui'
 
 /**
  * Artworks gallery.
@@ -42,11 +41,9 @@ export default function ArtworksPage() {
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [tab, setTab] = useState<'artwork' | 'creative'>('artwork')
-  const [aiCount, setAiCount] = useState(10)
   const [addKind, setAddKind] = useState<'artwork' | 'character'>('artwork')
-  const allAssets = useAllAssetsByProject()
   const [filterProject, setFilterProject] = useState<string>('all')
-  const [search, setSearch] = useState('')
+  const [showAdd, setShowAdd] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [adding, setAdding] = useState(0)
   const [downloaded, setDownloaded] = useState<PostListItem | null>(null)
@@ -63,39 +60,6 @@ export default function ArtworksPage() {
   const isCreative = (a: PostListItem) => kindOf(a) === 'creative'
   const creativeCount = useMemo(() => artworks.filter(isCreative).length, [artworks])
   const artworkTabCount = artworks.length - creativeCount
-  /** This project's permanent character references — AI source material, never deleted. */
-  const characters = useMemo(
-    () => artworks.filter((a) => a.project_id === activeProjectId && isCharacter(a)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [artworks, activeProjectId],
-  )
-
-  /** The project's transparent logo — the mark used by AI generation. */
-  const markAsset = useMemo(() => {
-    const group = (allAssets.data ?? []).find((g) => g.projectId === activeProjectId)
-    const assets = group?.assets ?? []
-    return (
-      assets.find((a) => a.kind === 'logo' || a.kind === 'logo_icon') ??
-      assets.find((a) => a.kind === 'logo_transparent_name') ??
-      assets.find((a) => a.kind === 'logo_full') ??
-      null
-    )
-  }, [allAssets.data, activeProjectId])
-
-  const activeProjectName = projectList.find((x) => x.id === activeProjectId)?.name ?? 'this project'
-  const aiBrief =
-    tab === 'artwork'
-      ? `This is my character for ${activeProjectName}: ${characters.length > 0 ? characters.map((c) => `"${c.title || 'Character'}" (artwork ${c.id})`).join(', ') : 'the character reference(s) stored in this project'}. Attach the character reference image(s) as the generation reference and keep the character faithful (same face, outfit, colors and style). Make ${aiCount} UNIQUE images with my character: different scenes, poses, moods and compositions, every image clearly the same character. Save EACH image in PostGen Artworks as an artwork (post type "artwork", no artwork_kind meta) for project ${activeProjectId}. Never delete or replace the character reference(s).`
-      : `Make creative images for ${activeProjectName}. The user does not upload anything: use the project's own logo asset${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}", kind "${markAsset.kind}")` : ''} and attach it as the generation reference. Prefer the project transparent logo; if no transparent logo exists, use the transparent logo with name instead. Create ANY creative 1:1 AI image with the project logo on something in the scene (a sign, wall, product, flag, jersey, sticker, screen), the logo placed naturally on the object, never as a corner watermark. Save EACH image in PostGen Artworks as a creative image (post type "artwork", meta artwork_kind "creative") for project ${activeProjectId}.`
-
-  const copyBrief = async () => {
-    try {
-      await navigator.clipboard.writeText(aiBrief)
-      setNotice('AI brief copied. Give it to your AI agent, the result lands back in this gallery.')
-    } catch {
-      setNotice('Could not copy automatically. Select the brief text and copy it manually.')
-    }
-  }
   const projectName = useMemo(() => {
     const map = new Map(projectList.map((p) => [p.id, p.name]))
     return (id: string) => map.get(id) ?? 'Project'
@@ -111,17 +75,16 @@ export default function ArtworksPage() {
   }, [artworks, projectList, projectName])
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return artworks.filter((a) => {
-      if (tab === 'creative' ? !isCreative(a) : isCreative(a)) return false
-      if (tab === 'creative' && filterProject !== 'all' && a.project_id !== filterProject) return false
-      if (!q) return true
-      return [a.title, a.content_text, projectName(a.project_id)].some((v) =>
-        (v ?? '').toLowerCase().includes(q),
-      )
-    })
-  }, [artworks, projectName, search, filterProject, tab])
+  const filtered = useMemo(
+    () =>
+      artworks.filter((a) => {
+        if (tab === 'creative' ? !isCreative(a) : isCreative(a)) return false
+        if (tab === 'creative' && filterProject !== 'all' && a.project_id !== filterProject) return false
+        return true
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [artworks, filterProject, tab],
+  )
 
   const grouped = useMemo(() => {
     const groups = new Map<string, PostListItem[]>()
@@ -248,7 +211,7 @@ export default function ArtworksPage() {
           <div className="min-w-0 flex-1">
             <h1 className="pg-title text-2xl text-ink">Artworks</h1>
             <p className="text-xs font-bold text-ink-soft">
-              Characters make artworks. Logos make creatives.
+              View and download your images.
             </p>
           </div>
           <span className="pg-glass shrink-0 rounded-full px-3 py-2 text-xs font-extrabold text-ink">
@@ -277,8 +240,17 @@ export default function ArtworksPage() {
           ))}
         </div>
 
-        {/* ── Bulk upload: every image becomes an artwork immediately ── */}
-        <section className="pg-glass-strong mt-5 rounded-[26px] p-4">
+        <button
+          type="button"
+          onClick={() => setShowAdd((v) => !v)}
+          className="pg-glass mt-3 w-full rounded-full py-2.5 text-[12.5px] font-extrabold text-ink transition active:scale-[0.98]"
+        >
+          {showAdd ? 'Close upload' : tab === 'creative' ? '+ Upload creative image' : '+ Upload artwork or character'}
+        </button>
+
+        {/* ── Upload (occasional use, so it stays collapsed) ── */}
+        {showAdd ? (
+        <section className="pg-glass-strong mt-3 rounded-[26px] p-4">
           <h2 className="pg-title text-lg text-ink">{tab === 'creative' ? 'Add creative images' : 'Add artworks'}</h2>
           <label className="mt-3.5 block">
             <span className="mb-1.5 block text-xs font-extrabold text-ink-soft">Upload into project</span>
@@ -348,77 +320,7 @@ export default function ArtworksPage() {
             </p>
           )}
         </section>
-
-        {/* ── Create with AI: the brief follows the active tab ── */}
-        <section className="pg-glass-strong mt-4 rounded-[26px] p-4">
-          <h2 className="pg-title text-lg text-ink">Create with AI</h2>
-          <p className="mt-1 text-[12px] font-semibold text-ink-soft">
-            {tab === 'artwork' ? (
-              <>
-                Tell the AI to reuse <strong className="text-ink">{activeProjectName}</strong>'s character.
-                It makes new unique artworks and adds them here. You upload nothing new.
-              </>
-            ) : (
-              <>
-                Tell the AI to make creative images for <strong className="text-ink">{activeProjectName}</strong>.
-                You upload nothing: the AI uses the project's own logo.
-              </>
-            )}
-          </p>
-          <p className="mt-2.5 text-[12px] leading-relaxed font-semibold text-ink-soft">
-            Copy the brief below and give it to your AI agent. Results come back into this tab.
-          </p>
-          {tab === 'creative' ? (
-            markAsset ? (
-              <p className="mt-2 rounded-[14px] bg-white/55 px-3 py-2 text-[12px] font-bold text-ink">
-                Logo the AI will use: {markAsset.filename}{' '}
-                <span className="text-ink-soft">
-                  ({markAsset.kind === 'logo_transparent_name' ? 'transparent logo + name' : 'transparent logo'})
-                </span>
-              </p>
-            ) : (
-              <p className="mt-2 rounded-[14px] bg-rose-soft/70 px-3 py-2 text-[12px] font-bold text-rose-700">
-                No logo asset in this project yet. Add a transparent logo (or transparent logo + name) to the project assets so the AI can use the real logo.
-              </p>
-            )
-          ) : null}
-          {tab === 'artwork' ? (
-            characters.length > 0 ? (
-              <div className="mt-2">
-                <p className="rounded-[14px] bg-white/55 px-3 py-2 text-[12px] font-bold text-ink">
-                  Character: {characters.map((c) => c.title || 'Untitled').join(', ')}
-                  <span className="text-ink-soft"> (kept permanently, never deleted)</span>
-                </p>
-                <label className="mt-2.5 flex items-center gap-2 text-[12px] font-extrabold text-ink-soft">
-                  How many unique images?
-                  <input
-                    type="number"
-                    min={1}
-                    max={30}
-                    value={aiCount}
-                    onChange={(e) => setAiCount(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
-                    className="w-20 rounded-full bg-white/60 px-3 py-1.5 text-center text-[12px] font-extrabold text-ink"
-                  />
-                </label>
-              </div>
-            ) : (
-              <p className="mt-2 rounded-[14px] bg-rose-soft/70 px-3 py-2 text-[12px] font-bold text-rose-700">
-                No character reference in this project yet. Upload one above with Add as: Character first, then the AI can reuse it.
-              </p>
-            )
-          ) : null}
-          <div className="mt-3 max-h-32 overflow-y-auto rounded-[16px] bg-white/45 p-3 text-[12px] leading-relaxed font-semibold text-ink-soft select-text">
-            {aiBrief}
-          </div>
-          <div className="mt-3 flex gap-2">
-            <Button className="flex-1 py-2.5" disabled={!activeProjectId} onClick={() => void copyBrief()}>
-              Copy AI brief
-            </Button>
-            <Button variant="ghost" className="flex-1 py-2.5" onClick={() => navigate('/prompts')}>
-              Prompt library
-            </Button>
-          </div>
-        </section>
+        ) : null}
 
         {/* ── Gallery, grouped by project ── */}
         <div className="mt-6">
@@ -455,12 +357,6 @@ export default function ArtworksPage() {
               })}
             </div>
           ) : null}
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={tab === 'creative' ? 'Search creative images…' : 'Search artworks…'}
-            className="mt-2.5 py-2.5 text-[13px]"
-          />
         </div>
 
         {notice ? (
@@ -479,11 +375,11 @@ export default function ArtworksPage() {
         ) : grouped.length === 0 ? (
           <div className="pg-glass mt-4 rounded-[24px] p-7 text-center">
             <p className="text-sm font-semibold text-ink-soft">
-              {search || (tab === 'creative' && filterProject !== 'all')
+              {tab === 'creative' && filterProject !== 'all'
                 ? 'Nothing matches that filter.'
                 : tab === 'creative'
                   ? 'No creative images yet. Ask the AI to make some, or upload above.'
-                  : 'No artworks yet. Upload a character or artworks above.'}
+                  : 'No artworks yet. Upload a character or artwork with the button above.'}
             </p>
           </div>
         ) : (
