@@ -244,10 +244,10 @@ export default function DashboardPage() {
         <section className="mt-4 space-y-3">
           {projects.isPending ? (
             <>
-              <Skeleton className="h-32 w-full rounded-[28px]" />
+              <Skeleton className="h-44 w-full rounded-[28px]" />
               <div className="grid grid-cols-2 gap-3">
-                <Skeleton className="h-[122px] rounded-[28px]" />
-                <Skeleton className="h-[122px] rounded-[28px]" />
+                <Skeleton className="h-[136px] rounded-[28px]" />
+                <Skeleton className="h-[136px] rounded-[28px]" />
               </div>
             </>
           ) : projects.error ? (
