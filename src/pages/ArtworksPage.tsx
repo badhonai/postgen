@@ -41,9 +41,10 @@ export default function ArtworksPage() {
     ''
 
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [kindFilter, setKindFilter] = useState<'all' | 'artwork' | 'reference'>('all')
-  const [addKind, setAddKind] = useState<'artwork' | 'reference'>('artwork')
-  const [aiMode, setAiMode] = useState<'reference' | 'creative'>('reference')
+  const [kindFilter, setKindFilter] = useState<'all' | 'artwork' | 'reference' | 'character'>('all')
+  const [aiCount, setAiCount] = useState(10)
+  const [addKind, setAddKind] = useState<'artwork' | 'reference' | 'character'>('artwork')
+  const [aiMode, setAiMode] = useState<'reference' | 'creative' | 'character'>('reference')
   const allAssets = useAllAssetsByProject()
   const [filterProject, setFilterProject] = useState<string>('all')
   const [search, setSearch] = useState('')
@@ -53,9 +54,19 @@ export default function ArtworksPage() {
   const addingRef = useRef(0)
 
   const artworks = useMemo(() => artworksQuery.data ?? [], [artworksQuery.data])
-  const isReference = (a: PostListItem) => a.meta?.artwork_kind === 'reference'
+  const kindOf = (a: PostListItem): 'artwork' | 'reference' | 'character' =>
+    a.meta?.artwork_kind === 'character' ? 'character' : a.meta?.artwork_kind === 'reference' ? 'reference' : 'artwork'
+  const isReference = (a: PostListItem) => kindOf(a) === 'reference'
+  const isCharacter = (a: PostListItem) => kindOf(a) === 'character'
   const referenceCount = useMemo(() => artworks.filter(isReference).length, [artworks])
-  const artworkCount = artworks.length - referenceCount
+  const characterCount = useMemo(() => artworks.filter(isCharacter).length, [artworks])
+  const artworkCount = artworks.length - referenceCount - characterCount
+  /** This project's permanent character references — AI source material, never deleted. */
+  const characters = useMemo(
+    () => artworks.filter((a) => a.project_id === activeProjectId && isCharacter(a)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [artworks, activeProjectId],
+  )
 
   /** The project's transparent logo — the mark used by AI generation. */
   const markAsset = useMemo(() => {
@@ -70,9 +81,11 @@ export default function ArtworksPage() {
 
   const activeProjectName = projectList.find((x) => x.id === activeProjectId)?.name ?? 'this project'
   const aiBrief =
-    aiMode === 'reference'
-      ? `Create a 1:1 artwork REFERENCE for ${activeProjectName}. Use the project transparent logo${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}")` : ''} as the project mark and attach it as the generation reference. Make a clean reference image an artist can work from: the mark clearly visible, simple background, no extra text. Save the result in PostGen Artworks as a Reference (post type "artwork", meta artwork_kind "reference") for project ${activeProjectId}.`
-      : `Create ANY creative 1:1 AI image for ${activeProjectName} with the project LOGO on something in the scene (a sign, wall, product, flag, jersey, sticker, screen). Use the project transparent logo${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}")` : ''} as the logo and attach it as the generation reference; place the logo naturally on the object, never as a corner watermark. Save the result in PostGen Artworks as an artwork (post type "artwork") for project ${activeProjectId}.`
+    aiMode === 'character'
+      ? `This is my character for ${activeProjectName}: ${characters.length > 0 ? characters.map((c) => `"${c.title || 'Character'}" (artwork ${c.id})`).join(', ') : 'the character reference(s) in this project Artworks'}. Attach the character reference image(s) as the generation reference and keep the character faithful (same face, outfit, colors and style). Make ${aiCount} UNIQUE images with my character: different scenes, poses, moods and compositions, every image clearly the same character. Save EACH image in PostGen Artworks as an artwork (post type "artwork", no artwork_kind meta) for project ${activeProjectId}. Never delete or replace the character reference(s).`
+      : aiMode === 'reference'
+        ? `Create a 1:1 artwork REFERENCE for ${activeProjectName}. Use the project transparent logo${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}")` : ''} as the project mark and attach it as the generation reference. Make a clean reference image an artist can work from: the mark clearly visible, simple background, no extra text. Save the result in PostGen Artworks as a Reference (post type "artwork", meta artwork_kind "reference") for project ${activeProjectId}.`
+        : `Create ANY creative 1:1 AI image for ${activeProjectName} with the project LOGO on something in the scene (a sign, wall, product, flag, jersey, sticker, screen). Use the project transparent logo${markAsset ? ` (asset ${markAsset.id}, file "${markAsset.filename}")` : ''} as the logo and attach it as the generation reference; place the logo naturally on the object, never as a corner watermark. Save the result in PostGen Artworks as an artwork (post type "artwork") for project ${activeProjectId}.`
 
   const copyBrief = async () => {
     try {
@@ -99,8 +112,7 @@ export default function ArtworksPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return artworks.filter((a) => {
-      if (kindFilter === 'reference' && !isReference(a)) return false
-      if (kindFilter === 'artwork' && isReference(a)) return false
+      if (kindFilter !== 'all' && kindOf(a) !== kindFilter) return false
       if (filterProject !== 'all' && a.project_id !== filterProject) return false
       if (!q) return true
       return [a.title, a.content_text, projectName(a.project_id)].some((v) =>
@@ -149,9 +161,9 @@ export default function ArtworksPage() {
         contentText: title,
         contentHash: await sha256Hex(title),
         media: [{ tweetIndex: 0, asset }],
-        meta: addKind === 'reference' ? { artwork_kind: 'reference' } : {},
+        meta: addKind === 'artwork' ? {} : { artwork_kind: addKind },
       })
-      setNotice(`Added "${title}" to ${projectName(activeProjectId)} as ${addKind === 'reference' ? 'a reference' : 'an artwork'}.`)
+      setNotice(`Added "${title}" to ${projectName(activeProjectId)} as ${addKind === 'character' ? 'a character reference (kept permanently)' : addKind === 'reference' ? 'a reference' : 'an artwork'}.`)
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Could not add that image as an artwork.')
     } finally {
@@ -175,6 +187,12 @@ export default function ArtworksPage() {
       a.click()
       a.remove()
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000)
+      if (isCharacter(artwork)) {
+        // Character references are the AI's source material: kept forever,
+        // never auto-deleted and no delete-after-download popup.
+        setNotice('Downloaded. Character references are kept and never auto-deleted.')
+        return
+      }
       if (isReference(artwork)) {
         // References are working material: once downloaded, the gallery
         // copy is deleted automatically (the user's chosen flow).
@@ -195,7 +213,10 @@ export default function ArtworksPage() {
 
   const remove = async (artwork: PostListItem) => {
     const label = artwork.title || artwork.content_text || 'this artwork'
-    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return
+    const warning = isCharacter(artwork)
+      ? `Delete the character reference "${label}"? The AI uses it to make new artworks, and this cannot be undone.`
+      : `Delete "${label}"? This cannot be undone.`
+    if (!window.confirm(warning)) return
     try {
       await deletePost.mutateAsync(artwork.id)
       setNotice('Artwork deleted.')
@@ -238,7 +259,7 @@ export default function ArtworksPage() {
             </p>
           </div>
           <span className="pg-glass shrink-0 rounded-full px-3 py-2 text-xs font-extrabold text-ink">
-            {artworkCount} art · {referenceCount} ref
+            {artworkCount} art · {referenceCount} ref · {characterCount} char
           </span>
         </header>
 
@@ -258,7 +279,7 @@ export default function ArtworksPage() {
           </label>
 
           <div className="pg-glass mt-3.5 flex gap-1 rounded-full p-1" role="group" aria-label="Add images as">
-            {(['artwork', 'reference'] as const).map((k) => (
+            {(['artwork', 'reference', 'character'] as const).map((k) => (
               <button
                 key={k}
                 type="button"
@@ -272,9 +293,11 @@ export default function ArtworksPage() {
             ))}
           </div>
           <p className="mt-1.5 text-center text-[11px] font-bold text-ink-soft">
-            {addKind === 'reference'
-              ? 'References are working material: downloading one deletes it here automatically.'
-              : 'Artworks are finished pieces you keep, download and caption.'}
+            {addKind === 'character'
+              ? 'Characters are permanent AI source material. They are never auto-deleted.'
+              : addKind === 'reference'
+                ? 'References are working material: downloading one deletes it here automatically.'
+                : 'Artworks are finished pieces you keep, download and caption.'}
           </p>
 
           <div className="mt-3">
@@ -318,7 +341,7 @@ export default function ArtworksPage() {
             AI agent generates it. Results come back into this gallery.
           </p>
           <div className="pg-glass mt-3 flex gap-1 rounded-full p-1" role="group" aria-label="AI generation mode">
-            {(['reference', 'creative'] as const).map((m) => (
+            {(['reference', 'creative', 'character'] as const).map((m) => (
               <button
                 key={m}
                 type="button"
@@ -327,14 +350,16 @@ export default function ArtworksPage() {
                   aiMode === m ? 'bg-ink text-white' : 'text-ink-soft'
                 }`}
               >
-                {m === 'reference' ? 'Artwork reference' : 'Creative image'}
+                {m === 'reference' ? 'Reference' : m === 'creative' ? 'Creative' : 'Character'}
               </button>
             ))}
           </div>
           <p className="mt-2.5 text-[12px] leading-relaxed font-semibold text-ink-soft">
-            {aiMode === 'reference'
-              ? 'AI makes a clean reference with the project mark. You download it, make your art, and it deletes itself after download.'
-              : 'Any creative image with the project logo on something inside the scene.'}
+            {aiMode === 'character'
+              ? 'AI reuses your permanent character reference to make many new unique artworks with the same character.'
+              : aiMode === 'reference'
+                ? 'AI makes a clean reference with the project mark. You download it, make your art, and it deletes itself after download.'
+                : 'Any creative image with the project logo on something inside the scene.'}
           </p>
           {markAsset ? (
             <p className="mt-2 rounded-[14px] bg-white/55 px-3 py-2 text-[12px] font-bold text-ink">
@@ -345,6 +370,31 @@ export default function ArtworksPage() {
               No transparent logo in this project yet. Add one to the project assets (kind: Transparent logo + name) so AI uses the real mark.
             </p>
           )}
+          {aiMode === 'character' ? (
+            characters.length > 0 ? (
+              <div className="mt-2">
+                <p className="rounded-[14px] bg-white/55 px-3 py-2 text-[12px] font-bold text-ink">
+                  Character: {characters.map((c) => c.title || 'Untitled').join(', ')}
+                  <span className="text-ink-soft"> (kept permanently, never deleted)</span>
+                </p>
+                <label className="mt-2.5 flex items-center gap-2 text-[12px] font-extrabold text-ink-soft">
+                  How many unique images?
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={aiCount}
+                    onChange={(e) => setAiCount(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
+                    className="w-20 rounded-full bg-white/60 px-3 py-1.5 text-center text-[12px] font-extrabold text-ink"
+                  />
+                </label>
+              </div>
+            ) : (
+              <p className="mt-2 rounded-[14px] bg-rose-soft/70 px-3 py-2 text-[12px] font-bold text-rose-700">
+                No character reference in this project yet. Upload one above with Add as: Character first, then the AI can reuse it.
+              </p>
+            )
+          ) : null}
           <div className="mt-3 max-h-32 overflow-y-auto rounded-[16px] bg-white/45 p-3 text-[12px] leading-relaxed font-semibold text-ink-soft select-text">
             {aiBrief}
           </div>
@@ -362,7 +412,7 @@ export default function ArtworksPage() {
         <div className="mt-6">
           <h2 className="pg-title text-lg text-ink">Your artworks</h2>
           <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Filter by kind">
-            {([['all', `All (${artworks.length})`], ['artwork', `Artworks (${artworkCount})`], ['reference', `References (${referenceCount})`]] as const).map(([k, label]) => (
+            {([['all', `All (${artworks.length})`], ['artwork', `Artworks (${artworkCount})`], ['reference', `References (${referenceCount})`], ['character', `Characters (${characterCount})`]] as const).map(([k, label]) => (
               <button
                 key={k}
                 type="button"
@@ -453,7 +503,11 @@ export default function ArtworksPage() {
                     <Link to={`/posts/${artwork.id}?from=artwork`} className="block">
                       <div className="relative">
                         <ArtworkCover artwork={artwork} />
-                        {isReference(artwork) ? (
+                        {isCharacter(artwork) ? (
+                          <span className="absolute top-2 left-2 rounded-full bg-violet-600/90 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white uppercase">
+                            Character · Keep
+                          </span>
+                        ) : isReference(artwork) ? (
                           <span className="absolute top-2 left-2 rounded-full bg-ink/80 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white uppercase">
                             Reference
                           </span>
