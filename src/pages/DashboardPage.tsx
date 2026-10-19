@@ -228,13 +228,13 @@ export default function DashboardPage() {
         </div>
 
         {/* ── bento grid ── */}
-        <section className="mt-5 space-y-3.5">
+        <section className="mt-4 space-y-3">
           {projects.isPending ? (
             <>
-              <Skeleton className="h-56 w-full rounded-[28px]" />
-              <div className="grid grid-cols-2 gap-3.5">
-                <Skeleton className="h-40 rounded-[28px]" />
-                <Skeleton className="h-40 rounded-[28px]" />
+              <Skeleton className="h-32 w-full rounded-[28px]" />
+              <div className="grid grid-cols-2 gap-3">
+                <Skeleton className="h-[122px] rounded-[28px]" />
+                <Skeleton className="h-[122px] rounded-[28px]" />
               </div>
             </>
           ) : projects.error ? (
@@ -271,7 +271,7 @@ export default function DashboardPage() {
                 approvedCount={statusCounts(postsByProject.get(hero.id) ?? []).approved}
                 statusTab={filter === 'all' ? 'approved' : filter}
               />
-              <div className="grid grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-2 gap-3">
                 <PromptLibraryTile promptCount={promptCount} />
                 <ArtworksTile artworkCount={artworkCount} />
                 {rest.map((p, i) => {
