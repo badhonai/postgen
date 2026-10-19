@@ -65,17 +65,17 @@ export function HeroTile({
   approvedCount: number
   statusTab: string
 }) {
-  const shown = posts.slice(0, 3)
+  const shown = posts.slice(0, 2)
   const more = posts.length - shown.length
   return (
-    <Link to={`/projects/${project.id}?status=${statusTab}`} className="pg-tile pg-cv relative block bg-mint p-5">
+    <Link to={`/projects/${project.id}?status=${statusTab}`} className="pg-tile pg-cv relative block bg-mint p-4">
       <span className="absolute top-4 right-4 rounded-full bg-white/55 px-2.5 py-1 text-[10px] font-bold text-ink">
         {posts.length} post{posts.length === 1 ? '' : 's'}
       </span>
-      <div className="flex items-center gap-3.5">
-        <Logo r2Key={project.logo?.r2_key} size={58} />
+      <div className="flex items-center gap-3">
+        <Logo r2Key={project.logo?.r2_key} size={50} />
         <div className="min-w-0 pr-14">
-          <h3 className="pg-title truncate text-xl text-ink">{project.name}</h3>
+          <h3 className="pg-title truncate text-lg text-ink">{project.name}</h3>
           {project.x_username ? (
             <p className="truncate text-xs font-bold text-ink-soft">@{project.x_username}</p>
           ) : null}
@@ -83,13 +83,13 @@ export function HeroTile({
       </div>
 
       {project.description ? (
-        <p className="mt-2.5 line-clamp-2 text-[13px] leading-snug font-semibold text-ink-soft">
+        <p className="mt-2 line-clamp-2 text-[13px] leading-snug font-semibold text-ink-soft">
           {project.description}
         </p>
       ) : null}
 
       {(project.content_pillars ?? []).length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {project.content_pillars.slice(0, 3).map((c) => (
             <span key={c} className="rounded-full bg-white/55 px-2.5 py-1 text-[11px] font-bold text-ink">
               {c}
@@ -98,12 +98,12 @@ export function HeroTile({
         </div>
       ) : null}
 
-      <div className="mt-3.5">
+      <div className="mt-3">
         <StatusPills drafts={draftCount} approved={approvedCount} />
       </div>
 
       {shown.length > 0 ? (
-        <div className="mt-3.5 space-y-1.5 rounded-[18px] bg-white/45 p-3">
+        <div className="mt-3 space-y-1 rounded-[18px] bg-white/45 p-2.5">
           {shown.map((post) => (
             <div key={post.id} className="flex items-center gap-2.5">
               <span
@@ -124,7 +124,7 @@ export function HeroTile({
           ) : null}
         </div>
       ) : (
-        <p className="mt-3.5 text-[13px] font-semibold text-ink-soft">No posts yet — tap to open.</p>
+        <p className="mt-3 text-[13px] font-semibold text-ink-soft">No posts yet — tap to open.</p>
       )}
     </Link>
   )
@@ -151,20 +151,20 @@ export function SmallTile({
       to={`/projects/${project.id}?status=${statusTab}`}
       className={`pg-tile pg-cv flex min-h-[150px] flex-col justify-between ${color} p-4`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <Logo r2Key={project.logo?.r2_key} size={42} />
-        <span className="rounded-full bg-white/55 px-2.5 py-1 text-[10px] font-bold text-ink">
-          {postCount === 0 ? 'empty' : `+${postCount} post${postCount === 1 ? '' : 's'}`}
-        </span>
-      </div>
       <div>
-        <h3 className="pg-title line-clamp-2 text-[15px] leading-tight text-ink">{project.name}</h3>
+        <div className="flex items-start justify-between gap-2">
+          <Logo r2Key={project.logo?.r2_key} size={42} />
+          <span className="rounded-full bg-white/55 px-2.5 py-1 text-[10px] font-bold text-ink">
+            {postCount === 0 ? 'empty' : `+${postCount} post${postCount === 1 ? '' : 's'}`}
+          </span>
+        </div>
+        <h3 className="pg-title mt-2.5 line-clamp-2 text-[15px] leading-tight text-ink">{project.name}</h3>
         {project.x_username ? (
           <p className="mt-0.5 truncate text-[11px] font-bold text-ink-soft">@{project.x_username}</p>
         ) : null}
-        <div className="mt-2.5">
-          <StatusPills drafts={draftCount} approved={approvedCount} />
-        </div>
+      </div>
+      <div className="mt-auto pt-3">
+        <StatusPills drafts={draftCount} approved={approvedCount} />
       </div>
     </Link>
   )
