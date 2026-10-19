@@ -11,19 +11,16 @@ export type PostSummary = {
   post_type?: string
 }
 
-/** Two small pills: amber drafts · green approved. */
+/** One neat status line: amber drafts · green approved on a single pill. */
 export function StatusPills({ drafts, approved }: { drafts: number; approved: number }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
-      <span className="flex items-center gap-1.5 rounded-full bg-white/60 px-2 py-0.5 text-[10px] font-extrabold text-ink">
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_DOT.draft }} />
-        {drafts} draft{drafts === 1 ? '' : 's'}
-      </span>
-      <span className="flex items-center gap-1.5 rounded-full bg-white/60 px-2 py-0.5 text-[10px] font-extrabold text-ink">
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_DOT.approved }} />
-        {approved} approved
-      </span>
-    </div>
+    <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-[10px] font-extrabold whitespace-nowrap text-ink">
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: STATUS_DOT.draft }} />
+      {drafts} draft{drafts === 1 ? '' : 's'}
+      <span className="text-ink-soft">·</span>
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: STATUS_DOT.approved }} />
+      {approved} approved
+    </span>
   )
 }
 
@@ -51,7 +48,8 @@ function Logo({ r2Key, size }: { r2Key?: string | null; size: number }) {
   )
 }
 
-/** Big mint hero tile — most recent project, with its posts as a mini checklist. */
+/** Big mint hero tile — most recent project, compact but structured: a soft
+ * white panel groups the latest post and the status line. */
 export function HeroTile({
   project,
   posts,
@@ -69,7 +67,7 @@ export function HeroTile({
   return (
     <Link to={`/projects/${project.id}?status=${statusTab}`} className="pg-tile pg-cv relative block bg-mint p-4">
       <div className="flex items-center gap-3">
-        <Logo r2Key={project.logo?.r2_key} size={46} />
+        <Logo r2Key={project.logo?.r2_key} size={48} />
         <div className="min-w-0 flex-1">
           <h3 className="pg-title truncate text-lg text-ink">{project.name}</h3>
           {project.x_username ? (
@@ -81,26 +79,30 @@ export function HeroTile({
         </span>
       </div>
 
-      {latest ? (
-        <div className="mt-3 flex items-center gap-2">
-          <span
-            className="h-2 w-2 shrink-0 rounded-full"
-            style={{ background: STATUS_DOT[latest.status] ?? '#a09cc4' }}
-          />
-          <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-ink">
-            {latest.title || 'Untitled post'}
-          </span>
-          <span className="shrink-0 text-[9px] font-bold tracking-wide text-ink-soft uppercase">
-            {latest.post_type && latest.post_type !== 'post' ? `${POST_TYPE_LABEL[latest.post_type as PostType]} · ` : ''}
-            {STATUS_LABEL[latest.status] ?? latest.status}
-          </span>
+      <div className="mt-3 rounded-[18px] bg-white/45 p-3 ring-1 ring-white/50">
+        {latest ? (
+          <div className="flex items-center gap-2">
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ background: STATUS_DOT[latest.status] ?? '#a09cc4' }}
+            />
+            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-ink">
+              {latest.title || 'Untitled post'}
+            </span>
+            <span className="shrink-0 text-[9px] font-bold tracking-wide text-ink-soft uppercase">
+              {latest.post_type && latest.post_type !== 'post' ? `${POST_TYPE_LABEL[latest.post_type as PostType]} · ` : ''}
+              {STATUS_LABEL[latest.status] ?? latest.status}
+            </span>
+          </div>
+        ) : (
+          <p className="text-[12px] font-semibold text-ink-soft">No posts yet — tap to open.</p>
+        )}
+        <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-white/60 pt-2.5">
+          <StatusPills drafts={draftCount} approved={approvedCount} />
+          {posts.length > 1 ? (
+            <span className="shrink-0 text-[10px] font-bold text-ink-soft">+{posts.length - 1} more</span>
+          ) : null}
         </div>
-      ) : (
-        <p className="mt-3 text-[12px] font-semibold text-ink-soft">No posts yet — tap to open.</p>
-      )}
-
-      <div className="mt-3">
-        <StatusPills drafts={draftCount} approved={approvedCount} />
       </div>
     </Link>
   )
