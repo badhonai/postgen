@@ -1,6 +1,8 @@
 import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import RequireAuth from './features/auth/RequireAuth'
+import { useAuth } from './features/auth/context'
+import { isSupabaseConfigured } from './lib/env'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import { Spinner } from './components/ui'
@@ -18,6 +20,23 @@ const ArtworksPage = lazy(() => import('./pages/ArtworksPage'))
 const SharesPage = lazy(() => import('./pages/SharesPage'))
 const CommandPalette = lazy(() => import('./components/CommandPalette'))
 
+/** Root: logged-in users open straight on the Dashboard (this is also the
+ * installed app's start_url); logged-out visitors see the landing page. */
+function RootRoute() {
+  const { session, loading } = useAuth()
+  if (isSupabaseConfigured && loading) return <PageFallback />
+  if (session) return <Navigate to="/dashboard" replace />
+  return <HomePage />
+}
+
+/** Login is pointless with a live session: go straight to the Dashboard. */
+function LoginRoute() {
+  const { session, loading } = useAuth()
+  if (isSupabaseConfigured && loading) return <PageFallback />
+  if (session) return <Navigate to="/dashboard" replace />
+  return <LoginPage />
+}
+
 function PageFallback() {
   return (
     <div className="pg-shell flex min-h-dvh items-center justify-center">
@@ -34,8 +53,8 @@ export default function App() {
       </Suspense>
       <Suspense fallback={<PageFallback />}>
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<RootRoute />} />
+          <Route path="/login" element={<LoginRoute />} />
           <Route
             path="/dashboard"
             element={

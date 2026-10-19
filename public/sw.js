@@ -5,7 +5,7 @@
  * a fresh deploy always wins; the cache is only a fallback for page
  * navigations and a fast path for the (immutable, hashed-by-us) icons.
  */
-const CACHE = 'postgen-shell-v1'
+const CACHE = 'postgen-shell-v3'
 const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png']
 
 self.addEventListener('install', (event) => {
