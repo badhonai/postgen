@@ -156,13 +156,15 @@ export function SmallTile({
           {postCount === 0 ? 'empty' : `${postCount} post${postCount === 1 ? '' : 's'}`}
         </span>
       </div>
-      <h3 className="pg-title relative mt-3 line-clamp-1 text-[15px] leading-tight text-ink">{project.name}</h3>
+      <div className="relative mt-3 flex items-center gap-2">
+        <h3 className="pg-title min-w-0 flex-1 truncate text-[15px] leading-tight text-ink">{project.name}</h3>
+        <TileArrow />
+      </div>
       {project.x_username ? (
         <p className="relative mt-0.5 truncate text-[11px] font-bold text-ink-soft">@{project.x_username}</p>
       ) : null}
-      <div className="relative mt-auto flex items-center justify-between gap-2 pt-3">
+      <div className="relative mt-auto pt-3">
         <StatusPills drafts={draftCount} approved={approvedCount} />
-        <TileArrow />
       </div>
     </Link>
   )
