@@ -157,6 +157,19 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              aria-label="History - recently published"
+              title="History - recently published"
+              onClick={() => navigate('/history')}
+              className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <path d="M3 4v5h5" />
+                <path d="M12 7v5l3.5 2" />
+              </svg>
+            </button>
+            <button
+              type="button"
               aria-label={
                 (pendingShares.data ?? 0) > 0
                   ? `Shares, ${pendingShares.data} waiting to accept`
