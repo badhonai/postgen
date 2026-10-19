@@ -11,9 +11,8 @@ import {
   type ProjectInput,
 } from '../features/projects/api'
 import {
-  ArtworksTile,
   HeroTile,
-  PromptLibraryTile,
+  LibraryGroupTile,
   SmallTile,
   type PostSummary,
 } from '../features/projects/BentoTiles'
@@ -285,8 +284,7 @@ export default function DashboardPage() {
                 statusTab={filter === 'all' ? 'approved' : filter}
               />
               <div className="grid grid-cols-2 gap-3">
-                <PromptLibraryTile promptCount={promptCount} />
-                <ArtworksTile artworkCount={artworkCount} />
+                <LibraryGroupTile promptCount={promptCount} artworkCount={artworkCount} />
                 {rest.map((p, i) => {
                   const projectPosts = postsByProject.get(p.id) ?? []
                   const counts = statusCounts(projectPosts)

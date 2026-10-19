@@ -169,60 +169,43 @@ export function SmallTile({
 }
 
 /**
- * Sits in the bento grid in place of a project tile and opens the prompt
- * library. Same tile language as the project cards so it reads as a peer,
- * not a bolt-on.
+ * Library group — Prompt Library + Artworks share ONE wide card with two
+ * tappable halves, so the pair costs a single short row instead of two
+ * full tiles in the bento grid.
  */
-export function PromptLibraryTile({ promptCount }: { promptCount: number }) {
+export function LibraryGroupTile({ promptCount, artworkCount }: { promptCount: number; artworkCount: number }) {
   return (
-    <Link to="/prompts" className="pg-tile pg-cv relative flex min-h-[136px] flex-col overflow-hidden bg-cream p-4">
+    <div className="pg-tile pg-cv relative col-span-2 grid grid-cols-2 overflow-hidden bg-cream">
       <Sheen />
-      <div className="relative flex items-start justify-between gap-2">
-        <span className="flex h-10 w-10 items-center justify-center rounded-[15px] bg-white/65 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+      <Link to="/prompts" className="relative flex items-center gap-3 p-4 transition active:bg-white/25">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] bg-white/65 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
           </svg>
         </span>
-        <span className="rounded-full bg-white/60 px-2.5 py-1 text-[10px] font-bold text-ink">
-          {promptCount === 0 ? 'empty' : `${promptCount} prompt${promptCount === 1 ? '' : 's'}`}
+        <span className="min-w-0">
+          <span className="pg-title block truncate text-[15px] leading-tight text-ink">Prompts</span>
+          <span className="mt-0.5 block text-[11px] font-bold text-ink-soft">
+            {promptCount} prompt{promptCount === 1 ? '' : 's'}
+          </span>
         </span>
-      </div>
-      <h3 className="pg-title relative mt-3 text-[15px] leading-tight text-ink">Prompt library</h3>
-      <p className="relative mt-0.5 text-[11px] font-bold text-ink-soft">Art recipes & references</p>
-      <div className="relative mt-auto flex justify-end pt-3">
-        <TileArrow />
-      </div>
-    </Link>
-  )
-}
-
-/**
- * Artworks hub tile — media-first gallery items with optional captions.
- * Artworks are not posts to publish, so they get their own home rather
- * than living inside the post lists.
- */
-export function ArtworksTile({ artworkCount }: { artworkCount: number }) {
-  return (
-    <Link to="/artworks" className="pg-tile pg-cv relative flex min-h-[136px] flex-col overflow-hidden bg-lilac p-4">
-      <Sheen />
-      <div className="relative flex items-start justify-between gap-2">
-        <span className="flex h-10 w-10 items-center justify-center rounded-[15px] bg-white/65 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+      </Link>
+      <Link to="/artworks" className="relative flex items-center gap-3 border-l border-white/60 p-4 transition active:bg-white/25">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] bg-white/65 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="16" rx="3" />
             <circle cx="8.5" cy="9.5" r="1.8" />
             <path d="M21 16l-5.5-5L7 20" />
           </svg>
         </span>
-        <span className="rounded-full bg-white/60 px-2.5 py-1 text-[10px] font-bold text-ink">
-          {artworkCount === 0 ? 'empty' : `${artworkCount} artwork${artworkCount === 1 ? '' : 's'}`}
+        <span className="min-w-0">
+          <span className="pg-title block truncate text-[15px] leading-tight text-ink">Artworks</span>
+          <span className="mt-0.5 block text-[11px] font-bold text-ink-soft">
+            {artworkCount} artwork{artworkCount === 1 ? '' : 's'}
+          </span>
         </span>
-      </div>
-      <h3 className="pg-title relative mt-3 text-[15px] leading-tight text-ink">Artworks</h3>
-      <p className="relative mt-0.5 text-[11px] font-bold text-ink-soft">Images & optional captions</p>
-      <div className="relative mt-auto flex justify-end pt-3">
-        <TileArrow />
-      </div>
-    </Link>
+      </Link>
+    </div>
   )
 }
