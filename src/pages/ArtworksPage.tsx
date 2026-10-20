@@ -65,21 +65,21 @@ export default function ArtworksPage() {
     return (id: string) => map.get(id) ?? 'Project'
   }, [projectList])
 
-  /** Projects that have creative images — the Creative tab filter chips. */
+  /** Projects that have items in the active tab — the filter chips. */
   const filterProjects = useMemo(() => {
-    const ids = [...new Set(artworks.filter(isCreative).map((a) => a.project_id))]
+    const ids = [...new Set(artworks.filter((a) => (tab === 'creative' ? isCreative(a) : !isCreative(a))).map((a) => a.project_id))]
     const known = projectList.filter((p) => ids.includes(p.id))
     const knownIds = new Set(known.map((p) => p.id))
     const extra = ids.filter((id) => !knownIds.has(id)).map((id) => ({ id, name: projectName(id) }) as (typeof projectList)[number])
     return [...known, ...extra]
-  }, [artworks, projectList, projectName])
+  }, [artworks, projectList, projectName, tab])
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(
     () =>
       artworks.filter((a) => {
         if (tab === 'creative' ? !isCreative(a) : isCreative(a)) return false
-        if (tab === 'creative' && filterProject !== 'all' && a.project_id !== filterProject) return false
+        if (filterProject !== 'all' && a.project_id !== filterProject) return false
         return true
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,7 +230,7 @@ export default function ArtworksPage() {
               type="button"
               role="tab"
               aria-selected={tab === k}
-              onClick={() => setTab(k)}
+              onClick={() => { setTab(k); setFilterProject('all') }}
               className={`flex-1 rounded-full px-2 py-2.5 text-[12.5px] font-extrabold transition ${
                 tab === k ? 'bg-ink text-white' : 'text-ink-soft'
               }`}
@@ -325,7 +325,7 @@ export default function ArtworksPage() {
         {/* ── Gallery, grouped by project ── */}
         <div className="mt-6">
           <h2 className="pg-title text-lg text-ink">{tab === 'creative' ? 'Creative images' : 'Your artworks'}</h2>
-          {tab === 'creative' && filterProjects.length > 1 ? (
+          {filterProjects.length > 1 ? (
             <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Filter by project">
               <button
                 type="button"
@@ -336,10 +336,10 @@ export default function ArtworksPage() {
                     : 'pg-glass rounded-full px-3 py-1.5 text-[12px] font-bold text-ink transition active:scale-95'
                 }
               >
-                All projects ({creativeCount})
+                All projects ({tab === 'creative' ? creativeCount : artworkTabCount})
               </button>
               {filterProjects.map((fp) => {
-                const count = artworks.filter((a) => a.project_id === fp.id && isCreative(a)).length
+                const count = artworks.filter((a) => a.project_id === fp.id && (tab === 'creative' ? isCreative(a) : !isCreative(a))).length
                 return (
                   <button
                     key={fp.id}
@@ -375,7 +375,7 @@ export default function ArtworksPage() {
         ) : grouped.length === 0 ? (
           <div className="pg-glass mt-4 rounded-[24px] p-7 text-center">
             <p className="text-sm font-semibold text-ink-soft">
-              {tab === 'creative' && filterProject !== 'all'
+              {filterProject !== 'all'
                 ? 'Nothing matches that filter.'
                 : tab === 'creative'
                   ? 'No creative images yet. Ask the AI to make some, or upload above.'
