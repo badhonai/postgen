@@ -5,34 +5,10 @@ import { useProjects } from '../features/projects/api'
 import { useAssetUrl } from '../lib/media'
 import { ErrorBox, Skeleton } from '../components/ui'
 import TabBar from '../components/TabBar'
+import { loadCadences, saveCadences, type ProjectCadence } from '../lib/cadence'
 import { cn } from '../lib/cn'
 
 type PlanTab = 'calendar' | 'reminders' | 'history'
-
-interface ProjectCadence {
-  intervalDays: number
-  targetDays?: number[]
-}
-
-const CADENCE_STORAGE_KEY = 'postgen_project_cadence_v1'
-
-function loadCadences(): Record<string, ProjectCadence> {
-  try {
-    const raw = localStorage.getItem(CADENCE_STORAGE_KEY)
-    if (raw) return JSON.parse(raw) as Record<string, ProjectCadence>
-  } catch {
-    /* fallback to empty */
-  }
-  return {}
-}
-
-function saveCadences(data: Record<string, ProjectCadence>) {
-  try {
-    localStorage.setItem(CADENCE_STORAGE_KEY, JSON.stringify(data))
-  } catch {
-    /* ignore storage errors */
-  }
-}
 
 /** "2h ago" / "3d ago" style relative time. */
 function timeAgo(iso: string): string {
