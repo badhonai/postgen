@@ -11,7 +11,7 @@ type PlanTab = 'calendar' | 'reminders' | 'history'
 
 interface ProjectCadence {
   intervalDays: number
-  targetDays?: number[] // 0 = Sun, 1 = Mon ... 6 = Sat
+  targetDays?: number[]
 }
 
 const CADENCE_STORAGE_KEY = 'postgen_project_cadence_v1'
@@ -96,6 +96,30 @@ function ProjectLogo({ r2Key, name }: { r2Key?: string | null; name: string }) {
   return <img src={url.data} alt="" loading="lazy" className="h-11 w-11 shrink-0 rounded-[14px] object-cover ring-1 ring-white/70" />
 }
 
+/** Small project logo icon rendered at the bottom of calendar date cells */
+function MiniProjectLogo({ r2Key, name }: { r2Key?: string | null; name: string }) {
+  const url = useAssetUrl(r2Key)
+  if (!url.data) {
+    return (
+      <span
+        title={name}
+        className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-white/90 text-[7.5px] font-black text-ink shadow-2xs ring-1 ring-black/10"
+      >
+        {name.slice(0, 1).toUpperCase()}
+      </span>
+    )
+  }
+  return (
+    <img
+      src={url.data}
+      alt={name}
+      title={name}
+      loading="lazy"
+      className="h-3.5 w-3.5 shrink-0 rounded-full object-cover shadow-2xs ring-1 ring-white/90"
+    />
+  )
+}
+
 export default function HistoryPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -107,16 +131,31 @@ export default function HistoryPage() {
 
   const [activeTab, setActiveTab] = useState<PlanTab>(initialTab)
 
-  const postsQ = usePosts({ status: 'published' })
+  // Fetch all posts so we have both published (for history/calendar) and unposted (for reminders)
+  const postsQ = usePosts({})
   const projectsQ = useProjects()
 
   const publishedAt = (p: PostListItem) => p.published_at ?? p.updated_at
 
-  const entries = useMemo(() => {
-    const list = [...(postsQ.data ?? [])]
+  const allPosts = postsQ.data ?? []
+
+  // Published posts (newest first)
+  const publishedEntries = useMemo(() => {
+    const list = allPosts.filter((p) => p.status === 'published')
     list.sort((a, b) => publishedAt(b).localeCompare(publishedAt(a)))
     return list.slice(0, 100)
-  }, [postsQ.data])
+  }, [allPosts])
+
+  // Ready / unposted posts grouped by project (drafts, approved posts)
+  const readyPostsByProject = useMemo(() => {
+    const map = new Map<string, PostListItem[]>()
+    for (const p of allPosts) {
+      if (p.status !== 'published') {
+        map.set(p.project_id, [...(map.get(p.project_id) ?? []), p])
+      }
+    }
+    return map
+  }, [allPosts])
 
   const projectById = useMemo(
     () => new Map((projectsQ.data ?? []).map((p) => [p.id, p])),
@@ -125,28 +164,28 @@ export default function HistoryPage() {
 
   const groupedHistory = useMemo(() => {
     const map = new Map<string, PostListItem[]>()
-    for (const e of entries) {
+    for (const e of publishedEntries) {
       const s = sectionOf(publishedAt(e))
       map.set(s, [...(map.get(s) ?? []), e])
     }
     return SECTIONS.filter((s) => map.has(s)).map((s) => ({ name: s, items: map.get(s)! }))
-  }, [entries])
+  }, [publishedEntries])
 
-  const usedProjects = useMemo(() => new Set(entries.map((e) => e.project_id)).size, [entries])
+  const usedProjects = useMemo(() => new Set(publishedEntries.map((e) => e.project_id)).size, [publishedEntries])
 
   // ── Calendar state ──
   const [calDate, setCalDate] = useState<Date>(() => new Date())
   const [selectedDateKey, setSelectedDateKey] = useState<string>(() => toDateKey(new Date()))
 
-  // Map of YYYY-MM-DD -> posts published on that date
+  // Map of YYYY-MM-DD -> published posts on that date
   const postsByDateKey = useMemo(() => {
     const map = new Map<string, PostListItem[]>()
-    for (const p of entries) {
+    for (const p of publishedEntries) {
       const key = toDateKey(new Date(publishedAt(p)))
       map.set(key, [...(map.get(key) ?? []), p])
     }
     return map
-  }, [entries])
+  }, [publishedEntries])
 
   // Calendar month days calculation
   const calendarGrid = useMemo(() => {
@@ -188,13 +227,13 @@ export default function HistoryPage() {
   // Find latest published post per project
   const latestPostByProject = useMemo(() => {
     const map = new Map<string, PostListItem>()
-    for (const p of entries) {
+    for (const p of publishedEntries) {
       if (!map.has(p.project_id)) {
         map.set(p.project_id, p)
       }
     }
     return map
-  }, [entries])
+  }, [publishedEntries])
 
   // Compute status per project
   const projectStatuses = useMemo(() => {
@@ -206,6 +245,7 @@ export default function HistoryPage() {
       const latest = latestPostByProject.get(project.id)
       const lastIso = latest ? publishedAt(latest) : null
       const daysSince = lastIso ? Math.floor((now - new Date(lastIso).getTime()) / dayMs) : null
+      const readyPosts = readyPostsByProject.get(project.id) ?? []
 
       let status: 'on_track' | 'due' | 'overdue' | 'none'
       let statusLabel = ''
@@ -216,7 +256,7 @@ export default function HistoryPage() {
       } else if (daysSince < cadence.intervalDays) {
         status = 'on_track'
         const left = cadence.intervalDays - daysSince
-        statusLabel = `On track · Next in ${left}d (posted ${daysSince === 0 ? 'today' : `${daysSince}d ago`})`
+        statusLabel = `On track · Next in ${left}d (last posted ${daysSince === 0 ? 'today' : `${daysSince}d ago`})`
       } else if (daysSince === cadence.intervalDays) {
         status = 'due'
         statusLabel = `Due today · ${daysSince}d since last post`
@@ -233,9 +273,10 @@ export default function HistoryPage() {
         daysSince,
         status,
         statusLabel,
+        readyPosts,
       }
     })
-  }, [projectsQ.data, cadences, latestPostByProject])
+  }, [projectsQ.data, cadences, latestPostByProject, readyPostsByProject])
 
   const reminderCounts = useMemo(() => {
     let due = 0
@@ -356,7 +397,7 @@ export default function HistoryPage() {
                   {calDate.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
                 </p>
                 <p className="text-[10px] font-bold text-ink-soft">
-                  Tap any day to see posts or schedule
+                  Project logos show what was published on each day
                 </p>
               </div>
               <button
@@ -372,7 +413,7 @@ export default function HistoryPage() {
             </div>
 
             {/* Calendar Grid */}
-            <div className="pg-glass rounded-[26px] p-4">
+            <div className="pg-glass rounded-[26px] p-3.5">
               <div className="grid grid-cols-7 gap-1 text-center">
                 {WEEKDAYS.map((w, idx) => (
                   <span key={w} className="py-1 text-[11px] font-extrabold tracking-wider text-ink-soft uppercase">
@@ -381,13 +422,14 @@ export default function HistoryPage() {
                 ))}
               </div>
 
-              <div className="mt-2 grid grid-cols-7 gap-1">
+              <div className="mt-1.5 grid grid-cols-7 gap-1">
                 {calendarGrid.map((cell, idx) => {
                   if (!cell.day || !cell.dateKey) {
-                    return <div key={`empty-${idx}`} className="h-11" />
+                    return <div key={`empty-${idx}`} className="h-13.5" />
                   }
                   const postList = postsByDateKey.get(cell.dateKey) ?? []
-                  const count = postList.length
+                  // Unique project IDs for published posts on this day
+                  const projectIds = Array.from(new Set(postList.map((p) => p.project_id)))
                   const isSelected = selectedDateKey === cell.dateKey
 
                   return (
@@ -396,7 +438,7 @@ export default function HistoryPage() {
                       type="button"
                       onClick={() => setSelectedDateKey(cell.dateKey!)}
                       className={cn(
-                        'relative flex h-11 flex-col items-center justify-center rounded-[14px] transition active:scale-95',
+                        'relative flex h-13.5 flex-col items-center justify-between rounded-[14px] px-0.5 py-1.5 transition active:scale-95',
                         isSelected
                           ? 'bg-ink text-white shadow'
                           : cell.isToday
@@ -404,22 +446,42 @@ export default function HistoryPage() {
                             : 'text-ink hover:bg-white/40',
                       )}
                     >
-                      <span className="text-[13px] font-extrabold">{cell.day}</span>
-                      {count > 0 ? (
-                        <span
-                          className={cn(
-                            'mt-0.5 flex h-1.5 w-1.5 rounded-full',
-                            isSelected ? 'bg-mint' : 'bg-emerald-500',
-                          )}
-                        />
-                      ) : null}
+                      <span className="text-[12px] font-extrabold leading-none">{cell.day}</span>
+
+                      {/* Small project logo icon(s) on bottom of the date */}
+                      {projectIds.length > 0 ? (
+                        <div className="flex items-center justify-center gap-0.5">
+                          {projectIds.slice(0, 2).map((pid) => {
+                            const proj = projectById.get(pid)
+                            return (
+                              <MiniProjectLogo
+                                key={pid}
+                                r2Key={proj?.logo?.r2_key}
+                                name={proj?.name ?? 'P'}
+                              />
+                            )
+                          })}
+                          {projectIds.length > 2 ? (
+                            <span
+                              className={cn(
+                                'text-[8px] font-black leading-none',
+                                isSelected ? 'text-white/80' : 'text-ink-soft',
+                              )}
+                            >
+                              +{projectIds.length - 2}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="h-3.5" />
+                      )}
                     </button>
                   )
                 })}
               </div>
             </div>
 
-            {/* Selected Date Posts & Action */}
+            {/* Selected Date Posts */}
             <div className="pg-glass rounded-[24px] p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -442,9 +504,6 @@ export default function HistoryPage() {
                 <div className="mt-4 rounded-[18px] bg-white/40 p-4 text-center">
                   <p className="text-xs font-semibold text-ink-soft">
                     No posts published on this day.
-                  </p>
-                  <p className="mt-1 text-[11px] font-bold text-ink-soft">
-                    Plan ahead: jump to a project to compose a post for this schedule.
                   </p>
                 </div>
               ) : (
@@ -481,7 +540,7 @@ export default function HistoryPage() {
             <div className="pg-glass rounded-[24px] p-4">
               <p className="pg-title text-base text-ink">Posting Cadence & Targets</p>
               <p className="mt-1 text-xs font-semibold text-ink-soft">
-                Choose how many days between posts for each project. We'll remind you when it's time to publish.
+                Choose how often each project should post. When a project is due, pick and post any of its ready posts directly.
               </p>
               <div className="mt-3 flex gap-2">
                 <div className="flex-1 rounded-[16px] bg-emerald-500/10 p-2.5 text-center">
@@ -499,9 +558,9 @@ export default function HistoryPage() {
               </div>
             </div>
 
-            {/* List of Projects with Cadence Knobs */}
+            {/* List of Projects with Cadence Knobs & Ready Posts to Post */}
             <div className="space-y-3">
-              {projectStatuses.map(({ project, cadence, status, statusLabel }) => {
+              {projectStatuses.map(({ project, cadence, status, statusLabel, readyPosts }) => {
                 const badgeColor =
                   status === 'on_track'
                     ? 'bg-emerald-500/15 text-emerald-700'
@@ -526,14 +585,14 @@ export default function HistoryPage() {
                       </span>
                     </div>
 
-                    <p className="mt-2.5 text-xs font-semibold text-ink-soft">
+                    <p className="mt-2 text-xs font-semibold text-ink-soft">
                       {statusLabel}
                     </p>
 
-                    {/* Cadence picker buttons */}
+                    {/* Cadence interval buttons */}
                     <div className="mt-3">
                       <p className="text-[10px] font-extrabold tracking-wider text-ink-soft uppercase">
-                        Post every:
+                        Post frequency:
                       </p>
                       <div className="mt-1.5 flex gap-1.5">
                         {[1, 2, 3, 5, 7].map((days) => (
@@ -554,20 +613,50 @@ export default function HistoryPage() {
                       </div>
                     </div>
 
-                    {/* Quick Action: New Post */}
-                    <div className="mt-3.5 flex gap-2">
-                      <Link
-                        to={`/projects/${project.id}/posts/new`}
-                        className="flex-1 rounded-[16px] bg-ink/10 py-2.5 text-center text-xs font-extrabold text-ink transition hover:bg-ink hover:text-white active:scale-95"
-                      >
-                        + Create post
-                      </Link>
-                      <Link
-                        to={`/projects/${project.id}`}
-                        className="rounded-[16px] bg-white/60 px-3 py-2.5 text-center text-xs font-extrabold text-ink transition hover:bg-white active:scale-95"
-                      >
-                        Project →
-                      </Link>
+                    {/* Ready Posts to Post (no need to create, just post any ready post) */}
+                    <div className="mt-3.5 border-t border-ink/8 pt-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-extrabold tracking-wider text-ink-soft uppercase">
+                          Ready to post ({readyPosts.length}):
+                        </p>
+                        <Link
+                          to={`/projects/${project.id}`}
+                          className="text-[11px] font-extrabold text-ink hover:underline"
+                        >
+                          All project posts →
+                        </Link>
+                      </div>
+
+                      {readyPosts.length > 0 ? (
+                        <div className="mt-2 space-y-1.5">
+                          {readyPosts.slice(0, 2).map((rp) => (
+                            <Link
+                              key={rp.id}
+                              to={`/posts/${rp.id}`}
+                              className="flex items-center justify-between gap-2 rounded-[16px] bg-white/60 px-3 py-2 text-xs font-bold text-ink transition hover:bg-white active:scale-[0.99]"
+                            >
+                              <span className="min-w-0 flex-1 truncate">
+                                {rp.title || 'Untitled post'}
+                              </span>
+                              <span className="shrink-0 rounded-full bg-ink px-2.5 py-1 text-[10px] font-extrabold text-white shadow-xs">
+                                Post on X →
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-2 flex items-center justify-between rounded-[14px] bg-white/40 px-3 py-2">
+                          <span className="text-xs font-semibold text-ink-soft">
+                            No unposted drafts in project
+                          </span>
+                          <Link
+                            to={`/projects/${project.id}`}
+                            className="text-xs font-extrabold text-ink hover:underline"
+                          >
+                            Open project →
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -589,7 +678,7 @@ export default function HistoryPage() {
               </div>
             ) : postsQ.error ? (
               <ErrorBox message={postsQ.error instanceof Error ? postsQ.error.message : 'Failed to load published history'} />
-            ) : entries.length === 0 ? (
+            ) : publishedEntries.length === 0 ? (
               <div className="pg-glass rounded-[28px] p-8 text-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-lilac text-ink">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
@@ -607,12 +696,12 @@ export default function HistoryPage() {
               <>
                 <div className="pg-glass flex items-center justify-between rounded-[24px] px-4 py-3.5">
                   <div>
-                    <p className="pg-title text-lg leading-none text-ink">{entries.length} published</p>
+                    <p className="pg-title text-lg leading-none text-ink">{publishedEntries.length} published</p>
                     <p className="mt-1 text-[11px] font-bold text-ink-soft">across {usedProjects} project{usedProjects === 1 ? '' : 's'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] font-bold tracking-wide text-ink-soft uppercase">Latest</p>
-                    <p className="mt-0.5 text-sm font-extrabold text-ink">{timeAgo(publishedAt(entries[0]))}</p>
+                    <p className="mt-0.5 text-sm font-extrabold text-ink">{timeAgo(publishedAt(publishedEntries[0]))}</p>
                   </div>
                 </div>
 
