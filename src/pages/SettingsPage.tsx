@@ -13,6 +13,7 @@ import { useProjects, useReorderProjects } from '../features/projects/api'
 import { useGlobalInstructions, useSetGlobalInstructions } from '../features/profile/api'
 import { buildAgentSetupText, buildMcpConfig } from '../features/agents/agentSetup'
 import { ACCENTS, applyAccent, applyTheme, getAccent, getTheme, type AccentId, type ThemeMode } from '../lib/theme'
+import TabBar from '../components/TabBar'
 
 const SWATCH: Record<AccentId, string> = {
   emerald: '#34d399',
@@ -256,7 +257,7 @@ export default function SettingsPage() {
 
   return (
     <main className="pg-shell">
-      <div className="mx-auto max-w-[440px] px-5 pt-6 pb-24">
+      <div className="mx-auto max-w-[440px] px-5 pt-6 pb-28">
         {/* ── header ── */}
         <header>
           <button
@@ -849,6 +850,7 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+      <TabBar active="settings" />
     </main>
   )
 }

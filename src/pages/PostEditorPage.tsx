@@ -73,6 +73,7 @@ export default function PostEditorPage() {
   const [statusNote, setStatusNote] = useState<string | null>(null)
   const [autosavedAt, setAutosavedAt] = useState<number | null>(null)
 
+  const previousStatusRef = useRef<PostStatus>('draft')
   const latestRef = useRef<SavePostInput | null>(null)
   const lastSavedRef = useRef<string>('')
   const timerRef = useRef<number | undefined>(undefined)
@@ -417,6 +418,26 @@ export default function PostEditorPage() {
     setMenuOpen(false)
     setSharing(true)
     const { text: shareText, media: shareMedia } = shareContent()
+
+    // ── Automatically move post to Published immediately so the user can
+    // just post on X and close all apps without needing to return to PostGen.
+    // The popup appears for undo in case they cancel or something went wrong.
+    if (postData) {
+      previousStatusRef.current = postData.status
+      if (postData.status !== 'published') {
+        setPostStatus.mutate(
+          { id: postData.id, status: 'published' },
+          {
+            onSuccess: () => {
+              setStatusNote('Marked as Published ✓')
+              window.setTimeout(() => setStatusNote(null), 3000)
+            },
+          },
+        )
+      }
+      setPostedAsk(true)
+    }
+
     let done = false
     try {
       const files: File[] = []
@@ -433,7 +454,6 @@ export default function PostEditorPage() {
       if (files.length > 0 && typeof navigator.canShare === 'function' && navigator.canShare({ files })) {
         await navigator.share({ files, text: shareText })
         done = true
-        if (postData && postData.status !== 'published') setPostedAsk(true)
       }
     } catch (err) {
       // closing the sheet is not a failure — just stop
@@ -443,9 +463,6 @@ export default function PostEditorPage() {
     }
     if (done) return
     window.open(`https://x.com/intent/post?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener')
-    // X opened in a new tab — when the user comes back, ask whether it
-    // actually went out so the board stays truthful.
-    if (postData && postData.status !== 'published') setPostedAsk(true)
   }
 
   return (
@@ -729,14 +746,22 @@ export default function PostEditorPage() {
         {postedAsk && postData ? (
           <div className="fixed inset-0 z-50 flex items-end bg-ink/45 px-3 pt-10 pb-6" onClick={() => setPostedAsk(false)}>
             <div
-              className="pg-glass-strong mx-auto w-full max-w-[440px] rounded-[26px] p-5"
+              className="pg-glass-strong mx-auto w-full max-w-[440px] rounded-[26px] p-5 shadow-[0_18px_40px_rgba(70,60,130,0.22)]"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="pg-title text-xl text-ink">Did you post it on X?</h2>
-              <p className="mt-1.5 text-sm leading-relaxed font-semibold text-ink-soft">
-                If it's live, I'll move this post to <strong className="text-ink">Published</strong> so your
-                board stays truthful. On desktop, X opens with text only — make sure you attached the
-                image there before posting.
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                <h2 className="pg-title text-xl text-ink">Marked as Published</h2>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed font-semibold text-ink-soft">
+                This post is automatically moved to <strong className="text-ink">Published</strong> so you don't need to reopen PostGen after posting on X. You can close all apps now.
+              </p>
+              <p className="mt-1 text-xs font-semibold text-ink-soft">
+                If you cancelled or changed your mind on X, undo below to keep it as {STATUS_LABEL[previousStatusRef.current] ?? 'Draft'}.
               </p>
               {postedError ? (
                 <div className="mt-3">
@@ -745,25 +770,34 @@ export default function PostEditorPage() {
               ) : null}
               <div className="mt-4 flex gap-2">
                 <Button
-                  variant="accent"
-                  className="flex-1 py-3"
+                  variant="ghost"
+                  className="flex-1 py-3 text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 active:scale-95"
                   disabled={setPostStatus.isPending}
                   onClick={() => {
                     setPostedError(null)
+                    const revertTo = previousStatusRef.current || 'draft'
                     setPostStatus.mutate(
-                      { id: postData.id, status: 'published' },
+                      { id: postData.id, status: revertTo },
                       {
-                        onSuccess: () => setPostedAsk(false),
+                        onSuccess: () => {
+                          setStatusNote(`Reverted to ${STATUS_LABEL[revertTo] ?? revertTo} ✓`)
+                          window.setTimeout(() => setStatusNote(null), 3000)
+                          setPostedAsk(false)
+                        },
                         onError: (e) =>
-                          setPostedError(e instanceof Error ? e.message : 'Could not mark as published'),
+                          setPostedError(e instanceof Error ? e.message : 'Could not undo publish status'),
                       },
                     )
                   }}
                 >
-                  {setPostStatus.isPending ? 'Saving…' : 'Yes — mark as Published'}
+                  {setPostStatus.isPending ? 'Undoing…' : 'Undo to Draft'}
                 </Button>
-                <Button variant="ghost" className="py-3" onClick={() => setPostedAsk(false)}>
-                  Not yet
+                <Button
+                  variant="accent"
+                  className="flex-1 py-3"
+                  onClick={() => setPostedAsk(false)}
+                >
+                  Done
                 </Button>
               </div>
             </div>

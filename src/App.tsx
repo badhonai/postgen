@@ -113,6 +113,14 @@ export default function App() {
             }
           />
           <Route
+            path="/planner"
+            element={
+              <RequireAuth>
+                <HistoryPage />
+              </RequireAuth>
+            }
+          />
+          <Route
             path="/shares"
             element={
               <RequireAuth>

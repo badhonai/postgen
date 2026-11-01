@@ -17,6 +17,7 @@ import { useImagePrompts } from '../features/prompts/api'
 import { SHARE_ITEM_LABEL, type Share, type ShareItemType } from '../lib/types'
 import { Button, ErrorBox, Input, Select, Spinner } from '../components/ui'
 import RecentRecipients from '../features/shares/RecentRecipients'
+import TabBar from '../components/TabBar'
 import { cn } from '../lib/cn'
 
 const ITEM_ICON: Record<ShareItemType, string> = { project: '📁', post: '💬', prompt: '🎨' }
@@ -142,7 +143,7 @@ export default function SharesPage() {
 
   return (
     <main className="pg-shell">
-      <div className="mx-auto max-w-[440px] px-5 pt-6 pb-16">
+      <div className="mx-auto max-w-[440px] px-5 pt-6 pb-28">
         <header className="flex items-center gap-3">
           <button
             type="button"
@@ -397,6 +398,7 @@ export default function SharesPage() {
           </>
         )}
       </div>
+      <TabBar active="inbox" />
     </main>
   )
 }

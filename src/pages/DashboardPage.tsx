@@ -19,7 +19,6 @@ import {
 import { TILE_COLORS } from '../lib/types'
 import ProjectForm from '../features/projects/ProjectForm'
 import { useImagePrompts } from '../features/prompts/api'
-import { usePendingShareCount } from '../features/shares/api'
 import { applyTheme, getTheme, type ThemeMode } from '../lib/theme'
 import TabBar from '../components/TabBar'
 import { Button, ErrorBox, Skeleton, SparkleLogo } from '../components/ui'
@@ -81,7 +80,6 @@ export default function DashboardPage() {
   const projects = useProjects()
   const createProject = useCreateProject()
   const prompts = useImagePrompts()
-  const pendingShares = usePendingShareCount()
   const [theme, setTheme] = useState<ThemeMode>(getTheme)
   const toggleTheme = () => {
     const next: ThemeMode = theme === 'dark' ? 'light' : 'dark'
@@ -154,40 +152,6 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="History - recently published"
-              title="History - recently published"
-              onClick={() => navigate('/history')}
-              className="pg-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
-            >
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12a9 9 0 1 0 3-6.7" />
-                <path d="M3 4v5h5" />
-                <path d="M12 7v5l3.5 2" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              aria-label={
-                (pendingShares.data ?? 0) > 0
-                  ? `Shares, ${pendingShares.data} waiting to accept`
-                  : 'Shares'
-              }
-              title="Shares — send & receive"
-              onClick={() => navigate('/shares')}
-              className="pg-glass relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition active:scale-95"
-            >
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="5" width="18" height="14" rx="3" />
-                <path d="m3.5 7 8.5 6 8.5-6" />
-              </svg>
-              {(pendingShares.data ?? 0) > 0 ? (
-                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white ring-2 ring-white/80">
-                  {pendingShares.data}
-                </span>
-              ) : null}
-            </button>
             <button
               type="button"
               aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
