@@ -1,11 +1,20 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { usePosts, type PostListItem } from '../features/posts/api'
 import { useProjects } from '../features/projects/api'
 import { useAssetUrl } from '../lib/media'
 import { ErrorBox, Skeleton } from '../components/ui'
 import TabBar from '../components/TabBar'
-import { computeCadenceStatus, loadCadences, saveCadences, type ProjectCadence } from '../lib/cadence'
+import {
+  computeCadenceStatus,
+  loadCadences,
+  loadManualPosts,
+  logManualPost,
+  removeManualPost,
+  saveCadences,
+  type ManualPostLog,
+  type ProjectCadence,
+} from '../lib/cadence'
 import { cn } from '../lib/cn'
 
 type PlanTab = 'calendar' | 'reminders' | 'history'
@@ -111,6 +120,22 @@ export default function HistoryPage() {
   const postsQ = usePosts({})
   const projectsQ = useProjects()
 
+  // Manual / external posts logged by user (from Twitter, phone app, Hootsuite, etc.)
+  const [manualPosts, setManualPosts] = useState<ManualPostLog[]>(loadManualPosts)
+  const [customDateOpen, setCustomDateOpen] = useState<string | null>(null) // projectId or null
+  const [customDateValue, setCustomDateValue] = useState<string>(() => toDateKey(new Date()))
+  const [calendarLogProject, setCalendarLogProject] = useState<string>('')
+
+  useEffect(() => {
+    const refresh = () => setManualPosts(loadManualPosts())
+    window.addEventListener('postgen_manual_posts_updated', refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener('postgen_manual_posts_updated', refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
+
   const publishedAt = (p: PostListItem) => p.published_at ?? p.updated_at
 
   const allPosts = postsQ.data ?? []
@@ -153,7 +178,7 @@ export default function HistoryPage() {
   const [calDate, setCalDate] = useState<Date>(() => new Date())
   const [selectedDateKey, setSelectedDateKey] = useState<string>(() => toDateKey(new Date()))
 
-  // Map of YYYY-MM-DD -> published posts on that date
+  // Map of YYYY-MM-DD -> published database posts on that date
   const postsByDateKey = useMemo(() => {
     const map = new Map<string, PostListItem[]>()
     for (const p of publishedEntries) {
@@ -162,6 +187,15 @@ export default function HistoryPage() {
     }
     return map
   }, [publishedEntries])
+
+  // Map of YYYY-MM-DD -> manual external post logs on that date
+  const manualByDateKey = useMemo(() => {
+    const map = new Map<string, ManualPostLog[]>()
+    for (const m of manualPosts) {
+      map.set(m.dateKey, [...(map.get(m.dateKey) ?? []), m])
+    }
+    return map
+  }, [manualPosts])
 
   // Calendar month days calculation
   const calendarGrid = useMemo(() => {
@@ -188,6 +222,10 @@ export default function HistoryPage() {
     return postsByDateKey.get(selectedDateKey) ?? []
   }, [postsByDateKey, selectedDateKey])
 
+  const selectedDayManuals = useMemo(() => {
+    return manualByDateKey.get(selectedDateKey) ?? []
+  }, [manualByDateKey, selectedDateKey])
+
   // ── Cadence / Reminders state ──
   const [cadences, setCadences] = useState<Record<string, ProjectCadence>>(loadCadences)
 
@@ -200,16 +238,22 @@ export default function HistoryPage() {
     })
   }
 
-  // Find latest published post per project
+  // Find latest published post per project (merging DB posts + manual logs)
   const latestPostByProject = useMemo(() => {
-    const map = new Map<string, PostListItem>()
+    const map = new Map<string, { iso: string; isManual: boolean; manualId?: string; dateKey?: string }>()
     for (const p of publishedEntries) {
       if (!map.has(p.project_id)) {
-        map.set(p.project_id, p)
+        map.set(p.project_id, { iso: publishedAt(p), isManual: false })
+      }
+    }
+    for (const m of manualPosts) {
+      const existing = map.get(m.projectId)
+      if (!existing || new Date(m.publishedAt).getTime() > new Date(existing.iso).getTime()) {
+        map.set(m.projectId, { iso: m.publishedAt, isManual: true, manualId: m.id, dateKey: m.dateKey })
       }
     }
     return map
-  }, [publishedEntries])
+  }, [publishedEntries, manualPosts])
 
   // Compute status per project
   const projectStatuses = useMemo(() => {
@@ -217,8 +261,8 @@ export default function HistoryPage() {
 
     return (projectsQ.data ?? []).map((project) => {
       const cadence = cadences[project.id] ?? { intervalDays: 2, targetDays: [1, 3, 5] }
-      const latest = latestPostByProject.get(project.id)
-      const lastIso = latest ? publishedAt(latest) : null
+      const latestInfo = latestPostByProject.get(project.id)
+      const lastIso = latestInfo?.iso ?? null
       const readyPosts = readyPostsByProject.get(project.id) ?? []
 
       const { status, statusLabel, daysElapsed } = computeCadenceStatus(
@@ -230,7 +274,7 @@ export default function HistoryPage() {
       return {
         project,
         cadence,
-        latest,
+        latestInfo,
         daysSince: daysElapsed,
         status,
         statusLabel,
@@ -250,6 +294,8 @@ export default function HistoryPage() {
     }
     return { due, onTrack, overdue, total: projectStatuses.length }
   }, [projectStatuses])
+
+  const todayKey = toDateKey(new Date())
 
   return (
     <div className="pg-shell">
@@ -358,7 +404,7 @@ export default function HistoryPage() {
                   {calDate.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
                 </p>
                 <p className="text-[10px] font-bold text-ink-soft">
-                  Project logos show what was published on each day
+                  Project logos show what was posted on each day
                 </p>
               </div>
               <button
@@ -389,8 +435,11 @@ export default function HistoryPage() {
                     return <div key={`empty-${idx}`} className="h-13.5" />
                   }
                   const postList = postsByDateKey.get(cell.dateKey) ?? []
-                  // Unique project IDs for published posts on this day
-                  const projectIds = Array.from(new Set(postList.map((p) => p.project_id)))
+                  const manualList = manualByDateKey.get(cell.dateKey) ?? []
+                  // All unique project IDs that posted on this day (DB or external manual log)
+                  const projectIds = Array.from(
+                    new Set([...postList.map((p) => p.project_id), ...manualList.map((m) => m.projectId)]),
+                  )
                   const isSelected = selectedDateKey === cell.dateKey
 
                   return (
@@ -442,7 +491,7 @@ export default function HistoryPage() {
               </div>
             </div>
 
-            {/* Selected Date Posts */}
+            {/* Selected Date Posts & Manual External Logs */}
             <div className="pg-glass rounded-[24px] p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -457,11 +506,11 @@ export default function HistoryPage() {
                   </p>
                 </div>
                 <span className="rounded-full bg-lilac px-2.5 py-1 text-xs font-extrabold text-ink">
-                  {selectedDayPosts.length} post{selectedDayPosts.length === 1 ? '' : 's'}
+                  {selectedDayPosts.length + selectedDayManuals.length} post{selectedDayPosts.length + selectedDayManuals.length === 1 ? '' : 's'}
                 </span>
               </div>
 
-              {selectedDayPosts.length === 0 ? (
+              {selectedDayPosts.length === 0 && selectedDayManuals.length === 0 ? (
                 <div className="mt-4 rounded-[18px] bg-white/40 p-4 text-center">
                   <p className="text-xs font-semibold text-ink-soft">
                     No posts published on this day.
@@ -469,6 +518,7 @@ export default function HistoryPage() {
                 </div>
               ) : (
                 <div className="mt-3 space-y-2">
+                  {/* Database published posts */}
                   {selectedDayPosts.map((post) => {
                     const project = projectById.get(post.project_id)
                     return (
@@ -486,8 +536,70 @@ export default function HistoryPage() {
                       </Link>
                     )
                   })}
+
+                  {/* External posts logged manually */}
+                  {selectedDayManuals.map((man) => {
+                    const project = projectById.get(man.projectId)
+                    return (
+                      <div
+                        key={man.id}
+                        className="flex items-center gap-3 rounded-[18px] bg-emerald-500/10 p-2.5"
+                      >
+                        <ProjectLogo r2Key={project?.logo?.r2_key} name={project?.name ?? 'Project'} />
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-1 text-xs font-bold text-ink">
+                            {man.note || 'External post on X'}
+                          </p>
+                          <p className="text-[10px] font-bold text-emerald-800">
+                            {project?.name ?? 'Project'} · Logged manually
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeManualPost(man.id)}
+                          className="rounded-full bg-rose-500/10 px-2.5 py-1 text-[10px] font-extrabold text-rose-700 hover:bg-rose-500/20 active:scale-95"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
+
+              {/* Option to log an external post for this selected calendar date */}
+              <div className="mt-3.5 border-t border-ink/8 pt-3">
+                <p className="text-[10px] font-extrabold tracking-wider text-ink-soft uppercase">
+                  Posted from Twitter / other tool on this day?
+                </p>
+                <div className="mt-1.5 flex gap-2">
+                  <select
+                    value={calendarLogProject}
+                    onChange={(e) => setCalendarLogProject(e.target.value)}
+                    className="min-w-0 flex-1 rounded-[14px] bg-white/70 px-3 py-2 text-xs font-bold text-ink outline-none ring-1 ring-black/5"
+                  >
+                    <option value="">Select project to log post…</option>
+                    {(projectsQ.data ?? []).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!calendarLogProject}
+                    onClick={() => {
+                      if (calendarLogProject) {
+                        logManualPost(calendarLogProject, selectedDateKey)
+                        setCalendarLogProject('')
+                      }
+                    }}
+                    className="shrink-0 rounded-[14px] bg-ink px-3 py-2 text-xs font-extrabold text-white transition disabled:opacity-40 active:scale-95"
+                  >
+                    + Log post
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         ) : null}
@@ -501,7 +613,7 @@ export default function HistoryPage() {
             <div className="pg-glass rounded-[24px] p-4">
               <p className="pg-title text-base text-ink">Posting Cadence & Targets</p>
               <p className="mt-1 text-xs font-semibold text-ink-soft">
-                Choose how often each project should post. When a project is due, pick and post any of its ready posts directly.
+                Choose how often each project posts. When due, post a ready draft or log an external post from Twitter/app.
               </p>
               <div className="mt-3 flex gap-2">
                 <div className="flex-1 rounded-[16px] bg-emerald-500/10 p-2.5 text-center">
@@ -519,9 +631,9 @@ export default function HistoryPage() {
               </div>
             </div>
 
-            {/* List of Projects with Cadence Knobs & Ready Posts to Post */}
+            {/* List of Projects with Cadence Knobs & Ready Posts / External Log Options */}
             <div className="space-y-3">
-              {projectStatuses.map(({ project, cadence, status, statusLabel, readyPosts }) => {
+              {projectStatuses.map(({ project, cadence, status, statusLabel, readyPosts, latestInfo }) => {
                 const badgeColor =
                   status === 'on_track'
                     ? 'bg-emerald-500/15 text-emerald-700'
@@ -530,6 +642,8 @@ export default function HistoryPage() {
                       : status === 'overdue'
                         ? 'bg-rose-500/15 text-rose-700'
                         : 'bg-white/60 text-ink-soft'
+
+                const isLoggedToday = latestInfo?.isManual && latestInfo?.dateKey === todayKey
 
                 return (
                   <div key={project.id} className="pg-glass rounded-[24px] p-4">
@@ -574,7 +688,73 @@ export default function HistoryPage() {
                       </div>
                     </div>
 
-                    {/* Ready Posts to Post (no need to create, just post any ready post) */}
+                    {/* ── Manual / External Post Logger: Mentally log that you posted from X or another app ── */}
+                    <div className="mt-3.5 rounded-[18px] bg-white/45 p-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10.5px] font-extrabold tracking-wide text-ink-soft uppercase">
+                          Posted outside PostGen?
+                        </span>
+                        {latestInfo?.isManual && latestInfo.manualId ? (
+                          <button
+                            type="button"
+                            onClick={() => removeManualPost(latestInfo.manualId!)}
+                            className="text-[10px] font-extrabold text-rose-700 hover:underline"
+                          >
+                            Undo external log
+                          </button>
+                        ) : null}
+                      </div>
+
+                      {isLoggedToday ? (
+                        <div className="mt-2 flex items-center justify-between rounded-[12px] bg-emerald-500/15 px-2.5 py-1.5 text-xs font-bold text-emerald-800">
+                          <span>✓ Logged as posted today</span>
+                          <span className="text-[10px] text-emerald-700">Resets at 0:00 UTC</span>
+                        </div>
+                      ) : (
+                        <div className="mt-2 flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => logManualPost(project.id, todayKey)}
+                            className="flex-1 rounded-[12px] bg-emerald-600/15 py-1.5 text-center text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-600/25 active:scale-95"
+                          >
+                            ✓ Mark posted today
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setCustomDateOpen(customDateOpen === project.id ? null : project.id)}
+                            className="rounded-[12px] bg-white/70 px-2.5 py-1.5 text-xs font-extrabold text-ink transition hover:bg-white active:scale-95"
+                          >
+                            {customDateOpen === project.id ? 'Cancel' : 'Other date…'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Custom date picker popdown */}
+                      {customDateOpen === project.id ? (
+                        <div className="mt-2 flex items-center gap-1.5 pt-1">
+                          <input
+                            type="date"
+                            max={todayKey}
+                            value={customDateValue}
+                            onChange={(e) => setCustomDateValue(e.target.value)}
+                            className="min-w-0 flex-1 rounded-[10px] bg-white px-2 py-1 text-xs font-bold text-ink outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              logManualPost(project.id, customDateValue)
+                              setCustomDateOpen(null)
+                            }}
+                            className="rounded-[10px] bg-ink px-3 py-1 text-xs font-extrabold text-white active:scale-95"
+                          >
+                            Confirm
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* Ready Posts to Post */}
                     <div className="mt-3.5 border-t border-ink/8 pt-3">
                       <div className="flex items-center justify-between">
                         <p className="text-[10px] font-extrabold tracking-wider text-ink-soft uppercase">
