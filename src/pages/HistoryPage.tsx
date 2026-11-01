@@ -5,7 +5,7 @@ import { useProjects } from '../features/projects/api'
 import { useAssetUrl } from '../lib/media'
 import { ErrorBox, Skeleton } from '../components/ui'
 import TabBar from '../components/TabBar'
-import { loadCadences, saveCadences, type ProjectCadence } from '../lib/cadence'
+import { computeCadenceStatus, loadCadences, saveCadences, type ProjectCadence } from '../lib/cadence'
 import { cn } from '../lib/cn'
 
 type PlanTab = 'calendar' | 'reminders' | 'history'
@@ -214,39 +214,24 @@ export default function HistoryPage() {
   // Compute status per project
   const projectStatuses = useMemo(() => {
     const now = Date.now()
-    const dayMs = 86400000
 
     return (projectsQ.data ?? []).map((project) => {
       const cadence = cadences[project.id] ?? { intervalDays: 2, targetDays: [1, 3, 5] }
       const latest = latestPostByProject.get(project.id)
       const lastIso = latest ? publishedAt(latest) : null
-      const daysSince = lastIso ? Math.floor((now - new Date(lastIso).getTime()) / dayMs) : null
       const readyPosts = readyPostsByProject.get(project.id) ?? []
 
-      let status: 'on_track' | 'due' | 'overdue' | 'none'
-      let statusLabel = ''
-
-      if (daysSince === null) {
-        status = 'none'
-        statusLabel = `No posts yet · Target: every ${cadence.intervalDays}d`
-      } else if (daysSince < cadence.intervalDays) {
-        status = 'on_track'
-        const left = cadence.intervalDays - daysSince
-        statusLabel = `On track · Next in ${left}d (last posted ${daysSince === 0 ? 'today' : `${daysSince}d ago`})`
-      } else if (daysSince === cadence.intervalDays) {
-        status = 'due'
-        statusLabel = `Due today · ${daysSince}d since last post`
-      } else {
-        status = 'overdue'
-        const late = daysSince - cadence.intervalDays
-        statusLabel = `Overdue by ${late}d · last posted ${daysSince}d ago`
-      }
+      const { status, statusLabel, daysElapsed } = computeCadenceStatus(
+        lastIso,
+        cadence.intervalDays,
+        now,
+      )
 
       return {
         project,
         cadence,
         latest,
-        daysSince,
+        daysSince: daysElapsed,
         status,
         statusLabel,
         readyPosts,

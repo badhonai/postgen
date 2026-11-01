@@ -28,8 +28,85 @@ export function saveCadences(data: Record<string, ProjectCadence>) {
 }
 
 /**
+ * Number of whole calendar days elapsed in UTC between an ISO timestamp and now.
+ * A new calendar day begins strictly at 0:00 UTC, so due states transition at
+ * 0:00 UTC regardless of what time of day the post was originally published.
+ */
+export function getUtcDaysElapsed(isoDate: string, nowMs = Date.now()): number {
+  const then = new Date(isoDate)
+  const thenUtcMidnight = Date.UTC(then.getUTCFullYear(), then.getUTCMonth(), then.getUTCDate())
+  const now = new Date(nowMs)
+  const nowUtcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const dayMs = 86400000
+  return Math.max(0, Math.floor((nowUtcMidnight - thenUtcMidnight) / dayMs))
+}
+
+export type CadenceStatusKind = 'on_track' | 'due' | 'overdue' | 'none'
+
+export interface ProjectCadenceStatus {
+  status: CadenceStatusKind
+  daysElapsed: number | null
+  statusLabel: string
+  isDueOrOverdue: boolean
+}
+
+/**
+ * Evaluates whether a project is on track, due today, or overdue.
+ *
+ * Rules:
+ * - Every calendar day begins at 0:00 UTC.
+ * - If user posts once, the latest published post is updated to today (0 days elapsed),
+ *   completely resetting any previous overdue count and starting fresh from that moment.
+ */
+export function computeCadenceStatus(
+  lastPublishedIso: string | null | undefined,
+  intervalDays: number,
+  nowMs = Date.now(),
+): ProjectCadenceStatus {
+  if (!lastPublishedIso) {
+    return {
+      status: 'none',
+      daysElapsed: null,
+      statusLabel: `No posts yet · Target: every ${intervalDays}d (0:00 UTC reset)`,
+      isDueOrOverdue: false,
+    }
+  }
+
+  const daysElapsed = getUtcDaysElapsed(lastPublishedIso, nowMs)
+
+  if (daysElapsed < intervalDays) {
+    const left = intervalDays - daysElapsed
+    const leftText = left === 1 ? 'due tomorrow' : `next in ${left}d`
+    const postedText = daysElapsed === 0 ? 'posted today' : `${daysElapsed}d ago`
+    return {
+      status: 'on_track',
+      daysElapsed,
+      statusLabel: `On track · ${leftText} (last ${postedText})`,
+      isDueOrOverdue: false,
+    }
+  }
+
+  if (daysElapsed === intervalDays) {
+    return {
+      status: 'due',
+      daysElapsed,
+      statusLabel: `Due today · ${daysElapsed}d since last post (resets on post)`,
+      isDueOrOverdue: true,
+    }
+  }
+
+  const late = daysElapsed - intervalDays
+  return {
+    status: 'overdue',
+    daysElapsed,
+    statusLabel: `Overdue by ${late}d · last posted ${daysElapsed}d ago (resets on post)`,
+    isDueOrOverdue: true,
+  }
+}
+
+/**
  * Counts how many projects currently have a post due today or overdue.
- * Reads published posts and compares days elapsed against each project's cadence interval.
+ * Respects 0:00 UTC day boundaries and resets immediately as soon as a project is posted.
  */
 export function useDueProjectsCount(): number {
   const projectsQ = useProjects()
@@ -42,9 +119,8 @@ export function useDueProjectsCount(): number {
 
     const cadences = loadCadences()
     const now = Date.now()
-    const dayMs = 86400000
 
-    // Find latest published post per project
+    // Find latest published post per project (posts are ordered updated_at / published_at desc)
     const latestByProject = new Map<string, string>()
     for (const p of posts) {
       if (!latestByProject.has(p.project_id)) {
@@ -57,11 +133,9 @@ export function useDueProjectsCount(): number {
     for (const proj of projects) {
       const cadence = cadences[proj.id] ?? { intervalDays: 2 }
       const lastIso = latestByProject.get(proj.id)
-      if (lastIso) {
-        const daysSince = Math.floor((now - new Date(lastIso).getTime()) / dayMs)
-        if (daysSince >= cadence.intervalDays) {
-          count++
-        }
+      const st = computeCadenceStatus(lastIso, cadence.intervalDays, now)
+      if (st.isDueOrOverdue) {
+        count++
       }
     }
     return count
