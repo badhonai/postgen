@@ -22,6 +22,9 @@ import { useImagePrompts } from '../features/prompts/api'
 import { applyTheme, getTheme, type ThemeMode } from '../lib/theme'
 import TabBar from '../components/TabBar'
 import { Button, ErrorBox, Skeleton, SparkleLogo } from '../components/ui'
+import { useCreateApiKey } from '../features/agents/keys'
+import { buildAgentSetupText } from '../features/agents/agentSetup'
+import { cn } from '../lib/cn'
 
 type Filter = 'all' | 'draft' | 'approved' | 'published'
 
@@ -85,6 +88,46 @@ export default function DashboardPage() {
     const next: ThemeMode = theme === 'dark' ? 'light' : 'dark'
     applyTheme(next)
     setTheme(next)
+  }
+
+  const createKey = useCreateApiKey()
+  const [agentCopied, setAgentCopied] = useState(false)
+  const [copyingAgent, setCopyingAgent] = useState(false)
+
+  const handleCopyForAgent = async () => {
+    if (!user || copyingAgent) return
+    setCopyingAgent(true)
+    try {
+      let text = sessionStorage.getItem('postgen_agent_pack')
+      if (!text) {
+        const { key } = await createKey.mutateAsync({
+          name: 'Agent (one-paste)',
+          userId: user.id,
+        })
+        const origin = window.location.origin
+        text = buildAgentSetupText(origin, key)
+        sessionStorage.setItem('postgen_agent_pack', text)
+      }
+      try {
+        await navigator.clipboard.writeText(text)
+      } catch {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.focus()
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      setAgentCopied(true)
+      window.setTimeout(() => setAgentCopied(false), 2500)
+    } catch (err) {
+      console.error('Failed to create and copy agent setup:', err)
+    } finally {
+      setCopyingAgent(false)
+    }
   }
   const [creating, setCreating] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
@@ -151,7 +194,7 @@ export default function DashboardPage() {
               <p className="mt-1 text-[11px] font-bold text-ink-soft">X Post Studio</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
@@ -170,11 +213,44 @@ export default function DashboardPage() {
                 </svg>
               )}
             </button>
+
+            {/* "Copy for your agent" button */}
+            <button
+              type="button"
+              onClick={() => void handleCopyForAgent()}
+              disabled={copyingAgent}
+              title="One click to create key and copy setup for your AI agent"
+              className={cn(
+                'pg-glass flex h-11 items-center gap-1.5 sm:gap-2 rounded-full px-3 text-xs font-black transition active:scale-95 shadow-xs shrink-0',
+                agentCopied
+                  ? 'bg-emerald-500/20 text-emerald-900 dark:text-emerald-200 ring-1 ring-emerald-500/50'
+                  : 'text-ink hover:bg-white/80 dark:hover:bg-white/10 ring-1 ring-black/5',
+              )}
+            >
+              {copyingAgent ? (
+                <>
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  <span className="hidden sm:inline">Creating…</span>
+                </>
+              ) : agentCopied ? (
+                <>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm">🤖</span>
+                  <span className="hidden sm:inline">Copy for your agent</span>
+                  <span className="sm:hidden">For agent</span>
+                </>
+              )}
+            </button>
+
             <button
               type="button"
               aria-label="Your profile"
               onClick={() => navigate('/profile')}
-              className="transition active:scale-95"
+              className="transition active:scale-95 shrink-0"
             >
               <UserAvatar user={user} />
             </button>
