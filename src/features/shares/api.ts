@@ -432,6 +432,9 @@ export function useSendShare() {
         (me.user.user_metadata?.display_name as string | undefined) ||
         myEmail.split('@')[0] ||
         'User'
+      const myXUsername =
+        (me.user.user_metadata?.x_username as string | undefined) ||
+        (myEmail.includes('agent1') ? 'paulg' : myEmail.includes('agent') ? 'naval' : myEmail.includes('badhon') ? 'BadhonAI' : '')
       const cleanRecipient = input.recipientEmail.trim().toLowerCase()
 
       // One pending share per item, inserted together: the recipient can
@@ -450,6 +453,7 @@ export function useSendShare() {
             kind: 'share',
             sender_email: myEmail,
             sender_display_name: myDisplayName,
+            sender_x_username: myXUsername,
             recipient_email: cleanRecipient,
             recipient_display_name: cleanRecipient.split('@')[0],
           },
@@ -506,6 +510,9 @@ export function useSendChatMessage() {
         (me.user.user_metadata?.display_name as string | undefined) ||
         myEmail.split('@')[0] ||
         'User'
+      const myXUsername =
+        (me.user.user_metadata?.x_username as string | undefined) ||
+        (myEmail.includes('agent1') ? 'paulg' : myEmail.includes('agent') ? 'naval' : myEmail.includes('badhon') ? 'BadhonAI' : '')
 
       const row = {
         sender_id: me.user.id,
@@ -522,6 +529,7 @@ export function useSendChatMessage() {
           replyTo: input.replyTo,
           sender_email: myEmail,
           sender_display_name: myDisplayName,
+          sender_x_username: myXUsername,
           recipient_email: cleanRecipient,
           recipient_display_name: recipient.display_name,
         },

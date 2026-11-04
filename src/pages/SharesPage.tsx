@@ -170,18 +170,40 @@ interface ChatThreadItem {
   message?: ChatMessage
 }
 
+const KNOWN_TWITTER_HANDLES: Record<string, string> = {
+  'badhon@postgen.com': 'BadhonAI',
+  'agent@postgen.com': 'naval',
+  'agent1@postgen.com': 'paulg',
+  'badhon': 'BadhonAI',
+  'agent': 'naval',
+  'agent1': 'paulg',
+}
+
 /**
- * Avatar with optional live online status dot
+ * Avatar with live Twitter PFP and optional live online status dot
  */
 function CollaboratorAvatar({
   nameOrEmail,
   size = 'md',
   showOnline = true,
+  xUsername,
 }: {
   nameOrEmail: string
   size?: 'sm' | 'md' | 'lg' | 'xl'
   showOnline?: boolean
+  xUsername?: string | null
 }) {
+  const [imgFailed, setImgFailed] = useState(false)
+
+  const clean = nameOrEmail.trim().toLowerCase()
+  const resolvedHandle = (
+    xUsername ||
+    KNOWN_TWITTER_HANDLES[clean] ||
+    KNOWN_TWITTER_HANDLES[clean.split('@')[0]] ||
+    (clean.startsWith('@') ? clean.slice(1) : '') ||
+    ''
+  ).replace(/^@/, '').trim()
+
   const initial = (nameOrEmail.trim()[0] || 'U').toUpperCase()
   const gradient = getAvatarGradient(nameOrEmail)
 
@@ -199,17 +221,33 @@ function CollaboratorAvatar({
     xl: 'h-4 w-4 bottom-1 right-1 ring-2',
   }[size]
 
+  const pfpUrl = resolvedHandle
+    ? `https://unavatar.io/x/${encodeURIComponent(resolvedHandle)}?fallback=false`
+    : null
+
   return (
     <div className="relative inline-block shrink-0">
-      <div
-        className={cn(
-          'flex items-center justify-center rounded-full bg-gradient-to-tr text-white shadow-sm ring-1 ring-black/5 select-none',
-          sizeClasses,
-          gradient,
-        )}
-      >
-        {initial}
-      </div>
+      {pfpUrl && !imgFailed ? (
+        <img
+          src={pfpUrl}
+          alt={resolvedHandle ? `@${resolvedHandle}` : nameOrEmail}
+          onError={() => setImgFailed(true)}
+          className={cn(
+            'rounded-full object-cover shadow-xs ring-1 ring-black/10 select-none bg-black/5',
+            sizeClasses,
+          )}
+        />
+      ) : (
+        <div
+          className={cn(
+            'flex items-center justify-center rounded-full bg-gradient-to-tr text-white shadow-sm ring-1 ring-black/5 select-none',
+            sizeClasses,
+            gradient,
+          )}
+        >
+          {initial}
+        </div>
+      )}
       {showOnline ? (
         <span
           className={cn(
@@ -686,11 +724,13 @@ function CallSimulationModal({
   contactEmail,
   displayName,
   type = 'voice',
+  xUsername,
   onClose,
 }: {
   contactEmail: string
   displayName: string
   type: 'voice' | 'video'
+  xUsername?: string
   onClose: () => void
 }) {
   const [callDuration, setCallDuration] = useState(0)
@@ -728,7 +768,7 @@ function CallSimulationModal({
         <div className="relative my-8">
           <div className="absolute -inset-4 rounded-full bg-blue-500/20 animate-ping" />
           <div className="absolute -inset-2 rounded-full bg-blue-500/30" />
-          <CollaboratorAvatar nameOrEmail={contactEmail} size="xl" showOnline={false} />
+          <CollaboratorAvatar nameOrEmail={contactEmail} size="xl" showOnline={false} xUsername={xUsername} />
         </div>
 
         {/* Call Controls */}
@@ -777,6 +817,7 @@ function CallSimulationModal({
 function CollaboratorDetailsSheet({
   contactEmail,
   displayName,
+  xUsername,
   shares,
   isPinned,
   onTogglePin,
@@ -785,6 +826,7 @@ function CollaboratorDetailsSheet({
 }: {
   contactEmail: string
   displayName: string
+  xUsername?: string
   shares: Share[]
   isPinned: boolean
   onTogglePin: () => void
@@ -820,9 +862,19 @@ function CollaboratorDetailsSheet({
 
         {/* Profile Card */}
         <div className="flex flex-col items-center py-6 text-center">
-          <CollaboratorAvatar nameOrEmail={contactEmail} size="xl" />
+          <CollaboratorAvatar nameOrEmail={contactEmail} size="xl" xUsername={xUsername} />
           <h4 className="mt-3 text-lg font-black text-ink">{displayName}</h4>
           <p className="text-xs font-semibold text-ink-soft">{contactEmail}</p>
+          {xUsername ? (
+            <a
+              href={`https://x.com/${xUsername.replace(/^@/, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-black/5 px-3 py-1 text-xs font-extrabold text-ink hover:bg-black/10 transition"
+            >
+              <span>𝕏 @{xUsername.replace(/^@/, '')}</span>
+            </a>
+          ) : null}
 
           <div className="mt-4 flex gap-2">
             <button
@@ -1152,6 +1204,7 @@ export default function SharesPage() {
     type ContactData = {
       email: string
       displayName: string
+      xUsername?: string
       shares: Share[]
       messages: ChatMessage[]
       pendingCount: number
@@ -1162,12 +1215,23 @@ export default function SharesPage() {
 
     const map = new Map<string, ContactData>()
 
-    const ensureContact = (email: string, displayName?: string | null): ContactData => {
+    const ensureContact = (
+      email: string,
+      displayName?: string | null,
+      xUsername?: string | null,
+    ): ContactData => {
       const key = email.trim().toLowerCase()
+      const resolvedHandle =
+        xUsername ||
+        KNOWN_TWITTER_HANDLES[key] ||
+        KNOWN_TWITTER_HANDLES[key.split('@')[0]] ||
+        undefined
+
       if (!map.has(key)) {
         map.set(key, {
           email: key,
           displayName: displayName || key.split('@')[0],
+          xUsername: resolvedHandle,
           shares: [],
           messages: [],
           pendingCount: 0,
@@ -1175,6 +1239,8 @@ export default function SharesPage() {
           latestSnippet: '',
           isPinned: pinnedChats.includes(key),
         })
+      } else if (resolvedHandle && !map.get(key)!.xUsername) {
+        map.get(key)!.xUsername = resolvedHandle
       }
       return map.get(key)!
     }
@@ -1183,8 +1249,10 @@ export default function SharesPage() {
     for (const sh of receivedList) {
       const senderEmail = getSenderEmail(sh)
       if (!senderEmail || senderEmail === myEmail) continue
-      const c = ensureContact(senderEmail, getSenderName(sh))
       const p = (sh.payload ?? {}) as Record<string, unknown>
+      const senderHandle =
+        (p.sender_x_username as string) || (sh.sender as { x_username?: string } | undefined)?.x_username
+      const c = ensureContact(senderEmail, getSenderName(sh), senderHandle)
       const isMsg = p.kind === 'message' || sh.item_id === '00000000-0000-0000-0000-000000000000'
 
       if (isMsg) {
@@ -1206,8 +1274,10 @@ export default function SharesPage() {
     for (const sh of sentList) {
       const recipientEmail = getRecipientEmail(sh)
       if (!recipientEmail || recipientEmail === myEmail) continue
-      const c = ensureContact(recipientEmail, getRecipientName(sh))
       const p = (sh.payload ?? {}) as Record<string, unknown>
+      const recipientHandle =
+        (p.recipient_x_username as string) || (sh.recipient as { x_username?: string } | undefined)?.x_username
+      const c = ensureContact(recipientEmail, getRecipientName(sh), recipientHandle)
       const isMsg = p.kind === 'message' || sh.item_id === '00000000-0000-0000-0000-000000000000'
 
       if (isMsg) {
@@ -1578,7 +1648,7 @@ export default function SharesPage() {
                 onClick={() => setDetailsSheetOpen(true)}
                 className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-85 transition"
               >
-                <CollaboratorAvatar nameOrEmail={activeContactEmail} size="md" />
+                <CollaboratorAvatar nameOrEmail={activeContactEmail} size="md" xUsername={activeContact?.xUsername} />
                 <div className="min-w-0">
                   <h3 className="truncate text-sm font-black text-ink leading-tight">
                     {activeContact?.displayName || activeContactEmail.split('@')[0]}
@@ -1709,7 +1779,7 @@ export default function SharesPage() {
 
             {visibleThreadItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <CollaboratorAvatar nameOrEmail={activeContactEmail} size="xl" />
+                <CollaboratorAvatar nameOrEmail={activeContactEmail} size="xl" xUsername={activeContact?.xUsername} />
                 <h4 className="mt-3 text-base font-black text-ink">
                   {activeContact?.displayName || activeContactEmail.split('@')[0]}
                 </h4>
@@ -1772,7 +1842,7 @@ export default function SharesPage() {
                     {!item.isMe ? (
                       <div className="w-7 shrink-0">
                         {isLastInGroup ? (
-                          <CollaboratorAvatar nameOrEmail={activeContactEmail} size="sm" showOnline={false} />
+                          <CollaboratorAvatar nameOrEmail={activeContactEmail} size="sm" showOnline={false} xUsername={activeContact?.xUsername} />
                         ) : null}
                       </div>
                     ) : null}
@@ -2144,7 +2214,7 @@ export default function SharesPage() {
                   className="flex flex-col items-center gap-1 shrink-0 transition active:scale-95"
                 >
                   <div className="rounded-full p-0.5 bg-gradient-to-tr from-blue-500 to-indigo-500 shadow-sm">
-                    <CollaboratorAvatar nameOrEmail={c.email} size="lg" />
+                    <CollaboratorAvatar nameOrEmail={c.email} size="lg" xUsername={c.xUsername} />
                   </div>
                   <span className="w-14 truncate text-center text-[10px] font-extrabold text-ink">
                     {c.displayName}
@@ -2216,7 +2286,7 @@ export default function SharesPage() {
                 className="group flex w-full items-center justify-between rounded-2xl bg-white/80 p-3 text-left shadow-xs ring-1 ring-black/5 transition hover:bg-white active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <CollaboratorAvatar nameOrEmail={c.email} size="lg" />
+                  <CollaboratorAvatar nameOrEmail={c.email} size="lg" xUsername={c.xUsername} />
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
@@ -2554,6 +2624,7 @@ export default function SharesPage() {
           contactEmail={activeContactEmail}
           displayName={activeContact?.displayName || activeContactEmail.split('@')[0]}
           type={callingState.type}
+          xUsername={activeContact?.xUsername}
           onClose={() => setCallingState(null)}
         />
       ) : null}
@@ -2565,6 +2636,7 @@ export default function SharesPage() {
         <CollaboratorDetailsSheet
           contactEmail={activeContactEmail}
           displayName={activeContact?.displayName || activeContactEmail.split('@')[0]}
+          xUsername={activeContact?.xUsername}
           shares={activeContact?.shares ?? []}
           isPinned={pinnedChats.includes(activeContactEmail)}
           onTogglePin={() => {
