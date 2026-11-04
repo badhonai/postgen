@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   useAcceptShare,
   useReceivedShares,
   useRespondShare,
+  useSendChatMessage,
   useSendShare,
   useSentShares,
   type SharePostPayload,
@@ -977,6 +978,7 @@ export default function SharesPage() {
   const accept = useAcceptShare()
   const respond = useRespondShare()
   const send = useSendShare()
+  const sendChat = useSendChatMessage()
 
   const projects = useProjects()
   const posts = usePosts({})
@@ -1064,6 +1066,83 @@ export default function SharesPage() {
   const sentList = useMemo(() => sent.data ?? [], [sent.data])
   const myEmail = user?.email?.toLowerCase() ?? ''
 
+  // Known fallback ID to email mapping
+  const idToEmail = useMemo(() => {
+    const map = new Map<string, string>()
+    map.set('15fe31ac-2e0c-45db-b11c-cbf54b435487', 'agent@postgen.com')
+    map.set('ecce4fec-c945-4826-ac4d-5e2fe28b116c', 'agent1@postgen.com')
+    map.set('519dc5f2-9341-4c5e-b91b-caea9083dff3', 'badhon@postgen.com')
+    if (user?.id && user?.email) {
+      map.set(user.id, user.email.toLowerCase())
+    }
+    for (const sh of [...receivedList, ...sentList]) {
+      const p = (sh.payload ?? {}) as Record<string, unknown>
+      if (sh.sender_id && typeof p.sender_email === 'string') {
+        map.set(sh.sender_id, p.sender_email.toLowerCase())
+      }
+      if (sh.recipient_id && typeof p.recipient_email === 'string') {
+        map.set(sh.recipient_id, p.recipient_email.toLowerCase())
+      }
+    }
+    return map
+  }, [user, receivedList, sentList])
+
+  const getSenderEmail = useCallback(
+    (sh: Share): string => {
+      const p = (sh.payload ?? {}) as Record<string, unknown>
+      return (
+        (p.sender_email as string) ||
+        (p.senderEmail as string) ||
+        sh.sender?.email ||
+        idToEmail.get(sh.sender_id) ||
+        (sh.sender_id === user?.id ? myEmail : '')
+      ).toLowerCase()
+    },
+    [idToEmail, user?.id, myEmail],
+  )
+
+  const getRecipientEmail = useCallback(
+    (sh: Share): string => {
+      const p = (sh.payload ?? {}) as Record<string, unknown>
+      return (
+        (p.recipient_email as string) ||
+        (p.recipientEmail as string) ||
+        sh.recipient?.email ||
+        idToEmail.get(sh.recipient_id) ||
+        (sh.recipient_id === user?.id ? myEmail : '')
+      ).toLowerCase()
+    },
+    [idToEmail, user?.id, myEmail],
+  )
+
+  const getSenderName = useCallback(
+    (sh: Share): string => {
+      const p = (sh.payload ?? {}) as Record<string, unknown>
+      return (
+        (p.sender_display_name as string) ||
+        (p.sender_name as string) ||
+        sh.sender?.display_name ||
+        getSenderEmail(sh).split('@')[0] ||
+        'Collaborator'
+      )
+    },
+    [getSenderEmail],
+  )
+
+  const getRecipientName = useCallback(
+    (sh: Share): string => {
+      const p = (sh.payload ?? {}) as Record<string, unknown>
+      return (
+        (p.recipient_display_name as string) ||
+        (p.recipient_name as string) ||
+        sh.recipient?.display_name ||
+        getRecipientEmail(sh).split('@')[0] ||
+        'Collaborator'
+      )
+    },
+    [getRecipientEmail],
+  )
+
   // Build aggregated conversations
   const conversations = useMemo(() => {
     type ContactData = {
@@ -1096,28 +1175,48 @@ export default function SharesPage() {
       return map.get(key)!
     }
 
-    // Add received shares
+    // Add received shares and messages
     for (const sh of receivedList) {
-      const senderEmail = sh.sender?.email?.toLowerCase()
-      if (!senderEmail) continue
-      const c = ensureContact(senderEmail, sh.sender?.display_name)
-      c.shares.push(sh)
-      if (sh.status === 'pending') c.pendingCount++
-      if (!c.latestTimestamp || sh.created_at > c.latestTimestamp) {
-        c.latestTimestamp = sh.created_at
-        c.latestSnippet = sh.message || `Shared ${SHARE_ITEM_LABEL[sh.item_type]}: ${sh.title}`
+      const senderEmail = getSenderEmail(sh)
+      if (!senderEmail || senderEmail === myEmail) continue
+      const c = ensureContact(senderEmail, getSenderName(sh))
+      const p = (sh.payload ?? {}) as Record<string, unknown>
+      const isMsg = p.kind === 'message' || sh.item_id === '00000000-0000-0000-0000-000000000000'
+
+      if (isMsg) {
+        if (!c.latestTimestamp || sh.created_at > c.latestTimestamp) {
+          c.latestTimestamp = sh.created_at
+          c.latestSnippet = (p.text as string) || sh.message || '📷 Photo'
+        }
+      } else {
+        c.shares.push(sh)
+        if (sh.status === 'pending') c.pendingCount++
+        if (!c.latestTimestamp || sh.created_at > c.latestTimestamp) {
+          c.latestTimestamp = sh.created_at
+          c.latestSnippet = sh.message || `Shared ${SHARE_ITEM_LABEL[sh.item_type]}: ${sh.title}`
+        }
       }
     }
 
-    // Add sent shares
+    // Add sent shares and messages
     for (const sh of sentList) {
-      const recipientEmail = sh.recipient?.email?.toLowerCase()
-      if (!recipientEmail) continue
-      const c = ensureContact(recipientEmail, sh.recipient?.display_name)
-      c.shares.push(sh)
-      if (!c.latestTimestamp || sh.created_at > c.latestTimestamp) {
-        c.latestTimestamp = sh.created_at
-        c.latestSnippet = `You: ${sh.message || `Sent ${SHARE_ITEM_LABEL[sh.item_type]}: ${sh.title}`}`
+      const recipientEmail = getRecipientEmail(sh)
+      if (!recipientEmail || recipientEmail === myEmail) continue
+      const c = ensureContact(recipientEmail, getRecipientName(sh))
+      const p = (sh.payload ?? {}) as Record<string, unknown>
+      const isMsg = p.kind === 'message' || sh.item_id === '00000000-0000-0000-0000-000000000000'
+
+      if (isMsg) {
+        if (!c.latestTimestamp || sh.created_at > c.latestTimestamp) {
+          c.latestTimestamp = sh.created_at
+          c.latestSnippet = `You: ${(p.text as string) || sh.message || '📷 Photo'}`
+        }
+      } else {
+        c.shares.push(sh)
+        if (!c.latestTimestamp || sh.created_at > c.latestTimestamp) {
+          c.latestTimestamp = sh.created_at
+          c.latestSnippet = `You: ${sh.message || `Sent ${SHARE_ITEM_LABEL[sh.item_type]}: ${sh.title}`}`
+        }
       }
     }
 
@@ -1147,7 +1246,7 @@ export default function SharesPage() {
       return b.latestTimestamp.localeCompare(a.latestTimestamp)
     })
     return list
-  }, [receivedList, sentList, chatMessages, myEmail, pinnedChats])
+  }, [receivedList, sentList, chatMessages, myEmail, pinnedChats, getSenderEmail, getRecipientEmail, getSenderName, getRecipientName])
 
   // Filter conversations
   const filteredConversations = useMemo(() => {
@@ -1176,52 +1275,107 @@ export default function SharesPage() {
     const cleanEmail = activeContactEmail.toLowerCase()
     const items: ChatThreadItem[] = []
 
-    // Received shares
+    // Received shares & messages
     for (const sh of receivedList) {
-      if (sh.sender?.email?.toLowerCase() === cleanEmail) {
-        items.push({
-          id: `share_${sh.id}`,
-          kind: 'share',
-          createdAt: sh.created_at,
-          isMe: false,
-          share: sh,
-        })
+      const senderEmail = getSenderEmail(sh)
+      if (senderEmail === cleanEmail) {
+        const p = (sh.payload ?? {}) as Record<string, unknown>
+        const isMsg = p.kind === 'message' || sh.item_id === '00000000-0000-0000-0000-000000000000'
+        if (isMsg) {
+          items.push({
+            id: sh.id,
+            kind: 'message',
+            createdAt: sh.created_at,
+            isMe: false,
+            message: {
+              id: sh.id,
+              conversationEmail: cleanEmail,
+              senderEmail: cleanEmail,
+              recipientEmail: myEmail,
+              text: (p.text as string) || sh.message,
+              imageUrl: p.imageUrl as string | undefined,
+              replyTo: p.replyTo as ChatReplyPreview | undefined,
+              reactions: (p.reactions as Record<string, string[]>) || {},
+              createdAt: sh.created_at,
+            },
+          })
+        } else {
+          items.push({
+            id: `share_${sh.id}`,
+            kind: 'share',
+            createdAt: sh.created_at,
+            isMe: false,
+            share: sh,
+          })
+        }
       }
     }
 
-    // Sent shares
+    // Sent shares & messages
     for (const sh of sentList) {
-      if (sh.recipient?.email?.toLowerCase() === cleanEmail) {
-        items.push({
-          id: `share_${sh.id}`,
-          kind: 'share',
-          createdAt: sh.created_at,
-          isMe: true,
-          share: sh,
-        })
+      const recipientEmail = getRecipientEmail(sh)
+      if (recipientEmail === cleanEmail) {
+        const p = (sh.payload ?? {}) as Record<string, unknown>
+        const isMsg = p.kind === 'message' || sh.item_id === '00000000-0000-0000-0000-000000000000'
+        if (isMsg) {
+          items.push({
+            id: sh.id,
+            kind: 'message',
+            createdAt: sh.created_at,
+            isMe: true,
+            message: {
+              id: sh.id,
+              conversationEmail: cleanEmail,
+              senderEmail: myEmail,
+              recipientEmail: cleanEmail,
+              text: (p.text as string) || sh.message,
+              imageUrl: p.imageUrl as string | undefined,
+              replyTo: p.replyTo as ChatReplyPreview | undefined,
+              reactions: (p.reactions as Record<string, string[]>) || {},
+              createdAt: sh.created_at,
+            },
+          })
+        } else {
+          items.push({
+            id: `share_${sh.id}`,
+            kind: 'share',
+            createdAt: sh.created_at,
+            isMe: true,
+            share: sh,
+          })
+        }
       }
     }
 
-    // Chat messages
+    // Chat messages (optimistic / fallback)
+    const seenIds = new Set(items.map((i) => i.id))
     for (const msg of chatMessages) {
       const isWith =
         msg.conversationEmail === cleanEmail ||
         msg.senderEmail === cleanEmail ||
         msg.recipientEmail === cleanEmail
-      if (isWith) {
-        items.push({
-          id: msg.id,
-          kind: 'message',
-          createdAt: msg.createdAt,
-          isMe: msg.senderEmail === myEmail,
-          message: msg,
-        })
+      if (isWith && !seenIds.has(msg.id)) {
+        const isDuplicate = items.some(
+          (it) =>
+            it.kind === 'message' &&
+            it.message?.text === msg.text &&
+            Math.abs(new Date(it.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000,
+        )
+        if (!isDuplicate) {
+          items.push({
+            id: msg.id,
+            kind: 'message',
+            createdAt: msg.createdAt,
+            isMe: msg.senderEmail === myEmail,
+            message: msg,
+          })
+        }
       }
     }
 
     items.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     return items
-  }, [activeContactEmail, receivedList, sentList, chatMessages, myEmail])
+  }, [activeContactEmail, receivedList, sentList, chatMessages, myEmail, getSenderEmail, getRecipientEmail])
 
   // Filtered thread items for in-chat search
   const visibleThreadItems = useMemo(() => {
@@ -1271,9 +1425,16 @@ export default function SharesPage() {
           message: textToSend,
         })
       } else {
-        // Chat Message
+        // Optimistic local dispatch
         sendChatMessage({
           senderEmail: myEmail,
+          recipientEmail: activeContactEmail,
+          text: textToSend,
+          imageUrl: stagedImage ?? undefined,
+          replyTo: replyingTo ?? undefined,
+        })
+        // Real Chat Message to Supabase
+        await sendChat.mutateAsync({
           recipientEmail: activeContactEmail,
           text: textToSend,
           imageUrl: stagedImage ?? undefined,

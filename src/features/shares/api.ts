@@ -344,6 +344,7 @@ export function useReceivedShares() {
   return useQuery({
     queryKey: ['shares', 'received', userId],
     enabled: !!supabase && !!userId,
+    refetchInterval: 2500,
     queryFn: async (): Promise<Share[]> => {
       const { data, error } = await supabase!
         .from('shares')
@@ -361,6 +362,7 @@ export function useSentShares() {
   return useQuery({
     queryKey: ['shares', 'sent', userId],
     enabled: !!supabase && !!userId,
+    refetchInterval: 2500,
     queryFn: async (): Promise<Share[]> => {
       const { data, error } = await supabase!
         .from('shares')
@@ -425,17 +427,32 @@ export function useSendShare() {
         )
       }
 
+      const myEmail = (me.user.email ?? '').toLowerCase()
+      const myDisplayName =
+        (me.user.user_metadata?.display_name as string | undefined) ||
+        myEmail.split('@')[0] ||
+        'User'
+      const cleanRecipient = input.recipientEmail.trim().toLowerCase()
+
       // One pending share per item, inserted together: the recipient can
       // accept or decline each project/post/prompt independently.
       const rows = []
       for (const item of input.items) {
+        const payload = await buildPayload(item.itemType, item.itemId)
         rows.push({
           sender_id: me.user.id,
           recipient_id: recipient.id,
           item_type: item.itemType,
           item_id: item.itemId,
           title: item.title,
-          payload: await buildPayload(item.itemType, item.itemId),
+          payload: {
+            ...payload,
+            kind: 'share',
+            sender_email: myEmail,
+            sender_display_name: myDisplayName,
+            recipient_email: cleanRecipient,
+            recipient_display_name: cleanRecipient.split('@')[0],
+          },
           message: (input.message ?? '').trim(),
         })
       }
@@ -454,6 +471,68 @@ export function useSendShare() {
     onSuccess: (_data, vars) => {
       // Offer this email as a one-tap quick-select on future sends.
       rememberRecipient(vars.recipientEmail)
+      void qc.invalidateQueries({ queryKey: ['shares'] })
+    },
+  })
+}
+
+export function useSendChatMessage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      recipientEmail: string
+      text: string
+      imageUrl?: string
+      replyTo?: { id: string; sender: string; snippet: string }
+    }): Promise<void> => {
+      const supa = supabase!
+      const { data: me } = await supa.auth.getUser()
+      if (!me.user) throw new Error('You are signed out.')
+
+      const cleanRecipient = input.recipientEmail.trim().toLowerCase()
+      const { data: found, error: lookupErr } = await supa.rpc('find_recipient_by_email', {
+        p_email: cleanRecipient,
+      })
+      if (lookupErr) throw lookupErr
+      const recipient = (found as Array<{ id: string; display_name: string }> | null)?.[0]
+      if (!recipient) {
+        throw new Error(
+          `No PostGen account found for ${cleanRecipient}. They need to sign up first — then you can send to them.`,
+        )
+      }
+
+      const myEmail = (me.user.email ?? '').toLowerCase()
+      const myDisplayName =
+        (me.user.user_metadata?.display_name as string | undefined) ||
+        myEmail.split('@')[0] ||
+        'User'
+
+      const row = {
+        sender_id: me.user.id,
+        recipient_id: recipient.id,
+        item_type: 'post' as const,
+        item_id: '00000000-0000-0000-0000-000000000000',
+        title: input.text.slice(0, 35) || 'Message',
+        message: input.text,
+        status: 'accepted' as const,
+        payload: {
+          kind: 'message',
+          text: input.text,
+          imageUrl: input.imageUrl,
+          replyTo: input.replyTo,
+          sender_email: myEmail,
+          sender_display_name: myDisplayName,
+          recipient_email: cleanRecipient,
+          recipient_display_name: recipient.display_name,
+        },
+      }
+
+      const { error } = await supa.from('shares').insert([row])
+      if (error) throw error
+
+      rememberRecipient(cleanRecipient)
+    },
+    onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['shares'] })
     },
   })
