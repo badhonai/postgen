@@ -994,12 +994,16 @@ export default function SharesPage() {
   const [textDraft, setTextDraft] = useState('')
   const [stagedImage, setStagedImage] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<ChatReplyPreview | null>(null)
-  const [selectedAttachment, setSelectedAttachment] = useState<{
+  type AttachmentItem = {
     itemType: ShareItemType
     itemId: string
     title: string
     subtitle?: string
-  } | null>(null)
+  }
+  const [selectedAttachments, setSelectedAttachments] = useState<AttachmentItem[]>([])
+  const [acceptAllBusy, setAcceptAllBusy] = useState(false)
+  const [acceptingShareId, setAcceptingShareId] = useState<string | null>(null)
+  const [decliningShareId, setDecliningShareId] = useState<string | null>(null)
 
   // Drawers & Modals
   const [attachmentPickerOpen, setAttachmentPickerOpen] = useState(false)
@@ -1408,19 +1412,73 @@ export default function SharesPage() {
     }
   }
 
+  const toggleAttachment = (item: AttachmentItem) => {
+    setSelectedAttachments((prev) => {
+      const exists = prev.some((x) => x.itemType === item.itemType && x.itemId === item.itemId)
+      if (exists) {
+        return prev.filter((x) => !(x.itemType === item.itemType && x.itemId === item.itemId))
+      }
+      return [...prev, item]
+    })
+  }
+
+  const isAttachmentSelected = (itemType: ShareItemType, itemId: string) => {
+    return selectedAttachments.some((x) => x.itemType === itemType && x.itemId === itemId)
+  }
+
+  // Pending shares received from this collaborator
+  const pendingReceivedShares = useMemo(() => {
+    return activeThread
+      .filter((it) => it.kind === 'share' && !it.isMe && it.share?.status === 'pending')
+      .map((it) => it.share!)
+  }, [activeThread])
+
+  const handleAcceptAll = async () => {
+    if (pendingReceivedShares.length === 0) return
+    setAcceptAllBusy(true)
+    setActionError(null)
+    try {
+      for (const share of pendingReceivedShares) {
+        await accept.mutateAsync({
+          share,
+          targetProjectId: destinations[share.id] || null,
+        })
+      }
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Could not accept all shares')
+    } finally {
+      setAcceptAllBusy(false)
+    }
+  }
+
+  const handleDeclineAll = async () => {
+    if (pendingReceivedShares.length === 0) return
+    setAcceptAllBusy(true)
+    setActionError(null)
+    try {
+      for (const share of pendingReceivedShares) {
+        await respond.mutateAsync({ share, action: 'declined' })
+      }
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Could not decline all shares')
+    } finally {
+      setAcceptAllBusy(false)
+    }
+  }
+
   // Handle Send action (text, attachment, photo)
   const handleSend = async (overrideText?: string) => {
     if (!activeContactEmail) return
     setActionError(null)
 
     const textToSend = (overrideText ?? textDraft).trim()
-    if (!textToSend && !selectedAttachment && !stagedImage) return
+    if (!textToSend && selectedAttachments.length === 0 && !stagedImage) return
 
     try {
-      if (selectedAttachment) {
-        // Real PostGen Share
+      if (selectedAttachments.length > 0) {
+        // Real PostGen Share - multiple items together
         await send.mutateAsync({
-          items: [selectedAttachment],
+          items: selectedAttachments,
           recipientEmail: activeContactEmail,
           message: textToSend,
         })
@@ -1446,7 +1504,7 @@ export default function SharesPage() {
       setTextDraft('')
       setStagedImage(null)
       setReplyingTo(null)
-      setSelectedAttachment(null)
+      setSelectedAttachments([])
       setPlusMenuOpen(false)
       setEmojiDrawerOpen(false)
       setQuickRepliesOpen(false)
@@ -1463,6 +1521,7 @@ export default function SharesPage() {
   // Handle Accept share
   const handleAccept = async (share: Share) => {
     setActionError(null)
+    setAcceptingShareId(share.id)
     try {
       await accept.mutateAsync({
         share,
@@ -1470,16 +1529,21 @@ export default function SharesPage() {
       })
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Could not accept share')
+    } finally {
+      setAcceptingShareId(null)
     }
   }
 
   // Handle Decline share
   const handleDecline = async (share: Share) => {
     setActionError(null)
+    setDecliningShareId(share.id)
     try {
       await respond.mutateAsync({ share, action: 'declined' })
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Could not decline share')
+    } finally {
+      setDecliningShareId(null)
     }
   }
 
@@ -1602,6 +1666,47 @@ export default function SharesPage() {
 
           {/* Messages Scroll Area */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+            {/* Sticky Accept All Pending Banner */}
+            {pendingReceivedShares.length > 0 ? (
+              <div className="sticky top-0 z-20 mb-3 flex items-center justify-between rounded-2xl bg-amber-50/95 p-3 ring-1 ring-amber-200/90 shadow-md backdrop-blur-md animate-in fade-in duration-150">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-white font-black text-sm shrink-0">
+                    ⚡
+                  </span>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-black text-amber-950 truncate">
+                      {pendingReceivedShares.length === 1
+                        ? '1 Pending Share to Import'
+                        : `${pendingReceivedShares.length} Pending Shares to Import`}
+                    </h4>
+                    <p className="text-[10px] font-bold text-amber-800/80 truncate">
+                      {pendingReceivedShares.map((s) => s.title).join(' · ')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <Button
+                    variant="accent"
+                    className="py-1 px-3 text-[11px] font-black shadow-xs bg-amber-500 hover:bg-amber-600 text-white"
+                    disabled={acceptAllBusy}
+                    onClick={handleAcceptAll}
+                  >
+                    {acceptAllBusy ? 'Importing all…' : `✓ Accept All (${pendingReceivedShares.length})`}
+                  </Button>
+                  <button
+                    type="button"
+                    className="p-1 text-xs font-bold text-ink-soft hover:text-rose-600 transition"
+                    disabled={acceptAllBusy}
+                    onClick={handleDeclineAll}
+                    title="Decline all pending"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             {visibleThreadItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <CollaboratorAvatar nameOrEmail={activeContactEmail} size="xl" />
@@ -1683,8 +1788,8 @@ export default function SharesPage() {
                             setDestinations({ ...destinations, [item.share!.id]: targetId })
                           }
                           projects={projects.data ?? []}
-                          acceptPending={accept.isPending}
-                          respondPending={respond.isPending}
+                          acceptPending={acceptingShareId === item.share.id || acceptAllBusy}
+                          respondPending={decliningShareId === item.share.id || acceptAllBusy}
                           onAccept={handleAccept}
                           onDecline={handleDecline}
                           reactions={shareReactions[item.share.id]}
@@ -1788,25 +1893,42 @@ export default function SharesPage() {
               </div>
             ) : null}
 
-            {/* Staged Attachment Preview Chip */}
-            {selectedAttachment ? (
-              <div className="mb-2 flex items-center justify-between rounded-xl bg-blue-50 px-3 py-1.5 text-xs ring-1 ring-blue-200">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span>{ITEM_ICON[selectedAttachment.itemType]}</span>
-                  <span className="font-extrabold text-blue-950 truncate">
-                    {selectedAttachment.title}
-                  </span>
-                  <span className="text-[10px] font-bold uppercase text-blue-700">
-                    {selectedAttachment.itemType}
-                  </span>
+            {/* Staged Multiple Attachments Chips */}
+            {selectedAttachments.length > 0 ? (
+              <div className="mb-2 space-y-1">
+                <div className="flex items-center justify-between text-[11px] font-extrabold text-blue-900 px-1">
+                  <span>📎 Attached ({selectedAttachments.length})</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAttachments([])}
+                    className="text-blue-600 hover:text-blue-900 underline text-[10px]"
+                  >
+                    Clear all
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedAttachment(null)}
-                  className="font-bold text-blue-500 hover:text-blue-800"
-                >
-                  ✕
-                </button>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {selectedAttachments.map((att) => (
+                    <div
+                      key={`${att.itemType}:${att.itemId}`}
+                      className="flex items-center gap-1.5 shrink-0 rounded-xl bg-blue-50 px-2.5 py-1 text-xs ring-1 ring-blue-200"
+                    >
+                      <span>{ITEM_ICON[att.itemType]}</span>
+                      <span className="font-extrabold text-blue-950 max-w-[140px] truncate">
+                        {att.title}
+                      </span>
+                      <span className="text-[9px] font-black uppercase text-blue-700 bg-blue-100 rounded px-1">
+                        {att.itemType}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => toggleAttachment(att)}
+                        className="ml-1 font-bold text-blue-500 hover:text-blue-900"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : null}
 
@@ -1957,7 +2079,7 @@ export default function SharesPage() {
               </div>
 
               {/* Messenger Dynamic Action: Thumbs Up 👍 OR Send 🚀 */}
-              {textDraft.trim() || selectedAttachment || stagedImage ? (
+              {textDraft.trim() || selectedAttachments.length > 0 || stagedImage ? (
                 <button
                   type="button"
                   disabled={send.isPending}
@@ -2159,19 +2281,32 @@ export default function SharesPage() {
 
             {/* Category Tabs: Posts, Prompts, Projects */}
             <div className="mt-3 flex gap-1 rounded-full bg-black/5 p-1">
-              {(['post', 'prompt', 'project'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setPickerTab(t)}
-                  className={cn(
-                    'flex-1 rounded-full py-1.5 text-xs font-extrabold capitalize transition',
-                    pickerTab === t ? 'bg-ink text-white' : 'text-ink-soft hover:text-ink',
-                  )}
-                >
-                  {t}s
-                </button>
-              ))}
+              {(['post', 'prompt', 'project'] as const).map((t) => {
+                const countInTab = selectedAttachments.filter((x) => x.itemType === t).length
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setPickerTab(t)}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-extrabold capitalize transition',
+                      pickerTab === t ? 'bg-ink text-white' : 'text-ink-soft hover:text-ink',
+                    )}
+                  >
+                    <span>{t}s</span>
+                    {countInTab > 0 ? (
+                      <span
+                        className={cn(
+                          'rounded-full px-1.5 py-0.2 text-[9px] font-black',
+                          pickerTab === t ? 'bg-white text-ink' : 'bg-blue-600 text-white',
+                        )}
+                      >
+                        {countInTab}
+                      </span>
+                    ) : null}
+                  </button>
+                )
+              })}
             </div>
 
             <div className="mt-2.5">
@@ -2190,25 +2325,39 @@ export default function SharesPage() {
                   .filter((p) =>
                     pickerSearch ? (p.title ?? '').toLowerCase().includes(pickerSearch.toLowerCase()) : true,
                   )
-                  .map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedAttachment({
-                          itemType: 'post',
-                          itemId: p.id,
-                          title: p.title || 'Untitled post',
-                          subtitle: p.content_text?.slice(0, 60),
-                        })
-                        setAttachmentPickerOpen(false)
-                      }}
-                      className="flex w-full items-center justify-between rounded-xl bg-white/60 p-2.5 text-left text-xs font-bold text-ink transition hover:bg-white active:scale-[0.99]"
-                    >
-                      <span className="truncate pr-2">{p.title || 'Untitled post'}</span>
-                      <span className="shrink-0 text-[10px] font-extrabold text-blue-600">Attach +</span>
-                    </button>
-                  ))
+                  .map((p) => {
+                    const isSelected = isAttachmentSelected('post', p.id)
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() =>
+                          toggleAttachment({
+                            itemType: 'post',
+                            itemId: p.id,
+                            title: p.title || 'Untitled post',
+                            subtitle: p.content_text?.slice(0, 60),
+                          })
+                        }
+                        className={cn(
+                          'flex w-full items-center justify-between rounded-xl p-2.5 text-left text-xs font-bold transition active:scale-[0.99]',
+                          isSelected
+                            ? 'bg-blue-600 text-white shadow-xs ring-1 ring-blue-500'
+                            : 'bg-white/60 text-ink hover:bg-white',
+                        )}
+                      >
+                        <span className="truncate pr-2">{p.title || 'Untitled post'}</span>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black',
+                            isSelected ? 'bg-white/20 text-white' : 'text-blue-600 bg-blue-50',
+                          )}
+                        >
+                          {isSelected ? '✓ Added' : '+ Add'}
+                        </span>
+                      </button>
+                    )
+                  })
               ) : null}
 
               {pickerTab === 'prompt' ? (
@@ -2216,25 +2365,39 @@ export default function SharesPage() {
                   .filter((p) =>
                     pickerSearch ? p.name.toLowerCase().includes(pickerSearch.toLowerCase()) : true,
                   )
-                  .map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedAttachment({
-                          itemType: 'prompt',
-                          itemId: p.id,
-                          title: p.name,
-                          subtitle: p.prompt.slice(0, 60),
-                        })
-                        setAttachmentPickerOpen(false)
-                      }}
-                      className="flex w-full items-center justify-between rounded-xl bg-white/60 p-2.5 text-left text-xs font-bold text-ink transition hover:bg-white active:scale-[0.99]"
-                    >
-                      <span className="truncate pr-2">{p.name}</span>
-                      <span className="shrink-0 text-[10px] font-extrabold text-blue-600">Attach +</span>
-                    </button>
-                  ))
+                  .map((p) => {
+                    const isSelected = isAttachmentSelected('prompt', p.id)
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() =>
+                          toggleAttachment({
+                            itemType: 'prompt',
+                            itemId: p.id,
+                            title: p.name,
+                            subtitle: p.prompt.slice(0, 60),
+                          })
+                        }
+                        className={cn(
+                          'flex w-full items-center justify-between rounded-xl p-2.5 text-left text-xs font-bold transition active:scale-[0.99]',
+                          isSelected
+                            ? 'bg-blue-600 text-white shadow-xs ring-1 ring-blue-500'
+                            : 'bg-white/60 text-ink hover:bg-white',
+                        )}
+                      >
+                        <span className="truncate pr-2">{p.name}</span>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black',
+                            isSelected ? 'bg-white/20 text-white' : 'text-blue-600 bg-blue-50',
+                          )}
+                        >
+                          {isSelected ? '✓ Added' : '+ Add'}
+                        </span>
+                      </button>
+                    )
+                  })
               ) : null}
 
               {pickerTab === 'project' ? (
@@ -2242,26 +2405,70 @@ export default function SharesPage() {
                   .filter((p) =>
                     pickerSearch ? p.name.toLowerCase().includes(pickerSearch.toLowerCase()) : true,
                   )
-                  .map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedAttachment({
-                          itemType: 'project',
-                          itemId: p.id,
-                          title: p.name,
-                          subtitle: p.description ?? undefined,
-                        })
-                        setAttachmentPickerOpen(false)
-                      }}
-                      className="flex w-full items-center justify-between rounded-xl bg-white/60 p-2.5 text-left text-xs font-bold text-ink transition hover:bg-white active:scale-[0.99]"
-                    >
-                      <span className="truncate pr-2">{p.name}</span>
-                      <span className="shrink-0 text-[10px] font-extrabold text-blue-600">Attach +</span>
-                    </button>
-                  ))
+                  .map((p) => {
+                    const isSelected = isAttachmentSelected('project', p.id)
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() =>
+                          toggleAttachment({
+                            itemType: 'project',
+                            itemId: p.id,
+                            title: p.name,
+                            subtitle: p.description ?? undefined,
+                          })
+                        }
+                        className={cn(
+                          'flex w-full items-center justify-between rounded-xl p-2.5 text-left text-xs font-bold transition active:scale-[0.99]',
+                          isSelected
+                            ? 'bg-blue-600 text-white shadow-xs ring-1 ring-blue-500'
+                            : 'bg-white/60 text-ink hover:bg-white',
+                        )}
+                      >
+                        <span className="truncate pr-2">{p.name}</span>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black',
+                            isSelected ? 'bg-white/20 text-white' : 'text-blue-600 bg-blue-50',
+                          )}
+                        >
+                          {isSelected ? '✓ Added' : '+ Add'}
+                        </span>
+                      </button>
+                    )
+                  })
               ) : null}
+            </div>
+
+            {/* Modal Bottom Action Bar */}
+            <div className="mt-4 pt-3 border-t border-black/8 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-ink">
+                  {selectedAttachments.length === 0
+                    ? 'No items selected'
+                    : `${selectedAttachments.length} selected`}
+                </span>
+                {selectedAttachments.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAttachments([])}
+                    className="text-[10px] font-bold text-ink-soft hover:text-rose-600 underline"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+
+              <Button
+                variant="accent"
+                className="py-1.5 px-4 text-xs font-black"
+                onClick={() => setAttachmentPickerOpen(false)}
+              >
+                {selectedAttachments.length > 0
+                  ? `Attach to Chat (${selectedAttachments.length})`
+                  : 'Done'}
+              </Button>
             </div>
           </div>
         </div>
