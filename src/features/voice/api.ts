@@ -12,6 +12,10 @@ export type VoiceStatus = {
   updated_at: string | null
   used_today: number
   remaining_today: number
+  /** Present on save/test: a plan/voice mismatch the provider will refuse. */
+  warning?: string | null
+  category?: string | null
+  tier?: string | null
 }
 
 export const HOPE_VOICE_ID = 'dmWfLQZJq7wNPv9WmtiM'

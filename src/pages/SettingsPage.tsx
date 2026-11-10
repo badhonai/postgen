@@ -643,6 +643,12 @@ export default function SettingsPage() {
                         Connected ✓ — voice “{testVoice.data.voice_name ?? 'unknown'}” (no credits used).
                       </p>
                     ) : null}
+                    {voiceStatus.data?.category || voiceStatus.data?.tier ? (
+                      <p className="text-[11px] font-semibold text-ink-soft">
+                        ElevenLabs plan: {voiceStatus.data?.tier ?? 'unknown'} · voice type:{' '}
+                        {voiceStatus.data?.category ?? 'unknown'}
+                      </p>
+                    ) : null}
                     {testVoice.error ? (
                       <ErrorBox
                         message={testVoice.error instanceof Error ? testVoice.error.message : 'Test failed'}

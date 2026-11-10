@@ -58,8 +58,18 @@ export async function onRequestPost(ctx: Ctx): Promise<Response> {
   }
 
   try {
-    const name = typeof body.voiceName === 'string' && body.voiceName.trim() ? body.voiceName.trim() : check.name
-    return Response.json(await saveSettings(ctx.env, user.id, { apiKey, voiceId, voiceName: name }))
+    const name =
+      typeof body.voiceName === 'string' && body.voiceName.trim() ? body.voiceName.trim() : check.name
+    return Response.json(
+      await saveSettings(ctx.env, user.id, {
+        apiKey,
+        voiceId,
+        voiceName: name,
+        category: check.category,
+        tier: check.tier,
+        warning: check.warning,
+      }),
+    )
   } catch {
     return jsonError('could not save settings', 500)
   }

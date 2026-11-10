@@ -139,8 +139,15 @@ export async function status(env: Env, userId: string): Promise<VoiceStatus> {
 export async function saveSettings(
   env: Env,
   userId: string,
-  input: { apiKey: string; voiceId: string; voiceName: string | null },
-): Promise<VoiceStatus> {
+  input: {
+    apiKey: string
+    voiceId: string
+    voiceName: string | null
+    category?: string | null
+    tier?: string | null
+    warning?: string | null
+  },
+): Promise<VoiceStatus & { warning?: string | null; category?: string | null; tier?: string | null }> {
   const db = serviceClient(env)
   const keyCipher = await encryptKey(env, userId, input.apiKey)
   const { error } = await db.from('voice_settings').upsert(
@@ -156,7 +163,12 @@ export async function saveSettings(
     { onConflict: 'user_id' },
   )
   if (error) throw new Error(error.message)
-  return status(env, userId)
+  return {
+    ...(await status(env, userId)),
+    warning: input.warning ?? null,
+    category: input.category ?? null,
+    tier: input.tier ?? null,
+  }
 }
 
 export async function deleteSettings(env: Env, userId: string): Promise<void> {
@@ -201,15 +213,45 @@ async function providerError(response: Response): Promise<ProviderError> {
   return { status: response.status, message: message.slice(0, 300) }
 }
 
-/** Free validation: fetch the voice metadata (no synthesis, no charge). */
+export type VoiceCheck = {
+  ok: true
+  name: string | null
+  category: string | null
+  tier: string | null
+  /** Set when the provider will refuse an API synthesis (e.g. free plan + library voice). */
+  warning: string | null
+}
+
+/**
+ * Free validation (no synthesis, no charge): voice metadata + account plan, so a
+ * plan/voice mismatch is reported when the key is saved instead of after a paid call.
+ */
 export async function validateVoice(
   apiKey: string,
   voiceId: string,
-): Promise<{ ok: true; name: string | null } | { ok: false; error: ProviderError }> {
+): Promise<VoiceCheck | { ok: false; error: ProviderError }> {
   const response = await providerFetch(`/v1/voices/${encodeURIComponent(voiceId)}`, apiKey)
   if (!response.ok) return { ok: false, error: await providerError(response) }
-  const body = (await response.json()) as { name?: string }
-  return { ok: true, name: body?.name ?? null }
+  const body = (await response.json()) as { name?: string; category?: string }
+
+  let tier: string | null = null
+  try {
+    const sub = await providerFetch('/v1/user/subscription', apiKey)
+    if (sub.ok) tier = String(((await sub.json()) as { tier?: string }).tier ?? '') || null
+  } catch {
+    /* plan is advisory only */
+  }
+
+  const category = body?.category ?? null
+  let warning: string | null = null
+  if (tier === 'free' && category && category !== 'premade' && category !== 'cloned') {
+    warning =
+      `This voice is a ${category} voice. ElevenLabs refuses ${category} voices on the API for ` +
+      'free accounts ("Free users cannot use library voices via the API"), so generation will fail. ' +
+      'Add a premade/cloned voice, or upgrade the ElevenLabs plan.'
+  }
+
+  return { ok: true, name: body?.name ?? null, category, tier, warning }
 }
 
 export type VoiceoverOutcome = { status: number; body: Record<string, unknown> }
@@ -325,8 +367,17 @@ export async function runVoiceover(
       },
     }
   }
+  let voiceId = settings.voice_id
   if (input.voiceId && input.voiceId !== settings.voice_id) {
-    return { status: 400, body: { error: 'voice_id does not match the voice configured in Settings' } }
+    // An override must be a voice the same account can actually use.
+    const key = await decryptKey(env, auth.userId, settings.key_cipher).catch(() => null)
+    if (!key) return { status: 500, body: { error: 'could not read the stored key' } }
+    const check = await validateVoice(key, input.voiceId)
+    if (!check.ok) return { status: 400, body: { error: 'voice_id is not available on this account' } }
+    if ('warning' in check && check.warning) {
+      return { status: 400, body: { error: check.warning, voice_id: input.voiceId } }
+    }
+    voiceId = input.voiceId
   }
 
   const scriptHash = await sha256Hex(text)
@@ -365,7 +416,7 @@ export async function runVoiceover(
       body: {
         dry_run: true,
         configured: true,
-        voice_id: settings.voice_id,
+        voice_id: voiceId,
         voice_name: settings.voice_name,
         characters: text.length,
         can_generate: true,
@@ -391,7 +442,7 @@ export async function runVoiceover(
     userId: auth.userId,
     projectId: input.projectId,
     apiKey,
-    voiceId: settings.voice_id,
+    voiceId,
     text,
   })
 
