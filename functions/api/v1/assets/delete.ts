@@ -33,6 +33,17 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
       return jsonError('asset is attached to a post; detach it first', 409)
     }
 
+    // Prompt-library references are just as load-bearing as post media — deleting the
+    // asset would leave a saved prompt pointing at nothing.
+    const { count: promptCount } = await db
+      .from('image_prompts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', auth.userId)
+      .contains('reference_asset_ids', [assetId])
+    if ((promptCount ?? 0) > 0) {
+      return jsonError('asset is a reference image in a saved prompt; edit the prompt first', 409)
+    }
+
     await ctx.env.MEDIA.delete(String((asset as { r2_key: string }).r2_key))
     const { error } = await db.from('assets').delete().eq('id', assetId).eq('user_id', auth.userId)
     if (error) return jsonError(error.message, 500)

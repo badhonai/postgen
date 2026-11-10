@@ -322,7 +322,8 @@ cp studio/.env.example …        # POSTGEN_API_KEY stays in the environment onl
 npm run studio:doctor
 npm run studio:list
 POSTGEN_API_KEY=pgk_… npm run studio:render -- fluton-private-actions
-POSTGEN_API_KEY=pgk_… npm run studio:cleanup -- --project <uuid> --keep <master>.mp4
+POSTGEN_API_KEY=pgk_… npm run studio:cleanup -- --project <uuid> \
+  --match 'voiceover-*.mp3' --keep <delivered-narration>.mp3 --confirm
 ```
 
 What's tracked vs. ignored: sources, docs, `cue` plans, the spoken script and

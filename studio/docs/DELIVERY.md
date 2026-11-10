@@ -5,11 +5,14 @@
 attached media answers 409, so a live draft can never lose its video.
 
 ```
+# dry run (default) — only --match globs are candidates
 POSTGEN_API_KEY=pgk_live_… node tools/postgen/cleanup.mjs \
-  --project <uuid> --keep <delivered-master>.mp4            # dry run
-POSTGEN_API_KEY=pgk_live_… node tools/postgen/cleanup.mjs \
-  --project <uuid> --keep <delivered-master>.mp4 --confirm  # actually delete
+  --project <uuid> --match 'voiceover-*.mp3' --keep '<delivered-narration>.mp3'
+# then repeat with --confirm
 ```
 
-Always pass `--keep` for the master that the draft points at; everything else in the
-project (audition MP3s, test renders, superseded cuts) is safe to remove.
+`--match` is required on purpose: a project also holds the media of its earlier posts
+(covers, style boards, logos), so a blanket sweep is never the right call.
+
+Deletion is refused (409) while **either** a post or a saved image prompt references the
+asset, so the delivered master and any prompt reference images are structurally safe.
