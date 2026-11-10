@@ -4,20 +4,26 @@ import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {ROOT,validateSpec} from './lib.mjs';
 let errors=[];let bytes=0;
-const files=execFileSync('git',['ls-files','-z'],{cwd:ROOT,encoding:'utf8'}).split('\0').filter(Boolean);
+// The studio lives at `studio/` inside the PostGen repo, so the checks must be
+// scoped to this directory instead of assuming it is the repository root.
+// `git ls-files` resolves pathspecs and prints paths relative to cwd, so running
+// from ROOT with `-- .` scopes the scan to the studio directory.
+const files=execFileSync('git',['ls-files','-z','--','.'],{cwd:ROOT,encoding:'utf8'}).split('\0').filter(Boolean);
 const forbidden=/^(local|raw|exports|reference|renders|tmp|node_modules|\.cache)\//;
 const media=/\.(mp4|mov|webm|mkv|mp3|wav|m4a|flac|zip|7z|tar|gz|xz)$/i;
+// The paid narration is the timing source of truth, so it is committed on purpose.
+const narration=/^projects\/[a-z][a-z0-9-]*\/production\/narration\.mp3$/;
 const secrets=[/github_pat_[A-Za-z0-9_]{20,}/,/gh[pousr]_[A-Za-z0-9]{30,}/,/-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----/,/https:\/\/[^\s/@:]+:[^\s/@]+@github\.com/];
 for(const file of files){
  const p=path.join(ROOT,file);if(!fs.existsSync(p)){errors.push('Tracked path absent from working tree; stage deletions: '+file);continue;}
- if(forbidden.test(file)||media.test(file)||/(^|\/)\.env(?:\.|$)/.test(file)&&!file.endsWith('.example'))errors.push('Forbidden tracked path: '+file);
- const blob=execFileSync('git',['show',':'+file],{cwd:ROOT});const size=blob.length;bytes+=size;if(size>1024*1024)errors.push('Tracked file exceeds 1 MiB: '+file);
+ if(forbidden.test(file)||(media.test(file)&&!narration.test(file))||/(^|\/)\.env(?:\.|$)/.test(file)&&!file.endsWith('.example'))errors.push('Forbidden tracked path: '+file);
+ const blob=execFileSync('git',['show',':./'+file],{cwd:ROOT});const size=blob.length;bytes+=size;if(size>1024*1024)errors.push('Tracked file exceeds 1 MiB: '+file);
  if(file.includes('/public/')&&!file.endsWith('/.gitkeep'))errors.push('Project media should stay local: '+file);
  if(file.endsWith('.png')){
   const m=/^(projects\/[a-z][a-z0-9-]*)\/(brand\/[^/]+\.png)$/.exec(file);
   if(!m||size>64*1024||!blob.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))errors.push('Unexpected/oversized binary asset: '+file);
   else{
-   try{const manifest=JSON.parse(execFileSync('git',['show',':'+m[1]+'/assets.json'],{cwd:ROOT,encoding:'utf8'}));const item=(manifest.bundled||[]).find(x=>x.source===m[2]);if(!item||!item.permission||item.sha256!==crypto.createHash('sha256').update(blob).digest('hex'))errors.push('Unverified brand PNG: '+file);}catch{errors.push('Missing staged asset manifest for '+file);}
+   try{const manifest=JSON.parse(execFileSync('git',['show',':./'+m[1]+'/assets.json'],{cwd:ROOT,encoding:'utf8'}));const item=(manifest.bundled||[]).find(x=>x.source===m[2]);if(!item||!item.permission||item.sha256!==crypto.createHash('sha256').update(blob).digest('hex'))errors.push('Unverified brand PNG: '+file);}catch{errors.push('Missing staged asset manifest for '+file);}
   }
   continue;
  }

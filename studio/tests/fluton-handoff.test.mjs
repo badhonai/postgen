@@ -5,11 +5,21 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {ROOT,project,assetDir} from '../tools/lib.mjs';
 const id='fluton-private-actions';
-test('prepared Fluton metadata and seven contiguous scene windows remain valid',()=>{
- const {dir,spec}=project(id);assert.deepEqual([spec.width,spec.height,spec.fps,spec.durationInFrames],[1920,1080,60,1800]);assert.equal(spec.workflowMode,'visual-handoff');
+test('prepared Fluton metadata and seven contiguous scene windows follow the narration',()=>{
+ const {dir,spec}=project(id);assert.deepEqual([spec.width,spec.height,spec.fps,spec.durationInFrames],[1920,1080,60,2102]);assert.equal(spec.workflowMode,'visual-handoff');
  const film=JSON.parse(fs.readFileSync(path.join(dir,'src/film-data.json'),'utf8'));assert.equal(film.scenes.length,7);let cursor=0;
- for(const s of film.scenes){assert.equal(s.startFrame,cursor);assert.ok(s.endFrameExclusive>s.startFrame);assert.ok(s.keyStateFrame>=s.startFrame&&s.keyStateFrame<s.endFrameExclusive);assert.ok(s.captionLines.length<=2);assert.ok(s.captionLines.every(x=>x.length<=66));cursor=s.endFrameExclusive;}
- assert.equal(cursor,1800);assert.match(film.finalNotice,/TESTNET ONLY/);assert.match(film.finalNotice,/NO REAL FUNDS/);
+ for(const s of film.scenes){assert.equal(s.startFrame,cursor);assert.ok(s.endFrameExclusive>s.startFrame);assert.ok(s.keyStateFrame>=s.startFrame&&s.keyStateFrame<s.endFrameExclusive);assert.ok(s.captionLines.length<=2);assert.ok(s.captionLines.every(x=>x.length<=96));cursor=s.endFrameExclusive;}
+ assert.equal(cursor,2102);assert.match(film.finalNotice,/TESTNET ONLY/);assert.match(film.finalNotice,/NO REAL FUNDS/);
+ // The picture is bent to the recorded voice: scene windows must match the alignment,
+ // and the last spoken word must land inside the film.
+ const timeline=JSON.parse(fs.readFileSync(path.join(dir,'production/voice-timeline.json'),'utf8'));
+ const scenes=timeline.scenes||timeline;
+ const windows=Object.values(scenes).map(s=>[s.startFrame,s.endFrameExclusive]);
+ assert.deepEqual(windows,film.scenes.map(s=>[s.startFrame,s.endFrameExclusive]));
+ const alignment=JSON.parse(fs.readFileSync(path.join(dir,'production/narration.alignment.json'),'utf8'));
+ const last=Math.max(...alignment.alignment.character_end_times_seconds);
+ assert.ok(last<spec.durationInFrames/spec.fps,'narration must end before the film does');
+ assert.equal(alignment.voiceId,'TX3LPaxmHKxFdv7VOQHJ','default voice is Liam');
 });
 test('two supplied Fluton brand PNGs are verified and staged without altering bytes',()=>{
  const {dir}=project(id),pub=assetDir(id,dir),manifest=JSON.parse(fs.readFileSync(path.join(dir,'assets.json'),'utf8'));assert.equal(manifest.bundled.length,2);

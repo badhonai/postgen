@@ -1,5 +1,10 @@
 # Motion Graphics
 
+> **Archived direction notes.** These come from the earlier local production archive, which was
+> never committed (media, exports and `reference/` material stayed local by policy). Paths in
+> `exports/` and `reference/` below are historical references, not files in this repo.
+
+
 ## Latest delivery — ACEPYR / THE GAP
 
 New 54s / 1080p60 / 3240-frame voice-led film, using the exact supplied narration and logo, original 144 BPM music/dry accents, twelve illustrated scenes, Remotion and frame-driven Framer Motion.
@@ -85,11 +90,11 @@ Uses Remotion for timeline/rendering and Framer Motion's components/easing for d
 
 Research for the next standalone 15-second showreel is saved; **do not create or render that revision until the user says “continue” in a later message**. Continue through Arena, not paid Claude model access.
 
-- Main findings: [`exports/motion-design-research.md`](exports/motion-design-research.md)
-- Portable source/skills collection: [`exports/motion-design-research-pack.zip`](exports/motion-design-research-pack.zip)
-- Reference frame study: [`reference/analysis/opus55-reference-study-2026-11-09.md`](reference/analysis/opus55-reference-study-2026-11-09.md)
-- Curated source index: [`reference/research/opus55-2026-11-09/skill-index.md`](reference/research/opus55-2026-11-09/skill-index.md)
-- Next-turn handoff: [`reference/research/opus55-2026-11-09/NEXT-CONTINUE.md`](reference/research/opus55-2026-11-09/NEXT-CONTINUE.md)
+- Main findings: `exports/motion-design-research.md`
+- Portable source/skills collection: `exports/motion-design-research-pack.zip`
+- Reference frame study: `reference/analysis/opus55-reference-study-2026-11-09.md`
+- Curated source index: `reference/research/opus55-2026-11-09/skill-index.md`
+- Next-turn handoff: `reference/research/opus55-2026-11-09/NEXT-CONTINUE.md`
 - Four reviewed project adapters: `.agents/skills/arena-{motion-direction,motion-choreography,frame-safe-motion,motion-sound-qa}/SKILL.md`. Read explicitly; automatic skill discovery is not assumed.
 
 Twelve repositories were pinned and selectively collected as inert references. No upstream install/plugin/script was executed. The pack retains 11 MIT collections with notices; official Remotion source text (license unclear in that repository) and creator media stay out of the portable archive. The source index records compatibility limits, rights, and review status. Frame-study sheets are not evidence of uninterrupted audiovisual playback.
@@ -98,9 +103,9 @@ Twelve repositories were pinned and selectively collected as inert references. N
 
 The user authorized production with “Continue” on 9 November 2026. A new 15-second standalone reel is completed, separate from CONTROL / CHAOS and Fluton.
 
-- Film: [`exports/make-break-become-15s.mp4`](exports/make-break-become-15s.mp4)
-- Editable project: [`exports/make-break-become-source.zip`](exports/make-break-become-source.zip)
-- Build / review evidence: [`exports/make-break-become-build-notes.md`](exports/make-break-become-build-notes.md)
+- Film: `exports/make-break-become-15s.mp4`
+- Editable project: `exports/make-break-become-source.zip`
+- Build / review evidence: `exports/make-break-become-build-notes.md`
 - Direction: [`become-direction.md`](become-direction.md)
 - Source: `src/become/`; assets / original audio: `public/become/`.
 - Reproduction: prepare/score/render/QA/master/contact scripts named `*become*` in `scripts/`.
