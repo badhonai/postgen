@@ -75,13 +75,16 @@ This tests the pipeline, **not** a finished creative film. Full production still
 AGENTS.md                 Canonical instructions for any AI
 CLAUDE.md / GEMINI.md      Thin pointers, not competing workflows
 .agents/skills/            Four curated direction/choreography/engineering/sound-QA skills
+system/                   THE MOTION SYSTEM every film imports: timing maths, tokens, fonts,
+                          word-level typography, printed primitives, shared chrome (+ README)
+templates/film/           The scaffold a new film starts from, with a worked chapter
 docs/                     Setup, workflow, taste, QA, security and production lessons
+  MOTION-SYSTEM.md        The eight-step loop, the module map and the eight rules
   research/               Distilled findings, immutable source pointers and notices
-templates/starter/        Small frame-clock/font/integration fixture + planning documents
-projects/<slug>/           Your separately scoped film source and brief
-tools/                    Generator, preview/render/QA, checks and optional audio master
+projects/<slug>/           One film: script, timing, one file per chapter
+tools/film.mjs            The pipeline: new, lines, audio, stills, score, mix, render, master
 tests/                    Built-in Node tests
-public/fonts/             One small licensed shared font (OFL retained)
+public/fonts/             Three bundled SIL OFL families: display, mono, UI
 .github/workflows/        Source checks and an optional manual render smoke
 ```
 

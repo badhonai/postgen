@@ -8,6 +8,7 @@
   },
   "scripts": {
     "new": "node tools/new-project.mjs",
+    "film": "node tools/film.mjs",
     "list": "node tools/motion.mjs list",
     "studio": "node tools/motion.mjs studio",
     "still": "node tools/motion.mjs still",
