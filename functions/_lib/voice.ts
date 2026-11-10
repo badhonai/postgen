@@ -453,6 +453,13 @@ export async function runVoiceover(
   }
 
   if (input.dryRun) {
+    const key = await decryptKey(env, auth.userId, settings.key_cipher).catch(() => null)
+    if (!key) return { status: 500, body: { error: 'could not read the stored key' } }
+    const check = await validateVoice(key, voiceId)
+    if (!check.ok) {
+      return { status: 400, body: { error: `provider error: ${check.error.message}` } }
+    }
+    if (check.warning) return { status: 400, body: { error: check.warning, voice_id: voiceId } }
     // Everything validated, nothing spent: lets clients confirm configuration + caps.
     return {
       status: 200,
@@ -460,7 +467,9 @@ export async function runVoiceover(
         dry_run: true,
         configured: true,
         voice_id: voiceId,
-        voice_name: settings.voice_name,
+        voice_name: check.name ?? settings.voice_name,
+        voice_category: check.category,
+        plan_tier: check.tier,
         characters: text.length,
         can_generate: true,
         caps: {
