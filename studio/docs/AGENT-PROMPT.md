@@ -31,21 +31,19 @@ Then do all of this yourself, without asking me again:
    the sources support (testnet status, no invented metrics).
 2. **Generate the voice first** with `studio/tools/postgen/voice.mjs` (Liam by default, max 2
    attempts per script, 20/day). The picture is built to that recording — never the reverse.
-3. **Pack and ship the handoff** into a PostGen studio job folder:
+3. **Build the visuals yourself** (this is the Acepyr flow — no handoff, no Claude): create the
+   project with `npm run new -- <slug>`, bend the scene windows to the recording, and author
+   every scene, component and the visual system. Frame-derived motion only.
+4. **Render, inspect, fix:**
    ```
-   cd studio
-   POSTGEN_API_KEY=… node tools/handoff.mjs ship <slug> --project=<postgen-project-id>
-   ```
-   This stores the voice, brief, timing and source in my account (not GitHub) and prints one
-   prompt. Give me that prompt and tell me to paste it into Claude.
-4. **Wait for me to say "done"** (Claude uploads its changed scenes back into the same folder).
-5. **Claim and render:**
-   ```
-   node tools/handoff.mjs claim <slug> --job=<job-id> --apply --check
+   node tools/motion.mjs still <slug> --frame=<cut>     # look at real frames at EVERY cut
    node tools/motion.mjs render <slug>
    python3 tools/mix_audio.py … ; python3 tools/master-audio.py …
    ```
-   Inspect real frames at every cut before you call it finished.
+5. **Store the working files** in the film's studio job folder so I can edit later or clear it:
+   ```
+   POSTGEN_API_KEY=… node tools/studio/archive.mjs <slug> --project=<postgen-project-id>
+   ```
 6. **Deliver as a draft post** (type `post`, not artwork) with a caption:
    ```
    POSTGEN_API_KEY=… node tools/postgen/post.mjs <slug> --postgen-project=<postgen-project-id>
@@ -56,8 +54,8 @@ Then do all of this yourself, without asking me again:
 ## Rules you never break
 
 - Voice first. Never re-time speech; bend the picture to the performance.
-- Claude's return may only touch `src/Film.tsx`, `src/visual-system.ts`, `src/scenes/*` and
-  `src/components/*`. Timing, composition, spec and dependencies are frozen.
+- You build the picture yourself. Only use the handoff/Claude path if I ask for it.
+- Frame-derived motion only — no CSS transitions, no rAF, no speed-ramped speech.
 - No paid call without a cap (2 attempts per script, 20 generations/day).
 - Keys live in PostGen settings or the environment — never in a file, a log or a commit.
 - Frame-derived motion only; supplied logos byte-identical; dry/tonal sound accents.
@@ -65,6 +63,5 @@ Then do all of this yourself, without asking me again:
 
 ## What I do (and nothing else)
 
-1. Answer your questions.
-2. Copy the prompt you print into Claude.
-3. Say "done", then approve the draft post in PostGen.
+1. Answer your questions (project, topic, format).
+2. Approve the draft post in PostGen.

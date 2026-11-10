@@ -91,9 +91,28 @@ def pad(buf, start, dur, freqs, amp=0.055, cut=None):
     sig *= a * r * amp
     add(buf, start, sig, pan=0.0)
 
-NOTE = {'A1': 55.0, 'C2': 65.41, 'D2': 73.42, 'E2': 82.41, 'F2': 87.31, 'G2': 98.0,
-        'A2': 110.0, 'C3': 130.81, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.0,
-        'A3': 220.0, 'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'G4': 392.0, 'A4': 440.0}
+# Note names are parsed rather than tabulated, so any chord in cues.json is playable
+# (the old fixed dictionary silently limited the score to six keys).
+_STEP = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
+
+def freq(name: str) -> float:
+    name = name.strip()
+    letter = name[0].upper()
+    rest = name[1:]
+    semis = _STEP[letter]
+    while rest and rest[0] in '#b':
+        semis += 1 if rest[0] == '#' else -1
+        rest = rest[1:]
+    octave = int(rest)
+    midi = 12 * (octave + 1) + semis
+    return 440.0 * 2 ** ((midi - 69) / 12)
+
+class _Notes(dict):
+    """Lazy note-name → frequency map (keeps `NOTE['A1']` call sites working)."""
+    def __missing__(self, key):
+        return freq(key)
+
+NOTE = _Notes()
 
 def main():
     ap = argparse.ArgumentParser()

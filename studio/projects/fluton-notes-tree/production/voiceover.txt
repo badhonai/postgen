@@ -1,0 +1,1 @@
+Fluton doesn't keep balances. It keeps notes. Each note is a sealed commitment, one leaf in a single tree: the amount, the owner and the token all hidden. To spend, you destroy a note and create three new ones. The chain learns one thing: a nullifier, proving it's spent without saying which. Only the net amount crossing the pool is public. Everything inside stays sealed.

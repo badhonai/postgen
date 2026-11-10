@@ -1,0 +1,199 @@
+{
+  "durationSeconds": 28.13,
+  "bpm": 84,
+  "note": "Original synthesis only. Accents land on the commitment lock, the nullifier publish, and the seal.",
+  "sections": [
+    {
+      "start": 0.0,
+      "end": 1.85,
+      "feel": "sparse",
+      "root": "A1",
+      "chords": [
+        [
+          "A2",
+          "C3",
+          "E3"
+        ]
+      ],
+      "padAmp": 0.13
+    },
+    {
+      "start": 1.85,
+      "end": 3.3,
+      "feel": "steady",
+      "root": "F2",
+      "chords": [
+        [
+          "F2",
+          "A2",
+          "C3"
+        ]
+      ],
+      "padAmp": 0.14,
+      "arp": [
+        "F3",
+        "A3",
+        "C4"
+      ]
+    },
+    {
+      "start": 3.3,
+      "end": 7.6,
+      "feel": "steady",
+      "root": "D2",
+      "chords": [
+        [
+          "D2",
+          "F2",
+          "A2"
+        ]
+      ],
+      "padAmp": 0.15
+    },
+    {
+      "start": 7.6,
+      "end": 11.24,
+      "feel": "half",
+      "root": "D2",
+      "chords": [
+        [
+          "D2",
+          "A2",
+          "F3"
+        ]
+      ],
+      "padAmp": 0.17,
+      "arp": [
+        "D3",
+        "A3",
+        "F4"
+      ]
+    },
+    {
+      "start": 11.24,
+      "end": 15.08,
+      "feel": "steady",
+      "root": "Bb1",
+      "chords": [
+        [
+          "Bb1",
+          "D2",
+          "F2"
+        ]
+      ],
+      "padAmp": 0.16,
+      "arp": [
+        "Bb2",
+        "D3",
+        "F3"
+      ]
+    },
+    {
+      "start": 15.08,
+      "end": 18.6,
+      "feel": "half",
+      "root": "G1",
+      "chords": [
+        [
+          "G1",
+          "Bb1",
+          "D2"
+        ]
+      ],
+      "padAmp": 0.15
+    },
+    {
+      "start": 18.6,
+      "end": 21.28,
+      "feel": "none",
+      "root": "G1",
+      "chords": [
+        [
+          "G1",
+          "D2",
+          "Bb2"
+        ]
+      ],
+      "padAmp": 0.14
+    },
+    {
+      "start": 21.28,
+      "end": 24.36,
+      "feel": "steady",
+      "root": "E2",
+      "chords": [
+        [
+          "E2",
+          "G2",
+          "B2"
+        ]
+      ],
+      "padAmp": 0.15
+    },
+    {
+      "start": 24.36,
+      "end": 28.13,
+      "feel": "none",
+      "root": "A1",
+      "chords": [
+        [
+          "A2",
+          "C3",
+          "E3",
+          "A3"
+        ]
+      ],
+      "padAmp": 0.18
+    }
+  ],
+  "accents": [
+    {
+      "time": 9.86,
+      "kind": "latch",
+      "amp": 0.22,
+      "note": "commitment hash locks in (scene 3)"
+    },
+    {
+      "time": 12.03,
+      "kind": "click",
+      "amp": 0.16,
+      "note": "note spent"
+    },
+    {
+      "time": 12.6,
+      "kind": "click",
+      "amp": 0.13,
+      "note": "output 0"
+    },
+    {
+      "time": 12.95,
+      "kind": "click",
+      "amp": 0.13,
+      "note": "output 1"
+    },
+    {
+      "time": 13.3,
+      "kind": "click",
+      "amp": 0.13,
+      "note": "output 2"
+    },
+    {
+      "time": 15.4,
+      "kind": "dry",
+      "amp": 0.2,
+      "note": "nullifier published"
+    },
+    {
+      "time": 18.9,
+      "kind": "click",
+      "amp": 0.18,
+      "note": "blind: the answer is withheld"
+    },
+    {
+      "time": 24.7,
+      "kind": "impact",
+      "amp": 0.24,
+      "note": "seal lands"
+    }
+  ]
+}

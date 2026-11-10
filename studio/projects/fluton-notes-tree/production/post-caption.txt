@@ -1,0 +1,7 @@
+Fluton doesn't keep balances. It keeps notes.
+
+One note = a sealed Poseidon commitment: amount, owner and asset hidden. Spending destroys it and writes three new ones, and the chain learns exactly one new fact — a nullifier. Spent is provable; which note is not.
+
+Only the net amount crossing the pool is public. Everything inside stays sealed.
+
+Testnet only. Not financial advice.

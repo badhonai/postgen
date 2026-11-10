@@ -1,0 +1,117 @@
+{
+  "width": 1080,
+  "height": 1920,
+  "captionBand": 300,
+  "palette": {
+    "bg": "#07080C",
+    "panel": "#101319",
+    "line": "#242A36",
+    "ink": "#F4F6FA",
+    "soft": "#9AA6BD",
+    "accent": "#7CE0C3",
+    "accent2": "#8FB4FF",
+    "warn": "#FFC46B",
+    "seal": "#1A2030"
+  },
+  "safeAreas": {
+    "side": 96,
+    "captionTop": 1520,
+    "captionLineHeight": 62,
+    "finalNoticeTop": 1740
+  },
+  "finalNotice": "TESTNET ONLY · NO REAL FUNDS",
+  "scenes": [
+    {
+      "id": "hook",
+      "startFrame": 0,
+      "endFrameExclusive": 54,
+      "keyStateFrame": 33,
+      "background": "#07080C",
+      "foreground": "#F4F6FA",
+      "captionText": "Fluton doesn't keep balances.",
+      "captionLines": [
+        "Fluton doesn't keep balances."
+      ]
+    },
+    {
+      "id": "notes",
+      "startFrame": 54,
+      "endFrameExclusive": 94,
+      "keyStateFrame": 78,
+      "background": "#07080C",
+      "foreground": "#F4F6FA",
+      "captionText": "It keeps notes.",
+      "captionLines": [
+        "It keeps notes."
+      ]
+    },
+    {
+      "id": "note",
+      "startFrame": 94,
+      "endFrameExclusive": 335,
+      "keyStateFrame": 243,
+      "background": "#07080C",
+      "foreground": "#F4F6FA",
+      "captionText": "Each note is a sealed commitment — one leaf in a single tree.",
+      "captionLines": [
+        "Each note is a sealed commitment — one leaf in a single tree."
+      ]
+    },
+    {
+      "id": "split",
+      "startFrame": 335,
+      "endFrameExclusive": 451,
+      "keyStateFrame": 406,
+      "background": "#07080C",
+      "foreground": "#F4F6FA",
+      "captionText": "To spend, you destroy a note and create three new ones.",
+      "captionLines": [
+        "To spend, you destroy a note and create three new ones."
+      ]
+    },
+    {
+      "id": "nullifier",
+      "startFrame": 451,
+      "endFrameExclusive": 637,
+      "keyStateFrame": 566,
+      "background": "#07080C",
+      "foreground": "#F4F6FA",
+      "captionText": "The chain learns one thing: a nullifier. Spent — not which.",
+      "captionLines": [
+        "The chain learns one thing: a nullifier. Spent — not which."
+      ]
+    },
+    {
+      "id": "boundary",
+      "startFrame": 637,
+      "endFrameExclusive": 729,
+      "keyStateFrame": 694,
+      "background": "#07080C",
+      "foreground": "#F4F6FA",
+      "captionText": "Only the net amount crossing the pool is public.",
+      "captionLines": [
+        "Only the net amount crossing the pool is public."
+      ]
+    },
+    {
+      "id": "seal",
+      "startFrame": 729,
+      "endFrameExclusive": 844,
+      "keyStateFrame": 800,
+      "background": "#07080C",
+      "foreground": "#F4F6FA",
+      "captionText": "Everything inside stays sealed.",
+      "captionLines": [
+        "Everything inside stays sealed."
+      ]
+    }
+  ],
+  "durationSeconds": 28.132,
+  "durationInFrames": 844,
+  "captionMode": "recording-aligned: one spoken sentence per scene, timed from the provider alignment",
+  "voice": {
+    "name": "Liam - Energetic, Social Media Creator",
+    "id": "TX3LPaxmHKxFdv7VOQHJ",
+    "audioSeconds": 26.932
+  }
+}

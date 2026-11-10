@@ -36,7 +36,9 @@ def main():
     graph = (
         '[1:a]asplit=2[narr][key];'
         '[0:a][key]sidechaincompress=threshold=0.03:ratio=6:attack=12:release=320:makeup=1[duck];'
-        '[duck][narr]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,'
+        # duration=longest: the score is already padded to the film length, so the bed can
+        # never come out shorter than the picture (duration=first truncated it).
+        '[duck][narr]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0,'
         f'alimiter=limit=0.95,atrim=0:{a.duration}[mix]'
     )
     run(['ffmpeg','-y','-v','error',

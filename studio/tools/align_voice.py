@@ -23,6 +23,9 @@ def main():
     ap.add_argument('--fps', type=int, default=60)
     ap.add_argument('--lead', type=float, default=0.35, help='picture lead before speech (s)')
     ap.add_argument('--tail', type=float, default=1.0, help='hold after the last word (s)')
+    ap.add_argument('--min-frames', type=int, default=60,
+                    help='merge a sentence whose window is shorter than this into the NEXT scene '
+                         '(or the previous one, if it is the last) — short lines should not get their own cut')
     a = ap.parse_args()
 
     root = Path(__file__).resolve().parent.parent
@@ -59,14 +62,40 @@ def main():
         marks.append(raw)
         cursor = idx + 1
 
-    # More sentences than scenes? Merge the trailing (short) closer sentences into the last scene.
-    if len(sentences) > len(scenes_for_count := json.loads((pdir / 'src' / 'film-data.json').read_text())['scenes']):
-        n_scenes = len(scenes_for_count)
-        head = sentences[:n_scenes - 1]
-        tail = sentences[n_scenes - 1:]
-        merged = head + [' '.join(tail)]
-        print(f'merged {len(tail)} closing sentences into the final scene')
-        sentences = merged
+    # Sentences must map one-to-one onto scenes. When the script has more lines than the
+    # film has scenes — or a line is too short to carry a visual beat — merge it into its
+    # neighbour instead of letting a scene flash past. Longest-first so the meaningful
+    # beats survive and the throwaway clauses fold in.
+    n_scenes = len(json.loads((pdir / 'src' / 'film-data.json').read_text())['scenes'])
+    min_seconds = a.min_frames / max(1, a.fps)
+
+    def windows(sents):
+        segs = []
+        for i, s in enumerate(sents):
+            ci = marks[i]
+            start = starts[ci] if ci < len(starts) else 0.0
+            end = ends[-1] if i == len(sents) - 1 else starts[marks[i+1]] if marks[i+1] < len(starts) else ends[-1]
+            segs.append({'text': s, 'start': round(start, 3), 'end': round(end, 3)})
+        return segs
+
+    merged_notes = []
+    while len(sentences) > n_scenes:
+        segs = windows(sentences)
+        # merge the shortest window into the neighbour it flows into (previous for the last line)
+        durations = [(sg['end'] - sg['start'], i) for i, sg in enumerate(segs)]
+        _, short = min(durations)
+        j = short + 1 if short + 1 < len(sentences) else short - 1
+        lo, hi = min(short, j), max(short, j)
+        merged_notes.append(f'"{sentences[short][:34]}…" → scene {lo + 1}')
+        sentences = sentences[:lo] + [' '.join(sentences[lo:hi + 1])] + sentences[hi + 1:]
+        marks = marks[:lo] + [marks[lo]] + marks[hi + 1:]
+    if merged_notes:
+        print('merged ' + '; '.join(merged_notes))
+
+    too_short = [sg['text'][:30] for sg in windows(sentences) if (sg['end'] - sg['start']) < min_seconds]
+    if too_short:
+        print('note: these lines are shorter than --min-frames but kept (one line per scene): '
+              + ', '.join(too_short))
 
     segments = []
     for i, s in enumerate(sentences):

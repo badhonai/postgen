@@ -10,20 +10,22 @@ system of record for narration and delivery.
 
 ```
 1 INTAKE        ask the fixed question set (docs/INTAKE.md) — never assume
-2 RESEARCH      orchestrator verifies facts, rights, assets; writes script + brief
+2 RESEARCH      verify facts, rights, assets; write script + FACT-CHECK
 3 VOICE         PostGen generate_voiceover (Liam by default) → mp3 + character alignment  ← paid, capped
-4 SHIP          handoff.mjs ship → a studio job folder in the user's PostGen account
-                (voice, brief, timing, source) + one prompt to paste into Claude
-5 VISUALS       Claude reads the folder via the job's scoped token, builds to the actual
-                audio, uploads only its changed scenes back into the same folder
-6 REVIEW        handoff.mjs claim → validate against the contract, import, render, inspect
-7 FINAL         score + mix + master; QA on the encoded final
-8 DELIVER       upload MP4 to PostGen → DRAFT post (type: post) with caption; user publishes
-   STORAGE      working files stay in the job folder; the user clears them in
-                PostGen → Studio whenever they like (or keeps them to edit later)
+4 TIMING        tools/align_voice.py bends scene windows to the recording
+5 VISUALS       the orchestrator builds every scene itself, frame-derived (the Acepyr way)
+6 REVIEW        stills at every cut + contact frames, inspect, fix, re-render
+7 AUDIO         score (cues.json) → mix with ducking → master to −14 LUFS / −2 dBTP
+8 DELIVER       upload MP4 → DRAFT post (type: post) with caption; user publishes
+9 STORAGE       working files go in the film's studio job folder; user clears or keeps them
 ```
 
-The user's whole job is three steps — see [AGENT-PROMPT.md](AGENT-PROMPT.md).
+**No specialist, no handoff.** One agent does research → script → voice → picture → sound →
+render → post. The Claude ZIP contract in [DELEGATION.md](DELEGATION.md) still exists and is
+supported, but it is **opt-in only**: use it when the user explicitly asks for a handoff.
+A solo film needs no `ship`/`claim` step at all.
+
+The user's only steps: answer the intake questions, then approve the draft.
 
 ## 1 · Intake (always)
 Ask these before work starts, in one message, with sensible defaults so a one-word reply is enough:

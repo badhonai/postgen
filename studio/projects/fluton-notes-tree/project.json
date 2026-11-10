@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "fluton-notes-tree",
+  "compositionId": "Main",
+  "entry": "src/index.tsx",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "durationInFrames": 844,
+  "audio": "production/narration.mp3 (26.932s) + original score",
+  "status": "rendered-with-narration",
+  "workflowMode": "solo"
+}

@@ -1,6 +1,7 @@
 # Optional split: orchestrator + visual specialist (ZIP return)
 
-Default is solo. Use this only when the user asks for it. No paid service is called automatically, and
+**Default is solo — the Acepyr flow: one agent builds the whole film.** Do not ship a handoff
+unless the user explicitly asks for a second agent. Everything below is the opt-in path. No paid service is called automatically, and
 the specialist never sees a provider key: narration arrives as an audio file.
 
 ## Ownership
