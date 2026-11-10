@@ -21,7 +21,9 @@
     "voice": "node tools/postgen/voice.mjs",
     "cleanup": "node tools/postgen/cleanup.mjs",
     "pack": "node tools/handoff.mjs pack",
-    "import": "node tools/handoff.mjs import"
+    "import": "node tools/handoff.mjs import",
+    "ship": "node tools/handoff.mjs ship",
+    "claim": "node tools/handoff.mjs claim"
   },
   "repository": {
     "type": "git",

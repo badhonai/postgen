@@ -162,6 +162,37 @@ const spec = {
         responses: { '200': { description: 'Assets' } },
       },
     },
+    '/studio/jobs': {
+      get: {
+        summary: 'List studio job folders (one per film) with file counts and storage used',
+        responses: { '200': { description: 'Jobs' } },
+      },
+      post: {
+        summary: 'Create a studio job folder; returns its scoped pgj_ token once',
+        responses: { '201': { description: 'Job + token' } },
+      },
+    },
+    '/studio/jobs/{id}': {
+      get: { summary: 'Job folder with every file and a short-lived URL', responses: { '200': { description: 'Job + files' } } },
+      patch: { summary: 'Rename a job, set a note, or change status', responses: { '200': { description: 'Updated' } } },
+      delete: { summary: 'Wipe the folder (R2 objects + rows)', responses: { '200': { description: 'Deleted' } } },
+    },
+    '/studio/jobs/{id}/files': {
+      get: { summary: 'List the folder (owner key or job token)', responses: { '200': { description: 'Files' } } },
+      post: {
+        summary: 'Upload one file into the folder (multipart: file, path, kind)',
+        responses: { '201': { description: 'Stored' } },
+      },
+    },
+    '/studio/jobs/{id}/files/{fileId}': {
+      delete: { summary: 'Delete one file from the folder', responses: { '200': { description: 'Deleted' } } },
+    },
+    '/studio/jobs/{id}/contract': {
+      get: {
+        summary: 'The visual specialist\'s entry point: what to read, which paths may change, where to upload',
+        responses: { '200': { description: 'Contract' } },
+      },
+    },
     '/prompts': {
       get: {
         summary: 'Saved image prompts (optionally ?project_id=… for that project + globals), each with reference images and signed URLs',

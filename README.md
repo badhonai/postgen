@@ -308,19 +308,29 @@ nothing in `studio/` ships to the browser.
 **The flow is voice-first** ([`studio/docs/FLOW.md`](studio/docs/FLOW.md)):
 
 ```
-intake → research → VOICE (PostGen, Liam default) → handoff to Claude (scenes ZIP)
-     → import + render (Remotion) → score/mix/master → upload asset → DRAFT post
+intake → research → VOICE (PostGen, Liam default) → SHIP (studio job folder + prompt)
+     → Claude returns scenes via the job API → claim + render (Remotion)
+     → score/mix/master → upload asset → DRAFT post (type: post)
 ```
 
 The picture is bent to the recorded voice (caption/scene timing comes from the
 ElevenLabs character alignment), never the reverse. The finished deliverable is a
-**post with a caption** — no zips, no intermediates kept.
+**post with a caption**.
+
+**Working files live in PostGen, not GitHub.** `handoff.mjs ship` creates a *studio job*
+folder in the user's account (R2 `studio/<user>/<job>/…`, `studio_jobs` /
+`studio_job_files`) holding the narration, brief, timing and source. The visual specialist
+gets a **job-scoped token** (`pgj_…`) that can only reach that one folder — never the
+account's posts or assets. When the video is posted, the folder stays as working storage and
+can be wiped any time from **Studio** in the app (or kept, to edit the film later).
 
 ```bash
 npm run studio:install          # once: studio/ has its own Remotion deps
 cp studio/.env.example …        # POSTGEN_API_KEY stays in the environment only
 npm run studio:doctor
 npm run studio:list
+POSTGEN_API_KEY=pgk_… npm run studio:ship -- fluton-private-actions --project=<postgen-project-id>
+npm run studio:claim -- fluton-private-actions --job=<job-id> --apply --check
 POSTGEN_API_KEY=pgk_… npm run studio:render -- fluton-private-actions
 POSTGEN_API_KEY=pgk_… npm run studio:cleanup -- --project <uuid> \
   --match 'voiceover-*.mp3' --keep <delivered-narration>.mp3 --confirm

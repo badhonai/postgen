@@ -4,6 +4,7 @@
  *
  *   POSTGEN_API_KEY=… node tools/postgen/post.mjs <slug> --postgen-project=<uuid> \
  *       [--video=renders/<slug>/<slug>-final.mp4] [--caption=production/post-caption.txt] [--title=…]
+ *       [--type=post|artwork]   (default post — a normal draft post with the video)
  *
  * Nothing is stored in the repo: the video goes to PostGen's private R2 bucket only.
  */
@@ -35,6 +36,7 @@ const draft=createDraftPost({
   title:opt.title||`${slug} — video`,
   tweets:[caption],
   assetId:uploaded.asset.id,
+  type:opt.type||'post',
 });
 const result=await draft;
 console.log(JSON.stringify({assetId:uploaded.asset.id,postId:result.post?.id,status:result.post?.status,videoMB:+(size/1048576).toFixed(2)},null,2));

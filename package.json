@@ -20,7 +20,11 @@
     "studio:still": "npm --prefix studio run still",
     "studio:cleanup": "npm --prefix studio run cleanup",
     "studio:check": "npm --prefix studio run check",
-    "studio:test": "npm --prefix studio run test"
+    "studio:test": "npm --prefix studio run test",
+    "studio:ship": "npm --prefix studio run ship",
+    "studio:claim": "npm --prefix studio run claim",
+    "studio:pack": "npm --prefix studio run pack",
+    "studio:import": "npm --prefix studio run import"
   },
   "dependencies": {
     "@fontsource/fredoka": "^5.3.0",

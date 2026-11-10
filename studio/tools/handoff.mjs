@@ -2,8 +2,15 @@
 /**
  * The Claude handoff, as a deterministic pair of commands.
  *
- *   node tools/handoff.mjs pack <id> [--out=<file>] [--max-mb=25]
+ *   node tools/handoff.mjs ship   <id> --project=<postgen-project-id> [--max-mb=25]
+ *   node tools/handoff.mjs claim  <id> --job=<job-id> [--apply] [--check]
+ *   node tools/handoff.mjs pack   <id> [--out=<file>]        (offline: local zip only)
  *   node tools/handoff.mjs import <id> <file.zip> [--apply] [--check]
+ *
+ * `ship` stores the handoff in the user's own PostGen account as a **studio job**
+ * folder (not GitHub, not a local zip) and prints one prompt to paste into Claude.
+ * `claim` reads the returned files back from that folder, validates them against the
+ * same contract and imports them. Nothing has to be emailed or unzipped by hand.
  *
  * `pack` builds ONE archive for the visual specialist: the recorded narration (the
  * timing source of truth), the frozen timing/contract files, the current source as a
@@ -165,29 +172,28 @@ Frame numbers where a visual event lands (the orchestrator puts sound accents he
 `
 }
 
-async function pack(args) {
-  const id = args[0]
-  if (!id) fail('usage: handoff.mjs pack <id> [--out=<file>] [--max-mb=25]')
-  const {dir,spec} = project(id)
-  const maxMb = Number(option(args, 'max-mb') ?? 25)
-
+/** Builds the archive in memory — shared by pack (local) and ship (PostGen job folder). */
+function buildPack(id, {maxMb = 25} = {}) {
+  const {dir, spec} = project(id)
   const files = collect(dir)
   if (!files.some((f) => f.name === 'production/narration.mp3')) {
     fail('no production/narration.mp3 — the flow is voice-first; generate the voice (tools/postgen/voice.mjs) before packing visuals.')
   }
 
   const secrets = scanSecrets(files)
-  if (secrets.length) fail('refusing to pack credentials:\n  ' + secrets.join('\n  '))
+  if (secrets.length) fail('refusing to ship credentials:\n  ' + secrets.join('\n  '))
 
   const total = files.reduce((n, f) => n + f.data.length, 0)
   if (total > maxMb * 1024 * 1024) fail(`pack is ${(total / 1024 / 1024).toFixed(1)} MB, over --max-mb=${maxMb}.`)
 
   const alignmentPath = path.join(dir, 'production/narration.alignment.json')
-  const voice = fs.existsSync(alignmentPath)
-    ? (() => {
-        const a = JSON.parse(fs.readFileSync(alignmentPath, 'utf8'))
-        return a.voiceName ? `${a.voiceName} (${a.voiceId})` : a.voiceId
-      })()
+  const alignment = fs.existsSync(alignmentPath)
+    ? JSON.parse(fs.readFileSync(alignmentPath, 'utf8'))
+    : undefined
+  const voice = alignment
+    ? alignment.voiceName
+      ? `${alignment.voiceName} (${alignment.voiceId})`
+      : alignment.voiceId
     : undefined
 
   const locked = {}
@@ -213,17 +219,154 @@ async function pack(args) {
     ...files,
   ]
 
-  const zip = writeZip(entries)
+  return {dir, spec, entries, manifest, voice, zip: writeZip(entries)}
+}
+
+/** Offline path: one local ZIP. `ship` is the normal flow. */
+async function pack(args) {
+  const id = args[0]
+  if (!id) fail('usage: handoff.mjs pack <id> [--out=<file>] [--max-mb=25]')
+  const {zip, voice, entries} = buildPack(id, {maxMb: Number(option(args, 'max-mb') ?? 25)})
   const out = option(args, 'out') ?? path.join(ROOT, 'renders', id, `${id}-handoff.zip`)
   fs.mkdirSync(path.dirname(out), {recursive: true})
   fs.writeFileSync(out, zip)
-
   log(`packed ${entries.length} entries, ${(zip.length / 1024 / 1024).toFixed(2)} MB`)
   log(`  ${out}`)
   log(`  sha256 ${sha256(zip)}`)
   log(`  voice  ${voice ?? 'none'}`)
-  log('  send this file to the specialist; they return a ZIP of scenes only')
-  log(`  then: node tools/handoff.mjs import ${id} <returned.zip>`)
+  log(`  prefer: node tools/handoff.mjs ship ${id} --project=<postgen-project-id>`)
+}
+
+/**
+ * Stores the handoff in the user's PostGen account (a studio job folder) and prints
+ * the one prompt the user pastes into Claude. The prompt carries a job-scoped token
+ * (`pgj_…`) that can only touch this job's files — never the account key.
+ */
+async function ship(args) {
+  const id = args[0]
+  const projectId = option(args, 'project')
+  if (!id || !projectId) fail('usage: handoff.mjs ship <id> --project=<postgen-project-id> [--max-mb=25]')
+  const jobs = await import('./postgen/client.mjs')
+
+  const {entries, manifest, voice, zip} = buildPack(id, {maxMb: Number(option(args, 'max-mb') ?? 25)})
+  const created = await jobs.createJob({
+    title: id,
+    slug: id,
+    project_id: projectId,
+    voice_id: manifest.voice ? String(manifest.voice).replace(/^.*\(([^)]+)\)$/, '$1') : null,
+    voice_name: voice ?? null,
+    spec: manifest.spec,
+  })
+  const job = created.job
+
+  let uploaded = 0
+  for (const entry of entries) {
+    await jobs.uploadJobFile(job.id, {
+      path: entry.name,
+      data: entry.data,
+      kind: 'handoff',
+      type: entry.name.endsWith('.mp3') ? 'audio/mpeg' : undefined,
+    })
+    uploaded++
+  }
+  await jobs.uploadJobFile(job.id, {
+    path: 'handoff.zip',
+    data: zip,
+    kind: 'handoff',
+    type: 'application/zip',
+  })
+
+  const base = process.env.POSTGEN_BASE_URL || 'https://postgen.pages.dev'
+  const promptText = claudePrompt({id, base, jobId: job.id, token: created.token, voice, spec: manifest.spec})
+
+  const promptFile = option(args, 'prompt-file')
+  if (promptFile) {
+    fs.mkdirSync(path.dirname(promptFile), {recursive: true})
+    fs.writeFileSync(promptFile, promptText)
+  }
+
+  log(`job ${job.id} — ${uploaded + 1} files in your PostGen account (Studio → ${id})`)
+  log('')
+  log('─'.repeat(72))
+  log('PASTE THIS IN CLAUDE:')
+  log('─'.repeat(72))
+  log(promptText)
+  log('─'.repeat(72))
+  log('')
+  log('When Claude says it is done, run:')
+  log(`  node tools/handoff.mjs claim ${id} --job=${job.id} --apply --check`)
+  log('Clear the working files later in PostGen → Studio (or keep them to edit the video).')
+}
+
+/** The copy-paste prompt: everything Claude needs, including how to get and return files. */
+function claudePrompt({id, base, jobId, token, voice, spec}) {
+  const seconds = (spec.durationInFrames / spec.fps).toFixed(2)
+  return [
+    `You are the visual specialist for a ${seconds} s motion film ("${id}", ${spec.width}x${spec.height}, ${spec.fps} fps, ${spec.durationInFrames} frames).`,
+    `The narration is already recorded${voice ? ` (${voice})` : ''}. The picture follows that performance.`,
+    '',
+    'Everything you need is in a private job folder in my PostGen account. Use this job token — it',
+    'only unlocks this one job, so it cannot see or change anything else of mine:',
+    '',
+    `  BASE URL:  ${base}`,
+    `  JOB ID:    ${jobId}`,
+    `  TOKEN:     ${token}`,
+    '',
+    '1) Read the contract (file list, which paths you may write, what is frozen):',
+    `   curl -s -H "Authorization: Bearer ${token}" ${base}/api/v1/studio/jobs/${jobId}/contract`,
+    '',
+    '2) Download the handoff files (the JSON lists them with short-lived signed URLs; fetch the',
+    '   ones you need — narration.mp3, src/**, film-data.json, HANDOFF.json, CLAUDE-PROMPT.md):',
+    `   curl -s -H "Authorization: Bearer ${token}" ${base}/api/v1/studio/jobs/${jobId}/files`,
+    '',
+    '3) Build the film to the recorded voice. Only these paths may change:',
+    '   src/Film.tsx, src/visual-system.ts, src/scenes/*.tsx, src/components/*.tsx, VISUAL-RETURN.md',
+    '   Frozen (do not touch): project.json, src/film-data.json, src/timeline.ts, src/Composition.tsx,',
+    '   src/index.tsx, package.json, brand/**, production/**',
+    '',
+    '4) Upload what you changed, one file per request, as kind=return:',
+    `   curl -s -X POST -H "Authorization: Bearer ${token}" \\`,
+    `     -F "file=@src/scenes/Intro.tsx" -F "path=src/scenes/Intro.tsx" -F "kind=return" \\`,
+    `     ${base}/api/v1/studio/jobs/${jobId}/files`,
+    '   Include VISUAL-RETURN.md: scenes done, contact/landing frames, checks you actually ran, limits.',
+    '',
+    '5) When everything is uploaded, reply "done". I render it and post the draft.',
+    '',
+    'Rules: frame-derived motion only (no CSS transitions/rAF), captions never collide with art,',
+    'keep supplied logos byte-identical, do not claim more than the brief allows.',
+  ].join('\n')
+}
+
+/**
+ * Reads the returned files back out of the job folder, validates them against the
+ * same contract as a local ZIP, and imports them.
+ */
+async function claim(args) {
+  const id = args[0]
+  const jobId = option(args, 'job')
+  if (!id || !jobId) fail('usage: handoff.mjs claim <id> --job=<job-id> [--apply] [--check]')
+  const jobs = await import('./postgen/client.mjs')
+
+  const detail = await jobs.getJob(jobId)
+  const returned = detail.files.filter((f) => f.kind === 'return' && f.path !== 'handoff.zip')
+  if (returned.length === 0) {
+    fail(
+      `job ${jobId} has no returned files yet (status: ${detail.job.status}).\n` +
+        '  Claude uploads each changed file with kind=return; if it already said "done", check the job in Studio.',
+    )
+  }
+
+  const entries = []
+  for (const file of returned) {
+    const data = await jobs.downloadJobFile(file)
+    entries.push({name: file.path, data})
+  }
+  const zipPath = path.join(ROOT, '.cache', id, 'return', `${id}-return.zip`)
+  fs.mkdirSync(path.dirname(zipPath), {recursive: true})
+  fs.writeFileSync(zipPath, writeZip(entries))
+  log(`pulled ${entries.length} returned file(s) from job ${jobId}`)
+
+  await importZip([id, zipPath, ...args.filter((a) => a.startsWith('--') && a !== '--job')])
 }
 
 function classify(name) {
@@ -319,7 +462,9 @@ async function main() {
   try {
     if (action === 'pack') await pack(rest)
     else if (action === 'import') await importZip(rest)
-    else fail('usage: handoff.mjs <pack|import> …')
+    else if (action === 'ship') await ship(rest)
+    else if (action === 'claim') await claim(rest)
+    else fail('usage: handoff.mjs <ship|claim|pack|import> …')
   } catch (error) {
     fail(error.message)
   }

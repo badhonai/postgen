@@ -9,8 +9,15 @@
 **The flow is voice-first:** generate (or pick up) the voice, let it fix the timing,
 then build the picture to the audio, render, master, upload as a PostGen asset and
 attach it to a **draft post**. The finished deliverable is the post, never a zip.
-See [`docs/FLOW.md`](docs/FLOW.md) for the current pipeline and
-[`../README.md`](../README.md#studio--motion-graphics) for how the two halves fit.
+
+**The handoff to the visual specialist happens through PostGen, not GitHub.** Each film gets a
+*studio job* folder in the user's own account; Claude reads it and returns its scenes through a
+job-scoped API token. Working files show up in **PostGen → Studio**, where they can be cleared at
+any time — or kept to edit the video later.
+
+- Paste-and-go agent prompt: [`docs/AGENT-PROMPT.md`](docs/AGENT-PROMPT.md)
+- Pipeline: [`docs/FLOW.md`](docs/FLOW.md) · return contract: [`docs/DELEGATION.md`](docs/DELEGATION.md)
+- App side: [`../README.md`](../README.md#studio--motion-graphics)
 
 ---
 

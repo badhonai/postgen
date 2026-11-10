@@ -19,6 +19,7 @@ const PromptLibraryPage = lazy(() => import('./pages/PromptLibraryPage'))
 const ArtworksPage = lazy(() => import('./pages/ArtworksPage'))
 const SharesPage = lazy(() => import('./pages/SharesPage'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage'))
+const StudioPage = lazy(() => import('./pages/StudioPage'))
 const CommandPalette = lazy(() => import('./components/CommandPalette'))
 
 /** Root: logged-in users open straight on the Dashboard (this is also the
@@ -125,6 +126,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <SharesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/studio"
+            element={
+              <RequireAuth>
+                <StudioPage />
               </RequireAuth>
             }
           />

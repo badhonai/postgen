@@ -49,6 +49,52 @@ export async function pg(path, init = {}) {
 }
 
 export const listProjects = () => pg('/api/v1/projects')
+
+// ───────────────────────── studio jobs ─────────────────────────
+// A job is one film's working folder (handoff files in, scenes out). Its files live
+// in the user's PostGen account, not in GitHub, and can be cleared from the app.
+export const listJobs = () => pg('/api/v1/studio/jobs')
+export const createJob = (body) =>
+  pg('/api/v1/studio/jobs', { method: 'POST', body: JSON.stringify(body) })
+export const getJob = (jobId) => pg(`/api/v1/studio/jobs/${encodeURIComponent(jobId)}`)
+export const deleteJob = (jobId) =>
+  pg(`/api/v1/studio/jobs/${encodeURIComponent(jobId)}`, { method: 'DELETE' })
+export const updateJob = (jobId, patch) =>
+  pg(`/api/v1/studio/jobs/${encodeURIComponent(jobId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  })
+
+/** Uploads one file into the job folder (`path` keeps the project-relative layout). */
+export async function uploadJobFile(jobId, { path: filePath, data, kind = 'handoff', type }) {
+  const form = new FormData()
+  const name = filePath.split('/').pop() || filePath
+  form.set('file', new Blob([data], { type: type || 'application/octet-stream' }), name)
+  form.set('path', filePath)
+  form.set('kind', kind)
+  const response = await fetch(`${BASE}/api/v1/studio/jobs/${encodeURIComponent(jobId)}/files`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${apiKey()}`, 'user-agent': UA },
+    body: form,
+  })
+  const text = await response.text()
+  let body
+  try {
+    body = JSON.parse(text)
+  } catch {
+    body = { raw: text.slice(0, 300) }
+  }
+  if (!response.ok) throw new Error(`upload ${filePath} → ${response.status} ${body?.error ?? ''}`)
+  return body.file
+}
+
+/** Downloads one job file through its short-lived signed URL. */
+export async function downloadJobFile(file) {
+  if (!file.url) throw new Error(`no signed URL for ${file.path} (server signing not configured)`)
+  const response = await fetch(file.url, { headers: { 'user-agent': UA } })
+  if (!response.ok) throw new Error(`download ${file.path} → ${response.status}`)
+  return Buffer.from(await response.arrayBuffer())
+}
 export const listAssets = (projectId) =>
   pg(`/api/v1/assets${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''}`)
 
@@ -84,7 +130,7 @@ export async function uploadAsset(projectId, filePath, mime, meta = {}) {
   return pg('/api/v1/assets/upload', { method: 'POST', body: form })
 }
 
-export function createDraftPost({ projectId, title, tweets, assetId, category = 'promotional', type = 'artwork' }) {
+export function createDraftPost({ projectId, title, tweets, assetId, category = 'promotional', type = 'post' }) {
   return pg('/api/v1/posts', {
     method: 'POST',
     body: JSON.stringify({

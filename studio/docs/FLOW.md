@@ -12,12 +12,18 @@ system of record for narration and delivery.
 1 INTAKE        ask the fixed question set (docs/INTAKE.md) — never assume
 2 RESEARCH      orchestrator verifies facts, rights, assets; writes script + brief
 3 VOICE         PostGen generate_voiceover (Liam by default) → mp3 + character alignment  ← paid, capped
-4 HANDOFF       orchestrator builds the project + ZIP-return contract for Claude
-5 VISUALS       Claude imagines the film to the actual audio, returns a ZIP of scenes only
-6 REVIEW        npm run import -- <slug> <zip> --apply --check; render, inspect, fix or send notes
+4 SHIP          handoff.mjs ship → a studio job folder in the user's PostGen account
+                (voice, brief, timing, source) + one prompt to paste into Claude
+5 VISUALS       Claude reads the folder via the job's scoped token, builds to the actual
+                audio, uploads only its changed scenes back into the same folder
+6 REVIEW        handoff.mjs claim → validate against the contract, import, render, inspect
 7 FINAL         score + mix + master; QA on the encoded final
-8 DELIVER       upload MP4 to PostGen → DRAFT post with caption; you approve/publish
+8 DELIVER       upload MP4 to PostGen → DRAFT post (type: post) with caption; user publishes
+   STORAGE      working files stay in the job folder; the user clears them in
+                PostGen → Studio whenever they like (or keeps them to edit later)
 ```
+
+The user's whole job is three steps — see [AGENT-PROMPT.md](AGENT-PROMPT.md).
 
 ## 1 · Intake (always)
 Ask these before work starts, in one message, with sensible defaults so a one-word reply is enough:

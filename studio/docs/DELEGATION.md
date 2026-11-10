@@ -26,27 +26,29 @@ No `package.json`, no lockfile, no `public/`, no audio, no renders, no `node_mod
 copy. `VISUAL-RETURN.md` lists: scenes completed, actual contact/landing frames (for sound accents),
 checks actually run, limitations, and any locked file it believes is blocking (proposed change only).
 
-## The two commands (do this instead of hand-zipping)
+## The commands (no GitHub, no hand-zipping)
 
 ```bash
-npm run pack -- <slug>                      # → renders/<slug>/<slug>-handoff.zip
-npm run import -- <slug> <returned.zip>      # validate + stage, writes nothing
-npm run import -- <slug> <returned.zip> --apply --check   # write + bundle
+POSTGEN_API_KEY=… npm run ship  -- <slug> --project=<postgen-project-id>  # job folder + prompt
+npm run claim -- <slug> --job=<job-id>                    # validate + stage, writes nothing
+npm run claim -- <slug> --job=<job-id> --apply --check     # write + bundle
+npm run pack  -- <slug>                                    # offline fallback: a local zip
+npm run import -- <slug> <returned.zip> --apply --check     # same checks, from a file
 ```
 
-`pack` allowlists the archive (spec, brief/storyboard, `src/**` baseline, brand PNGs,
-`production/voiceover.txt`, `voice-timeline.json`, `narration.alignment.json` and the
-**recorded** `narration.mp3`), refuses to run when the narration is missing, scans every
-text file for credential shapes, and pins entry timestamps so the same inputs produce the
-same bytes — the archive is reviewable by sha256. It also writes `HANDOFF.json` (frozen
-files with hashes), `CLAUDE-PROMPT.md` (the contract) and a `VISUAL-RETURN.md` skeleton.
+`ship` creates a **studio job** — a per-film folder in the user's own PostGen account
+(R2 `studio/<user>/<job>/…`, tables `studio_jobs` + `studio_job_files`) — uploads the whole
+handoff into it and prints one prompt. The specialist receives a **job-scoped token**
+(`pgj_…`), not an account key: it can read and write only that job's files, never the user's
+posts, drafts or assets. Its entry point is
+`GET /api/v1/studio/jobs/{id}/contract`; it uploads each changed file with `kind=return`.
 
-`import` reads the returned ZIP with a minimal reader that rejects absolute paths, `..`,
-backslashes, symlinks, duplicates and decompression bombs, then refuses the whole archive
-if it contains anything outside the editable list — naming each frozen file and why it is
-frozen. Accepted files are staged in `.cache/<slug>/import/`; `--apply` copies them into
-the project, `--check` then bundles with Remotion. It also warns when a frozen file
-changed since the pack (the specialist built on a stale base).
+`claim` lists the job, downloads what came back, rebuilds a zip in `.cache/` and runs exactly
+the same validation as an offline import — one contract, two doors. Working files stay in the
+folder afterwards: the user clears them in **PostGen → Studio**, or keeps them to edit the
+film later. Nothing depends on GitHub.
+
+`pack`/`import` still exist for a machine with no network: same allowlist, same refusals.
 
 ## Orchestrator import rules
 1. Unzip into the existing project on a branch; refuse any path outside the list above

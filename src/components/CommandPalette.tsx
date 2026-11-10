@@ -47,6 +47,7 @@ export default function CommandPalette() {
   const items = useMemo<PaletteItem[]>(() => {
     const list: PaletteItem[] = [
       { id: 'nav-dashboard', label: 'Dashboard', hint: 'Page', run: () => navigate('/dashboard') },
+      { id: 'nav-studio', label: 'Studio (video working files)', hint: 'Page', run: () => navigate('/studio') },
       { id: 'nav-settings', label: 'Settings', hint: 'Page', run: () => navigate('/settings') },
       ...(projects.data ?? []).map((p) => ({
         id: `project-${p.id}`,

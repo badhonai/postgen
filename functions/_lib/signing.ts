@@ -36,7 +36,12 @@ export async function verifyAsset(
   return diff === 0
 }
 
-/** R2 key layout: users/{userId}/projects/{projectId}/{stamp}-{rand}.{ext} */
+/**
+ * R2 key layouts:
+ *   users/{userId}/projects/{projectId}/{stamp}-{rand}.{ext}   post media
+ *   studio/{userId}/{jobId}/{path}                              studio job files
+ * Both are namespaced by owner, so the prefix alone proves who signed the URL.
+ */
 export function keyBelongsToUser(key: string, userId: string): boolean {
-  return key.startsWith(`users/${userId}/`)
+  return key.startsWith(`users/${userId}/`) || key.startsWith(`studio/${userId}/`)
 }
