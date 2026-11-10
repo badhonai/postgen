@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "film",
+  "compositionId": "Main",
+  "entry": "src/index.tsx",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationInFrames": 900,
+  "audio": "none",
+  "status": "new-film",
+  "workflowMode": "solo"
+}

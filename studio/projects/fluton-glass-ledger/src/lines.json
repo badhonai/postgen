@@ -7,7 +7,7 @@
   {
    "id": "ledger",
    "startFrame": 0,
-   "endAudioFrame": 171,
+   "ground": "paper",
    "sentences": [
     {
      "text": "Every public chain is a glass ledger.",
@@ -89,12 +89,12 @@
      ]
     }
    ],
-   "endFrame": 182
+   "endFrame": 176
   },
   {
    "id": "note",
-   "startFrame": 192,
-   "endAudioFrame": 406,
+   "startFrame": 182,
+   "ground": "ink",
    "sentences": [
     {
      "text": "All of it readable, forever.",
@@ -191,12 +191,12 @@
      ]
     }
    ],
-   "endFrame": 416
+   "endFrame": 412
   },
   {
    "id": "tree",
-   "startFrame": 427,
-   "endAudioFrame": 584,
+   "startFrame": 417,
+   "ground": "paper",
    "sentences": [
     {
      "text": "Each note is one sealed commitment, a leaf in a single append-only tree.",
@@ -271,12 +271,12 @@
      ]
     }
    ],
-   "endFrame": 594
+   "endFrame": 590
   },
   {
    "id": "joinsplit",
-   "startFrame": 605,
-   "endAudioFrame": 838,
+   "startFrame": 595,
+   "ground": "verm",
    "sentences": [
     {
      "text": "Spend it and it becomes three, and value is conserved: what goes in, plus what crosses the boundary, equals what comes out.",
@@ -396,12 +396,12 @@
      ]
     }
    ],
-   "endFrame": 850
+   "endFrame": 845
   },
   {
    "id": "nullifier",
-   "startFrame": 862,
-   "endAudioFrame": 1008,
+   "startFrame": 852,
+   "ground": "ink",
    "sentences": [
     {
      "text": "All the chain learns is a nullifier, proof that a note is spent, never which one.",
@@ -491,12 +491,12 @@
      ]
     }
    ],
-   "endFrame": 1025
+   "endFrame": 1020
   },
   {
    "id": "extdata",
-   "startFrame": 1042,
-   "endAudioFrame": 1257,
+   "startFrame": 1032,
+   "ground": "blue",
    "sentences": [
     {
      "text": "Recipient, amount, fee and ciphertexts are bound into one hash, so nobody can retarget your transaction.",
@@ -586,12 +586,12 @@
      ]
     }
    ],
-   "endFrame": 1266
+   "endFrame": 1261
   },
   {
    "id": "boundary",
-   "startFrame": 1275,
-   "endAudioFrame": 1344,
+   "startFrame": 1265,
+   "ground": "paper",
    "sentences": [
     {
      "text": "Only the net amount crossing the pool is public.",
@@ -646,12 +646,12 @@
      ]
     }
    ],
-   "endFrame": 1353
+   "endFrame": 1348
   },
   {
    "id": "close",
-   "startFrame": 1362,
-   "endAudioFrame": 1505,
+   "startFrame": 1352,
+   "ground": "ink",
    "sentences": [
     {
      "text": "Deposits and withdrawals show their size.",

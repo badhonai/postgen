@@ -1,56 +1,10 @@
 import React from 'react';
-import {film} from './timeline';
-import {DISPLAY,MONO} from './fonts';
+import {DISPLAY, MONO} from './fonts';
+import {clamp, fit, prog, settle, sp} from './motion';
 
 /**
- * "Mint Security" — the film is a printed instrument, not a dashboard.
- * Flat ink on paper, full-bleed colour flips, monumental fitted type, engraved line-work.
- * No gradients, no glow, no blur, no particles.
+ * Printed primitives: engraved line-work, stamps and serials. No gradients, no glow, no blur.
  */
-export const P = film.palette;
-export const W = film.width;
-export const H = film.height;
-export const SIDE = film.safeAreas.side;
-export const CAP = film.safeAreas.captionTop;
-
-export const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-export const prog = (f: number, start: number, dur: number) => clamp((f - start) / Math.max(1, dur));
-/** Critically damped settle: no overshoot, lands in ~2 frames after the ramp. */
-export const settle = (t: number) => {
-  const x = clamp(t);
-  return 1 - Math.exp(-6.4 * x) * (1 + 6.4 * x);
-};
-export const sp = (f: number, start: number, dur: number) => settle(prog(f, start, dur));
-/** Quint ease-out: fast, and still moving on its last frame (no dead expo tail). */
-export const ex = (f: number, start: number, dur: number) => 1 - Math.pow(1 - prog(f, start, dur), 5);
-/** Frames per beat at the score's 120 BPM / 30 fps. */
-export const BEAT = 15;
-
-/** Fitted size: display type fills the frame edge instead of sitting in the middle of it. */
-export const fit = (text: string, maxW: number, max = 300, factor = 0.66) =>
-  Math.min(max, maxW / Math.max(1, text.length * factor));
-
-export const hex = (seed: string, len = 16): string => {
-  let h = 0x811c9dc5;
-  const out: string[] = [];
-  for (let r = 0; r < Math.ceil(len / 8); r++) {
-    for (let i = 0; i < seed.length; i++) {
-      h ^= seed.charCodeAt(i) + r * 31;
-      h = Math.imul(h, 0x01000193) >>> 0;
-    }
-    out.push(h.toString(16).padStart(8, '0'));
-  }
-  return out.join('').slice(0, len).toUpperCase();
-};
-
-/** A ticking serial that locks on a given frame — the note's identity settling into place. */
-export const serial = (seed: string, f: number, lock: number, step = 3, len = 16) => {
-  if (f >= lock) return hex(seed, len).toLowerCase();
-  const tick = Math.floor(f / step);
-  return hex(`${seed}:${tick}`, len).toLowerCase();
-};
-
 type Ids = {id: string};
 
 /** Display lines that rise out of a mask, one after another. */
@@ -108,16 +62,16 @@ export const Stamp: React.FC<{
 
 /** One scrolling band of data; velocity is constant and never eases. */
 export const Marquee: React.FC<{
-  y: number; h: number; text: string; size: number; f: number; color: string;
+  w: number; y: number; h: number; text: string; size: number; f: number; color: string;
   speed?: number; opacity?: number; mono?: boolean; dir?: 1 | -1;
-}> = ({y, h, text, size, f, color, speed = 5, opacity = 0.9, mono = true, dir = -1}) => {
+}> = ({w, y, h, text, size, f, color, speed = 5, opacity = 0.9, mono = true, dir = -1}) => {
   const unit = text.length * size * (mono ? 0.62 : 0.6);
-  const reps = Math.ceil((W + unit) / unit) + 1;
+  const reps = Math.ceil((w + unit) / unit) + 1;
   const off = (((f * speed) % unit) + unit) % unit;
   return (
     <g>
       <defs>
-        <clipPath id={`mq-${y}-${size}`}><rect x={0} y={y - size} width={W} height={h} /></clipPath>
+        <clipPath id={`mq-${y}-${size}`}><rect x={0} y={y - size} width={w} height={h} /></clipPath>
       </defs>
       <g clipPath={`url(#mq-${y}-${size})`} opacity={opacity}>
         {Array.from({length: reps}).map((_, i) => (

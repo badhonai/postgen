@@ -25,6 +25,20 @@ A lightweight, **AI-neutral** workspace for creating a different, original motio
 
 **Any coding assistant:** start with [`AGENTS.md`](AGENTS.md). No Claude subscription, proprietary agent runtime or voice API is required.
 
+## Reusable motion system
+
+Every film in `projects/` is built from `studio/system/` (timing maths, tokens, bundled fonts,
+word-level typography, printed primitives, the shared chrome) and one scaffold, `templates/film`.
+A new motion graphic is a script plus one file per chapter:
+
+```bash
+node tools/film.mjs new my-film
+# script -> voice -> production/scenes.json -> chapters -> stills -> score -> render -> master
+```
+
+Read [`docs/MOTION-SYSTEM.md`](docs/MOTION-SYSTEM.md) for the loop, the modules and the eight rules;
+[`system/README.md`](system/README.md) for what each module owns.
+
 ## Quick start
 
 Node 20.19+ (22 LTS recommended), npm, Git, FFmpeg/ffprobe and Chrome's Linux system libraries are required. See [setup](docs/SETUP.md).

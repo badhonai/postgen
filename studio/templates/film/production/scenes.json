@@ -1,0 +1,6 @@
+{
+ "note": "Chapter order, and which spoken sentences belong to each chapter. Sentence indexes are 0-based, in narration order, used in ascending order. `node tools/film.mjs lines <slug>` turns this + the provider alignment into src/lines.json and the scene bounds.",
+ "scenes": [
+  {"id": "open", "sentences": [0], "ground": "paper"}
+ ]
+}

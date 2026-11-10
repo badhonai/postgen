@@ -1,0 +1,27 @@
+{
+ "leadSeconds": 0.6,
+ "fps": 30,
+ "durationInFrames": 900,
+ "durationSeconds": 30,
+ "scenes": [
+  {
+   "id": "open",
+   "startFrame": 0,
+   "endFrame": 900,
+   "sentences": [
+    {
+     "text": "Write the first line here.",
+     "startFrame": 18,
+     "endFrame": 90,
+     "words": [
+      {"w": "Write", "startFrame": 18, "endFrame": 40},
+      {"w": "the", "startFrame": 40, "endFrame": 52},
+      {"w": "first", "startFrame": 52, "endFrame": 72},
+      {"w": "line", "startFrame": 72, "endFrame": 84},
+      {"w": "here.", "startFrame": 84, "endFrame": 90}
+     ]
+    }
+   ]
+  }
+ ]
+}

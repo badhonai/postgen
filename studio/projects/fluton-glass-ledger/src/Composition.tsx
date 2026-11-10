@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill,useCurrentFrame} from 'remotion';
 import {getSceneAtFrame} from './timeline';
-import {FONT} from './fonts';
+import {FONT} from './system';
 import {Film} from './Film';
 
 /**

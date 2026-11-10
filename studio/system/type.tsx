@@ -1,17 +1,17 @@
 import React from 'react';
-import {DISPLAY,MONO} from './fonts';
-import {LineSentence,LineWord} from './lines';
-import {clamp,lerp,prog} from './sys';
+import {DISPLAY, MONO} from './fonts';
+import {clamp, lerp, prog} from './motion';
 
 /**
- * The words ARE the typography: every word lands on the frame it is spoken and stays until
- * its phrase is done. Reveals are mask-rises (no fades), and settled words keep a sub-pixel
- * drift so the frame is never dead.
+ * Word-level typography. A spoken sentence is on screen for its whole duration and each word
+ * lights on the frame it is spoken — that is what keeps picture and voice on one clock.
  */
+import type {TypedSentence, TypedWord} from './lines';
+
 const norm=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
 
 export const Words:React.FC<{
-  sentence:LineSentence; f:number; size:number; color:string;
+  sentence:TypedSentence; f:number; size:number; color:string;
   hot?:string[]; hotColor?:string; hotStyle?:'color'|'strike'|'block';
   maxW?:number; lineHeight?:number; weight?:number; family?:string; exitAt?:number;
   align?:'left'|'center'; drift?:number; spacing?:number; blockText?:string; dim?:number;
@@ -22,7 +22,7 @@ export const Words:React.FC<{
   return <div style={{display:'flex',flexWrap:'wrap',alignItems:'baseline',justifyContent:align==='center'?'center':'flex-start',
     columnGap:size*0.24,rowGap:size*0.04,maxWidth:maxW,fontFamily:family,fontWeight:weight,
     fontSize:size,lineHeight,letterSpacing:spacing,color,opacity:out}}>
-    {sentence.words.map((w:LineWord,i:number)=>{
+    {sentence.words.map((w:TypedWord,i:number)=>{
       // The sentence is on screen the whole time; the word LIGHTS UP on the frame it is spoken.
       const p=clamp(prog(f,w.startFrame-1,5));
       const isHot=hot.map(norm).includes(norm(w.w));

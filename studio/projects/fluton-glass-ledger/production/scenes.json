@@ -1,0 +1,13 @@
+{
+ "note": "Chapter order and which spoken sentences belong to each chapter. Sentence indexes are 0-based, in narration order, and must be used in ascending order.",
+ "scenes": [
+  {"id": "ledger",    "sentences": [0, 1], "ground": "paper"},
+  {"id": "note",      "sentences": [2, 3], "ground": "ink"},
+  {"id": "tree",      "sentences": [4],    "ground": "paper"},
+  {"id": "joinsplit", "sentences": [5],    "ground": "verm"},
+  {"id": "nullifier", "sentences": [6],    "ground": "ink"},
+  {"id": "extdata",   "sentences": [7],    "ground": "blue"},
+  {"id": "boundary",  "sentences": [8],    "ground": "paper"},
+  {"id": "close",     "sentences": [9, 10], "ground": "ink"}
+ ]
+}

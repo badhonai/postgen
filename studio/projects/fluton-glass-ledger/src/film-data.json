@@ -14,111 +14,79 @@
     "captionLineHeight": 44,
     "finalNoticeTop": 992
   },
-  "finalNotice": "TESTNET ONLY · NO REAL FUNDS",
+  "finalNotice": "TESTNET ONLY \u00b7 NO REAL FUNDS",
   "scenes": [
     {
       "id": "ledger",
       "startFrame": 0,
-      "endFrameExclusive": 182,
+      "endFrameExclusive": 176,
+      "ground": "paper",
       "background": "#EDEDE7",
       "foreground": "#0B0B0C",
-      "ground": "paper",
-      "fg": "ink",
-      "captionText": "Every public chain is a glass ledger. Your balance, your counterparty, your timing.",
-      "captionLines": [
-        "Every public chain is a glass ledger. Your balance, your counterparty, your timing."
-      ]
+      "captionText": "Every public chain is a glass ledger. Your balance, your counterparty, your timing."
     },
     {
       "id": "note",
-      "startFrame": 192,
-      "endFrameExclusive": 416,
+      "startFrame": 182,
+      "endFrameExclusive": 412,
+      "ground": "ink",
       "background": "#0B0B0C",
       "foreground": "#EDEDE7",
-      "ground": "ink",
-      "fg": "paper",
-      "captionText": "All of it readable, forever. Fluton keeps a different book: it holds no balances, only notes.",
-      "captionLines": [
-        "All of it readable, forever. Fluton keeps a different book: it holds no balances, only notes."
-      ]
+      "captionText": "All of it readable, forever. Fluton keeps a different book: it holds no balances, only notes."
     },
     {
       "id": "tree",
-      "startFrame": 427,
-      "endFrameExclusive": 594,
+      "startFrame": 417,
+      "endFrameExclusive": 590,
+      "ground": "paper",
       "background": "#EDEDE7",
       "foreground": "#0B0B0C",
-      "ground": "paper",
-      "fg": "ink",
-      "captionText": "Each note is one sealed commitment, a leaf in a single append-only tree.",
-      "captionLines": [
-        "Each note is one sealed commitment, a leaf in a single append-only tree."
-      ]
+      "captionText": "Each note is one sealed commitment, a leaf in a single append-only tree."
     },
     {
       "id": "joinsplit",
-      "startFrame": 605,
-      "endFrameExclusive": 850,
-      "background": "#FF3B1F",
-      "foreground": "#0B0B0C",
+      "startFrame": 595,
+      "endFrameExclusive": 845,
       "ground": "verm",
-      "fg": "ink",
-      "captionText": "Spend it and it becomes three, and value is conserved: what goes in, plus what crosses the boundary, equals what comes out.",
-      "captionLines": [
-        "Spend it and it becomes three, and value is conserved: what goes in, plus what crosses the boundary, equals what comes out."
-      ]
+      "background": "#FF3B1F",
+      "foreground": "#EDEDE7",
+      "captionText": "Spend it and it becomes three, and value is conserved: what goes in, plus what crosses the boundary, equals what comes out."
     },
     {
       "id": "nullifier",
-      "startFrame": 862,
-      "endFrameExclusive": 1025,
+      "startFrame": 852,
+      "endFrameExclusive": 1020,
+      "ground": "ink",
       "background": "#0B0B0C",
       "foreground": "#EDEDE7",
-      "ground": "ink",
-      "fg": "paper",
-      "captionText": "All the chain learns is a nullifier, proof that a note is spent, never which one.",
-      "captionLines": [
-        "All the chain learns is a nullifier, proof that a note is spent, never which one."
-      ]
+      "captionText": "All the chain learns is a nullifier, proof that a note is spent, never which one."
     },
     {
       "id": "extdata",
-      "startFrame": 1042,
-      "endFrameExclusive": 1266,
+      "startFrame": 1032,
+      "endFrameExclusive": 1261,
+      "ground": "blue",
       "background": "#1B4CFF",
       "foreground": "#EDEDE7",
-      "ground": "blue",
-      "fg": "paper",
-      "captionText": "Recipient, amount, fee and ciphertexts are bound into one hash, so nobody can retarget your transaction.",
-      "captionLines": [
-        "Recipient, amount, fee and ciphertexts are bound into one hash, so nobody can retarget your transaction."
-      ]
+      "captionText": "Recipient, amount, fee and ciphertexts are bound into one hash, so nobody can retarget your transaction."
     },
     {
       "id": "boundary",
-      "startFrame": 1275,
-      "endFrameExclusive": 1353,
+      "startFrame": 1265,
+      "endFrameExclusive": 1348,
+      "ground": "paper",
       "background": "#EDEDE7",
       "foreground": "#0B0B0C",
-      "ground": "paper",
-      "fg": "ink",
-      "captionText": "Only the net amount crossing the pool is public.",
-      "captionLines": [
-        "Only the net amount crossing the pool is public."
-      ]
+      "captionText": "Only the net amount crossing the pool is public."
     },
     {
       "id": "close",
-      "startFrame": 1362,
+      "startFrame": 1352,
       "endFrameExclusive": 1550,
+      "ground": "ink",
       "background": "#0B0B0C",
       "foreground": "#EDEDE7",
-      "ground": "ink",
-      "fg": "paper",
-      "captionText": "Deposits and withdrawals show their size. Everything inside stays sealed.",
-      "captionLines": [
-        "Deposits and withdrawals show their size. Everything inside stays sealed."
-      ]
+      "captionText": "Deposits and withdrawals show their size. Everything inside stays sealed."
     }
   ],
   "durationSeconds": 51.667,

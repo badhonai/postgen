@@ -1,7 +1,7 @@
 import React from 'react';
-import {P,W,H,SIDE,clamp,sp} from '../sys';
-import {MONO} from '../fonts';
-import {Words} from '../type';
+import {P,W,H,SIDE,clamp,sp} from '../system';
+import {MONO} from '../system';
+import {Words} from '../system';
 import {sentencesOf,at} from '../lines';
 import {ChapterProps} from '../Film';
 

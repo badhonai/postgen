@@ -1,0 +1,10 @@
+Write the first line here. Then a second sentence that carries the thought.
+
+Rules for a script that edits well:
+- one idea per sentence, 8 to 14 words, because one sentence is one chapter;
+- 100 to 130 words total for a 45 to 60 second film;
+- write the words you want to see set large on screen, not the words a narrator would pad with;
+- end on the thing you want remembered, in five words or fewer.
+
+Generate the voice, then keep the provider's alignment JSON in
+production/narration.alignment.json and the audio in production/narration.mp3.

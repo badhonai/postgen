@@ -1,0 +1,20 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "palette": {"paper": "#EDEDE7", "ink": "#0B0B0C", "verm": "#FF3B1F", "blue": "#1B4CFF"},
+  "safeAreas": {"side": 96},
+  "finalNotice": "TESTNET ONLY · NO REAL FUNDS",
+  "scenes": [
+    {
+      "id": "open",
+      "startFrame": 0,
+      "endFrameExclusive": 900,
+      "ground": "paper",
+      "background": "#EDEDE7",
+      "foreground": "#0B0B0C",
+      "captionText": "Write the first line here."
+    }
+  ],
+  "durationInFrames": 900,
+  "durationSeconds": 30
+}
