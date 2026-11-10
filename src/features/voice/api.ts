@@ -12,13 +12,24 @@ export type VoiceStatus = {
   updated_at: string | null
   used_today: number
   remaining_today: number
+  default_voice_id?: string
   /** Present on save/test: a plan/voice mismatch the provider will refuse. */
   warning?: string | null
   category?: string | null
   tier?: string | null
 }
 
+/** Default narration voice for every project until the user picks another. */
+export const DEFAULT_VOICE_ID = 'TX3LPaxmHKxFdv7VOQHJ' // Liam — Energetic, Social Media Creator
+/** Kept for reference: the original requested voice (needs a paid ElevenLabs plan). */
 export const HOPE_VOICE_ID = 'dmWfLQZJq7wNPv9WmtiM'
+
+export type VoiceOption = {
+  voice_id: string
+  name: string
+  category: string | null
+  usable_on_api: boolean
+}
 
 /** Every call goes through a Pages Function; the stored key never comes back. */
 async function authed(path: string, init: RequestInit = {}): Promise<Response> {
@@ -39,6 +50,38 @@ async function authed(path: string, init: RequestInit = {}): Promise<Response> {
     throw new Error(body.error ?? `Request failed (${response.status})`)
   }
   return response
+}
+
+export function useVoiceOptions() {
+  return useQuery({
+    queryKey: ['voice-options'],
+    enabled: !!supabase,
+    retry: false,
+    queryFn: async (): Promise<{ voices: VoiceOption[]; tier: string | null; configured_voice_id: string }> =>
+      (await (await authed('/api/voice/voices')).json()) as {
+        voices: VoiceOption[]
+        tier: string | null
+        configured_voice_id: string
+      },
+  })
+}
+
+/** Switch voice with the stored key (validated; no credits spent). */
+export function useSwitchVoice() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (voiceId: string) =>
+      (await (
+        await authed('/api/voice/settings', {
+          method: 'PUT',
+          body: JSON.stringify({ voice_id: voiceId }),
+        })
+      ).json()) as VoiceStatus,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['voice-status'] })
+      void qc.invalidateQueries({ queryKey: ['voice-options'] })
+    },
+  })
 }
 
 export function useVoiceStatus() {

@@ -171,6 +171,35 @@ export async function saveSettings(
   }
 }
 
+/** Change the saved voice without asking for the API key again (validated first). */
+export async function changeVoice(
+  env: Env,
+  userId: string,
+  voiceId: string,
+): Promise<{ ok: true; status: VoiceStatus; warning: string | null } | { ok: false; error: string }> {
+  const row = await readSettings(env, userId)
+  if (!row) return { ok: false, error: 'voice is not configured yet' }
+
+  let apiKey: string
+  try {
+    apiKey = await decryptKey(env, userId, row.key_cipher)
+  } catch {
+    return { ok: false, error: 'could not read the stored key; save it again' }
+  }
+
+  const check = await validateVoice(apiKey, voiceId)
+  if (!check.ok) return { ok: false, error: `provider error: ${check.error.message}` }
+  if (check.warning) return { ok: false, error: check.warning }
+
+  const db = serviceClient(env)
+  const { error } = await db
+    .from('voice_settings')
+    .update({ voice_id: voiceId, voice_name: check.name, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, status: await status(env, userId), warning: null }
+}
+
 export async function deleteSettings(env: Env, userId: string): Promise<void> {
   const db = serviceClient(env)
   const { error } = await db.from('voice_settings').delete().eq('user_id', userId)

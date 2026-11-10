@@ -283,8 +283,14 @@ Returns `asset_id` (+ `has_alignment`, `alignment` character timings for caption
 script** per 24h (the script is hashed; edits count as a new script). Over-cap calls return 429/409 with
 the reason. Every success and failure is logged in `voice_generations` and `agent_activity`.
 
-Default voice in the UI: **Hope – upbeat and clear** (`dmWfLQZJq7wNPv9WmtiM`); any voice id your key can
-access works by editing the constant in `src/features/voice/api.ts`.
+**Default voice: Liam — Energetic, Social Media Creator** (`TX3LPaxmHKxFdv7VOQHJ`). It is used for every
+film until you pick another voice, either from the chips in Settings → Voiceover or per call with
+`voice_id`. A per-call `voice_id` is validated against your account first.
+
+ElevenLabs **free plans cannot synthesize library/professional voices through the API** — only `premade`
+(and your own cloned) voices work. Settings shows your plan, the voice type, and only offers switchable
+voices with `usable_on_api: true`. `PUT /api/voice/settings { voice_id }` switches voice using the stored
+key (validated, **no credits spent**).
 
 ## Performance ⚡
 

@@ -15,10 +15,12 @@ import { buildAgentSetupText, buildMcpConfig } from '../features/agents/agentSet
 import { ACCENTS, applyAccent, applyTheme, getAccent, getTheme, type AccentId, type ThemeMode } from '../lib/theme'
 import TabBar from '../components/TabBar'
 import {
-  HOPE_VOICE_ID,
+  DEFAULT_VOICE_ID,
   useRemoveVoice,
   useSaveVoice,
+  useSwitchVoice,
   useTestVoice,
+  useVoiceOptions,
   useVoiceStatus,
 } from '../features/voice/api'
 
@@ -168,6 +170,8 @@ export default function SettingsPage() {
   const saveVoice = useSaveVoice()
   const testVoice = useTestVoice()
   const removeVoice = useRemoveVoice()
+  const voiceOptions = useVoiceOptions()
+  const switchVoice = useSwitchVoice()
 
   // ── account switching ──
   const [accounts, setAccounts] = useState<StoredAccount[]>(() => loadAccounts())
@@ -582,7 +586,7 @@ export default function SettingsPage() {
                   className="space-y-2"
                   onSubmit={(e) => {
                     e.preventDefault()
-                    saveVoice.mutate({ apiKey: voiceKey.trim(), voiceId: HOPE_VOICE_ID })
+                    saveVoice.mutate({ apiKey: voiceKey.trim(), voiceId: DEFAULT_VOICE_ID })
                   }}
                 >
                   <Input
@@ -594,7 +598,9 @@ export default function SettingsPage() {
                     onChange={(e) => setVoiceKey(e.target.value)}
                   />
                   <p className="text-[11px] font-semibold text-ink-soft">
-                    Voice: Hope · upbeat and clear (<code className="text-[11px]">{HOPE_VOICE_ID}</code>)
+                    Default voice: <strong className="text-ink">Liam · Energetic, Social Media Creator</strong>{' '}
+                    (<code className="text-[11px]">{DEFAULT_VOICE_ID}</code>) — used for every film until you
+                    pick another.
                   </p>
                   <Button className="w-full" type="submit" disabled={!voiceKey.trim() || saveVoice.isPending}>
                     {saveVoice.isPending ? 'Verifying with ElevenLabs…' : 'Save key securely'}
@@ -642,6 +648,48 @@ export default function SettingsPage() {
                       <p className="text-[11px] font-bold text-ink">
                         Connected ✓ — voice “{testVoice.data.voice_name ?? 'unknown'}” (no credits used).
                       </p>
+                    ) : null}
+                    {voiceOptions.data?.voices?.length ? (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] font-extrabold tracking-[0.12em] text-ink-soft uppercase">
+                          Change voice
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {voiceOptions.data.voices
+                            .filter((v) => v.usable_on_api)
+                            .map((v) => {
+                              const active = voiceStatus.data?.voice_id === v.voice_id
+                              return (
+                                <button
+                                  key={v.voice_id}
+                                  type="button"
+                                  disabled={switchVoice.isPending || active}
+                                  onClick={() => switchVoice.mutate(v.voice_id)}
+                                  className={`rounded-full border px-3 py-1 text-[11px] font-bold transition ${
+                                    active
+                                      ? 'border-ink bg-ink text-cream'
+                                      : 'border-white/70 bg-white/45 text-ink hover:bg-white/70'
+                                  }`}
+                                >
+                                  {active ? '✓ ' : ''}
+                                  {v.name}
+                                </button>
+                              )
+                            })}
+                        </div>
+                        {switchVoice.isSuccess ? (
+                          <p className="text-[11px] font-bold text-ink">Voice switched ✓</p>
+                        ) : null}
+                        {switchVoice.error ? (
+                          <ErrorBox
+                            message={
+                              switchVoice.error instanceof Error
+                                ? switchVoice.error.message
+                                : 'Could not switch voice'
+                            }
+                          />
+                        ) : null}
+                      </div>
                     ) : null}
                     {voiceStatus.data?.category || voiceStatus.data?.tier ? (
                       <p className="text-[11px] font-semibold text-ink-soft">
