@@ -300,7 +300,7 @@ export async function generateVoiceover(
 export async function runVoiceover(
   env: Env,
   auth: { userId: string; keyId: string },
-  input: { projectId: string; text: string; voiceId?: string },
+  input: { projectId: string; text: string; voiceId?: string; dryRun?: boolean },
 ): Promise<VoiceoverOutcome> {
   const text = input.text.trim()
   if (!input.projectId) return { status: 400, body: { error: 'project_id is required' } }
@@ -355,6 +355,28 @@ export async function runVoiceover(
     return {
       status: 429,
       body: { error: 'daily voiceover limit reached', detail: `${used}/${settings.daily_limit} today (UTC)` },
+    }
+  }
+
+  if (input.dryRun) {
+    // Everything validated, nothing spent: lets clients confirm configuration + caps.
+    return {
+      status: 200,
+      body: {
+        dry_run: true,
+        configured: true,
+        voice_id: settings.voice_id,
+        voice_name: settings.voice_name,
+        characters: text.length,
+        can_generate: true,
+        caps: {
+          daily_limit: settings.daily_limit,
+          used_today: used,
+          remaining_today: Math.max(0, settings.daily_limit - used),
+          per_script_limit: settings.per_script_limit,
+          remaining_for_script: Math.max(0, settings.per_script_limit - (sameScript ?? 0)),
+        },
+      },
     }
   }
 

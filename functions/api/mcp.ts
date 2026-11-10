@@ -195,6 +195,7 @@ const TOOLS = [
       '(has_alignment/alignment) for caption timing. Spends the owner’s provider credits, so it is ' +
       'capped: 20/day per account and 2 attempts per identical script per 24h — 409/429 explain which ' +
       'cap stopped you. Write the FINAL approved script before calling; do not retry with the same text. ' +
+      'Call with dry_run:true first — it validates everything and costs nothing. ' +
       'Then attach asset_id to a draft with create_draft/update_draft.',
     inputSchema: {
       type: 'object',
@@ -204,6 +205,11 @@ const TOOLS = [
         voice_id: {
           type: 'string',
           description: 'Optional; must match the voice configured in Settings (defaults to it).',
+        },
+        dry_run: {
+          type: 'boolean',
+          description:
+            'Validate configuration and caps WITHOUT spending credits. Always try dry_run first.',
         },
       },
       required: ['project_id', 'text'],
@@ -385,6 +391,7 @@ async function callTool(
         projectId: String(args.project_id ?? ''),
         text: String(args.text ?? ''),
         voiceId: typeof args.voice_id === 'string' ? args.voice_id : undefined,
+        dryRun: args.dry_run === true,
       })
       if (outcome.status === 201) {
         await agent.logActivity(

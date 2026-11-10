@@ -34,7 +34,11 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
     const max = mime.startsWith('video/') ? MAX_VIDEO : MAX_IMAGE
     if (file.size > max) return jsonError('file too large', 413)
 
-    const db = serviceClient(ctx.env)
+    const width = Number(form.get('width') ?? '') || null
+  const height = Number(form.get('height') ?? '') || null
+  const altText = String(form.get('alt_text') ?? '').trim() || null
+
+  const db = serviceClient(ctx.env)
     const { data: project } = await db
       .from('projects')
       .select('id')
@@ -60,6 +64,9 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
         filename: file.name || `${stamp}.${ext}`,
         mime_type: mime,
         size_bytes: file.size,
+        width,
+        height,
+        alt_text: altText,
       })
       .select()
       .single()

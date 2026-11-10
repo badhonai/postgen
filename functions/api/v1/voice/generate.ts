@@ -20,6 +20,7 @@ export function onRequestPost(ctx: Ctx): Promise<Response> {
       projectId: String(body.project_id ?? ''),
       text: String(body.text ?? ''),
       voiceId: typeof body.voice_id === 'string' ? body.voice_id : undefined,
+      dryRun: body.dry_run === true,
     })
     if (outcome.status === 201) {
       await agent.logActivity(
