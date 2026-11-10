@@ -1,32 +1,28 @@
 import React from 'react';
-import {C,W,SIDE,Label,Headline,Note,hex,ex,clamp} from '../visual-system';
+import {P,W,H,SIDE,clamp,sp} from '../sys';
+import {MONO} from '../fonts';
+import {Words} from '../type';
+import {sentencesOf,at} from '../lines';
+import {ChapterProps} from '../Film';
 
-/**
- * 7 · The boundary (41.8–44.7s). Short movement: one number is public at the pool edge,
- * the notes behind it stay sealed. Nothing crosses but the net amount.
- */
-export const BoundaryScene:React.FC<{f:number;dur:number}>=({f})=>{
- const line=ex(f,0,26);
- const mid=880;
- return <svg width={W} height={1080}>
-  <Headline x={SIDE} y={300} title="One public number" sub="only the net amount crossing the pool"
-    o={ex(f,0,16)}/>
-  <line x1={mid} y1={392} x2={mid} y2={392+404*line} stroke={C.grid} strokeWidth={2} strokeDasharray="8 10"/>
-  <g opacity={ex(f,3,16)}>
-   <Label x={SIDE} y={462}>PUBLIC</Label>
-   <text x={SIDE} y={640} fontSize="170" fontWeight="800" letterSpacing="-8" fill={C.ink}>−4.00</text>
-   <text x={SIDE} y={704} fontSize="26" fontWeight="700" letterSpacing="1" fill={C.dim}>amount · token · recipient address</text>
-   <text x={SIDE} y={746} fontSize="26" fontWeight="700" letterSpacing="1" fill={C.dim}>visible to everyone on chain</text>
-  </g>
-  <g opacity={ex(f,8,18)}>
-   <Label x={mid+70} y={462} tone={C.green}>SEALED</Label>
-   {[0,1,2].map(i=>(
-    <Note key={i} x={mid+70} y={490+i*108} w={W-SIDE-(mid+70)} h={92} label="NOTE"
-      fp={`${hex(`sealed${i}`,10).toLowerCase()} · amount hidden`} size={26}
-      o={ex(f,28+i*8,20)}/>
-   ))}
-  </g>
-  <text x={SIDE} y={792} fontSize="24" fontWeight="800" letterSpacing="5"
-    fill={C.dim} opacity={ex(f,40,20)}>AMOUNTS DO NOT CROSS</text>
- </svg>;
+/** 07 · Only the net amount crossing the pool is public. */
+export const BoundaryScene:React.FC<ChapterProps>=({frame,scene})=>{
+ const s=sentencesOf('boundary');
+ const ink=scene.foreground;
+ const end=at('boundary','public.',0,1328);
+ const v=(-4*clamp((frame-s[0].startFrame)/(end-s[0].startFrame))).toFixed(2);
+ return <>
+  <div style={{position:'absolute',left:SIDE,top:100,width:1000}}>
+   <Words sentence={s[0]} f={frame} size={62} color={ink} hot={['net','amount']} hotColor={P.verm} maxW={1000}/>
+  </div>
+  <div style={{position:'absolute',left:SIDE-10,top:330,fontFamily:MONO,fontWeight:800,fontSize:230,
+    letterSpacing:-6,fontVariantNumeric:'tabular-nums'}}>{v}</div>
+  <div style={{position:'absolute',left:SIDE,top:620,fontFamily:MONO,fontSize:24,letterSpacing:4,
+    opacity:0.7}}>CROSSES THE POOL · PUBLIC</div>
+  <div style={{position:'absolute',right:SIDE,top:330,width:600,height:360,background:ink,
+    opacity:clamp(sp(frame,1288,9)),transform:`translateX(${(1-clamp(sp(frame,1288,9)))*80}px)`}}>
+   <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
+     fontFamily:'FlutonDisplay',fontSize:104,color:P.paper,letterSpacing:-2}}>SEALED</div>
+  </div>
+ </>;
 };

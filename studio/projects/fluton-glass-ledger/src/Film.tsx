@@ -1,7 +1,8 @@
 import React from 'react';
-import {useCurrentFrame} from 'remotion';
+import {AbsoluteFill,useCurrentFrame} from 'remotion';
 import {film,getSceneAtFrame} from './timeline';
-import {C,W,H,ART,SIDE,GX,TOP,clamp,prog,ex} from './visual-system';
+import {MONO} from './fonts';
+import {W,H,SIDE,clamp,sp} from './sys';
 import {Ledger} from './scenes/Ledger';
 import {NoteScene} from './scenes/NoteScene';
 import {TreeScene} from './scenes/TreeScene';
@@ -11,53 +12,49 @@ import {ExtData} from './scenes/ExtData';
 import {BoundaryScene} from './scenes/BoundaryScene';
 import {Close} from './scenes/Close';
 
-const SCENES:{[id:string]:React.FC<{f:number;dur:number}>}={
+export type ChapterProps={frame:number;f:number;scene:ReturnType<typeof getSceneAtFrame>};
+
+const CHAPTERS:{[id:string]:React.FC<ChapterProps>}={
  ledger:Ledger,note:NoteScene,tree:TreeScene,joinsplit:JoinSplit,
  nullifier:NullifierScene,extdata:ExtData,boundary:BoundaryScene,close:Close,
 };
 
 /**
- * One persistent system. The frame, the grid and the progress rule are owned here, so they
- * never cut: chapters are movements inside the same drawing, not slides.
+ * The ground, the shutter and the printed chrome. A chapter change is a cut: the ground flips
+ * colour and a shutter wipes off it in 7 frames. Nothing cross-fades.
  */
 export const Film:React.FC=()=>{
  const frame=useCurrentFrame();
  const scene=getSceneAtFrame(frame);
  const dur=scene.endFrameExclusive-scene.startFrame;
  const f=Math.max(0,frame-scene.startFrame);
- const Scene=SCENES[scene.id]??SCENES.ledger;
- const total=film.durationInFrames;
- const p=clamp(frame/(total-1));
- const ruleY=ART-40;
- return <svg width={W} height={H}>
-  {/* structural grid — fixed for the whole film */}
-  <g opacity={ex(frame,0,26)*0.85}>
-   {Array.from({length:9}).map((_,i)=>(
-    <line key={i} x1={GX(i)} y1={104} x2={GX(i)} y2={ruleY} stroke={C.line} strokeWidth={1.5}/>
-   ))}
-  </g>
-  <Scene f={f} dur={dur}/>
-  {/* fixed frame */}
-  <line x1={SIDE} y1={88} x2={W-SIDE} y2={88} stroke={C.grid} strokeWidth={2}/>
-  <text x={SIDE} y={66} fontSize="19" fontWeight="800" letterSpacing="7" fill={C.dim}>FLUTON</text>
-  <text x={W-SIDE} y={66} textAnchor="end" fontSize="19" fontWeight="800" letterSpacing="7" fill={C.dim}>
-   NOTES · NOT BALANCES
-  </text>
-  {/* the one continuous line: chapter marks on the frame rule, whole-film progress in green */}
-  <line x1={SIDE} y1={ruleY} x2={W-SIDE} y2={ruleY} stroke={C.grid} strokeWidth={2}/>
-  <line x1={SIDE} y1={ruleY} x2={SIDE+(W-SIDE*2)*p} y2={ruleY} stroke={C.green} strokeWidth={3}/>
-  {film.scenes.map(s=>{
-   const x=SIDE+((W-SIDE*2)*s.startFrame)/(total-1);
-   const active=s.id===scene.id;
-   return <rect key={s.id} x={x-2} y={ruleY-10} width={5} height={20} rx={1}
-     fill={active?C.green:C.grid} opacity={active?1:0.9}/>;
-  })}
-  <text x={SIDE+150} y={66} fontSize="17" fontWeight="800" letterSpacing="5" fill={C.grid}
-   opacity={prog(frame,40,20)*0.9}>
-   {`${String(film.scenes.findIndex(s=>s.id===scene.id)+1).padStart(2,'0')} / ${String(film.scenes.length).padStart(2,'0')}`}
-  </text>
-  <text x={SIDE} y={TOP-42} fontSize="17" fontWeight="800" letterSpacing="5" fill={C.dim} opacity={prog(frame,40,20)*0.9}>
-   CONFIDENTIAL EXECUTION · TESTNET
-  </text>
- </svg>;
+ const Chapter=CHAPTERS[scene.id]??CHAPTERS.ledger;
+ const fg=scene.foreground;
+ const idx=film.scenes.findIndex(s=>s.id===scene.id);
+ const p=clamp(frame/(film.durationInFrames-1));
+ const pop=1+0.025*(1-sp(f,0,9));
+ const shutter=1-sp(f,0,7);
+ return <AbsoluteFill style={{background:scene.background,color:fg}}>
+  <div style={{position:'absolute',inset:0,transform:`scale(${pop})`}}>
+   <Chapter frame={frame} f={f} scene={scene}/>
+  </div>
+  {shutter>0.002&&<div style={{position:'absolute',top:0,bottom:0,left:0,width:`${100*shutter}%`,background:fg}}/>}
+  {/* printed chrome — same ink as the chapter, never a UI overlay */}
+  <div style={{position:'absolute',left:SIDE,top:44,fontFamily:MONO,fontWeight:700,fontSize:21,
+    letterSpacing:7,opacity:0.8}}>FLUTON</div>
+  <div style={{position:'absolute',right:SIDE,top:44,fontFamily:MONO,fontWeight:700,fontSize:21,
+    letterSpacing:5,opacity:0.8}}>{`${String(idx+1).padStart(2,'0')} / 08`}</div>
+  {/* register: a hairline that travels the whole chapter, and a live frame counter */}
+  <div style={{position:'absolute',left:0,right:0,top:`${((f*1.6)%(H+80))-40}px`,height:2,background:fg,
+    opacity:0.16}}/>
+  <div style={{position:'absolute',left:SIDE,bottom:34,fontFamily:MONO,fontWeight:700,fontSize:18,
+    letterSpacing:4,opacity:0.5}}>{`${String(frame).padStart(4,'0')} · ${((frame*37)%997).toString().padStart(3,'0')}`}</div>
+  <div style={{position:'absolute',right:SIDE,bottom:34,fontFamily:MONO,fontWeight:700,fontSize:18,
+    letterSpacing:4,opacity:0.5}}>{`${(frame/30).toFixed(2)}S`}</div>
+  <div style={{position:'absolute',left:0,right:0,bottom:0,height:10,background:fg,opacity:0.16}}/>
+  <div style={{position:'absolute',left:0,bottom:0,height:10,width:`${p*100}%`,background:fg}}/>
+  {scene.id==='close'&&<div style={{position:'absolute',right:SIDE,bottom:40,fontFamily:MONO,
+    fontWeight:800,fontSize:20,letterSpacing:3,opacity:clamp((frame-scene.startFrame-90)/16)}}>
+   {film.finalNotice}</div>}
+ </AbsoluteFill>;
 };

@@ -1,78 +1,58 @@
 import React from 'react';
-import {C,W,SIDE,Label,Headline,hex,sp,ex,clamp} from '../visual-system';
+import {P,W,H,SIDE,clamp,sp} from '../sys';
+import {MONO} from '../fonts';
+import {Words} from '../type';
+import {sentencesOf} from '../lines';
+import {ChapterProps} from '../Film';
 
-/**
- * 3 · One tree (13.5–19.4s). Root at the top, leaves at the bottom: a note becomes the
- * newest leaf, one batch writes one root, and the pool keeps the last thirty roots.
- */
-export const TreeScene:React.FC<{f:number;dur:number}>=({f})=>{
+/** 03 · Each note is one sealed commitment, a leaf in a single append-only tree. */
+export const TreeScene:React.FC<ChapterProps>=({frame,scene})=>{
+ const s=sentencesOf('tree');
+ const ink=scene.foreground;
  const LEVELS=4;
- const topY=372;
- const step=104;
- const cx0=460, cx1=1120;
- const leafFp=hex('note-13.37-owner-asset',12);
- const panelX=W-SIDE-420, panelW=420;
- const nodeXs=(level:number)=>{
-  const n=Math.pow(2,level);
+ const topY=520, step=84;
+ const cx0=SIDE+10, cx1=SIDE+1120;
+ const xs=(lv:number)=>{
+  const n=Math.pow(2,lv);
   return Array.from({length:n}).map((_,i)=>cx0+((cx1-cx0)*i)/Math.max(1,n-1));
  };
- const yOf=(level:number)=>topY+level*step; // level 0 = root (top)
- return <svg width={W} height={1080}>
-  <Headline x={SIDE} y={300} title="One append-only tree" sub="Poseidon · depth 20 · one root per accepted batch"
-    o={ex(f,0,18)}/>
-  {Array.from({length:LEVELS-1}).map((_,level)=>{
-   const ps=nodeXs(level), cs=nodeXs(level+1);
-   return <g key={`e${level}`}>
-    {ps.map((x,i)=>{
-     const l=cs[2*i], r=cs[2*i+1];
-     const o=sp(f,16+level*18+i*4,26);
-     return <g key={i} opacity={o}>
-      <line x1={x} y1={yOf(level)+13} x2={l} y2={yOf(level+1)-13} stroke={C.line} strokeWidth={2}/>
-      <line x1={x} y1={yOf(level)+13} x2={r} y2={yOf(level+1)-13} stroke={C.line} strokeWidth={2}/>
-     </g>;
-    })}
-   </g>;
-  })}
-  {Array.from({length:LEVELS}).map((_,level)=>(
-   <g key={`n${level}`}>
-    {nodeXs(level).map((x,i)=>{
-     const o=sp(f,12+level*18+i*4,24);
-     const isRoot=level===0;
-     const isNew=level===LEVELS-1&&i===Math.pow(2,LEVELS-1)-1;
-     const r=isRoot?15:isNew?14:10;
-     return <circle key={i} cx={x} cy={yOf(level)} r={r}
-       fill={isRoot?C.blue:isNew?C.green:C.line}
-       stroke={isNew?C.green:'none'} strokeWidth={isNew?2:0} opacity={o}/>;
-    })}
-   </g>
-  ))}
-  {/* root label above the root node */}
-  <g opacity={sp(f,104,26)}>
-   <text x={(cx0+cx1)/2} y={topY-64} textAnchor="middle" fontSize="22" fontWeight="800"
-     letterSpacing="6" fill={C.blue}>ROOT</text>
-   <text x={(cx0+cx1)/2} y={topY-34} textAnchor="middle" fontSize="19" fontWeight="700"
-     letterSpacing="2" fill={C.dim}>{hex('root-latest',16).toLowerCase()}</text>
-  </g>
-  {/* the arriving note, named once */}
-  <g opacity={sp(f,78,28)}>
-   <rect x={cx1-190} y={yOf(LEVELS-1)+30} width={380} height={88} rx={6} fill="none" stroke={C.green} strokeWidth={2.5}/>
-   <text x={cx1} y={yOf(LEVELS-1)+62} textAnchor="middle" fontSize="19" fontWeight="800" letterSpacing="5" fill={C.green}>NEW LEAF</text>
-   <text x={cx1} y={yOf(LEVELS-1)+100} textAnchor="middle" fontSize="24" fontWeight="800" letterSpacing="2" fill={C.ink}>{leafFp}</text>
-  </g>
-  <Label x={SIDE} y={800} o={clamp((f-10)/16)}>LEAVES APPEND · NOTHING REWRITES</Label>
-  {/* root history window */}
-  <g opacity={ex(f,96,22)}>
-   <Label x={panelX} y={396}>ACCEPTED ROOTS</Label>
-   {Array.from({length:6}).map((_,i)=>{
-    const latest=i===5;
-    return <g key={i}>
-     <rect x={panelX} y={420+i*60} width={panelW} height={44} rx={4} fill="none"
-       stroke={latest?C.blue:C.grid} strokeWidth={latest?2.5:1.5}/>
-     <text x={panelX+18} y={449+i*60} fontSize="19" fontWeight="800" letterSpacing="2"
-       fill={latest?C.ink:C.dim}>{latest?'latest · accepted':hex(`root${i}`,12).toLowerCase()}</text>
-    </g>;
-   })}
-   <text x={panelX} y={796} fontSize="21" fontWeight="700" letterSpacing="1" fill={C.dim}>older proofs still verify</text>
-  </g>
- </svg>;
+ const y=(lv:number)=>topY+lv*step;
+ const lit=Math.floor(clamp((frame-520)/60)*16);
+ const root=`${((frame*5)%1048575).toString(16)}`.padStart(5,'0');
+ return <>
+  <div style={{position:'absolute',left:SIDE,top:120,width:1300}}>
+   <Words sentence={s[0]} f={frame} size={64} color={ink} hot={['commitment,','tree.']} hotColor={P.blue}
+     maxW={1300}/>
+  </div>
+  <svg width={W} height={H} style={{position:'absolute',inset:0}}>
+   {Array.from({length:LEVELS}).map((_,lv)=>(
+    <g key={lv} opacity={clamp(sp(frame,470+lv*9,11))}>
+     {xs(lv).map((x,i)=>{
+      const a=xs(lv+1)[2*i], b=xs(lv+1)[2*i+1], mid=y(lv)+step/2;
+      return <g key={i} stroke={ink} strokeWidth={2.5} fill="none" opacity={0.68}>
+       <polyline points={`${x},${y(lv)+11} ${x},${mid} ${a},${mid} ${a},${y(lv+1)-11}`}/>
+       <polyline points={`${x},${mid} ${b},${mid} ${b},${y(lv+1)-11}`}/>
+      </g>;
+     })}
+    </g>
+   ))}
+   {Array.from({length:LEVELS+1}).map((_,lv)=>(
+    <g key={lv} opacity={clamp(sp(frame,470+lv*9,11))}>
+     {xs(lv).map((x,i)=>{
+      const leaf=lv===LEVELS;
+      const on=leaf?i<lit:true;
+      const size=leaf?22:28;
+      return <rect key={i} x={x-size/2} y={y(lv)-size/2} width={size} height={size}
+        fill={lv===0?P.blue:(leaf&&on?P.blue:'none')} stroke={lv===0?'none':ink} strokeWidth={2.5}
+        opacity={leaf&&!on?0.32:1}/>;
+     })}
+    </g>
+   ))}
+  </svg>
+  <div style={{position:'absolute',left:cx1+20,top:topY-16,fontFamily:MONO,fontSize:22,letterSpacing:2,
+    lineHeight:1.6,opacity:0.8}}>
+   <div>ROOT 0x{root}</div>
+   <div style={{opacity:0.6}}>{`LEAVES ${String(lit).padStart(2,'0')} / 16`}</div>
+  </div>
+ </>;
 };

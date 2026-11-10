@@ -6,7 +6,7 @@
   "width": 1920,
   "height": 1080,
   "fps": 30,
-  "durationInFrames": 1548,
+  "durationInFrames": 1550,
   "audio": "production/narration.mp3 (50.390s) + original score",
   "status": "rendered-with-narration",
   "workflowMode": "solo"

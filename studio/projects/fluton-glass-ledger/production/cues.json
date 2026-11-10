@@ -1,13 +1,13 @@
 {
  "fps": 30,
- "durationSeconds": 51.59,
- "bpm": 92,
+ "durationSeconds": 51.667,
+ "bpm": 120,
  "sections": [
   {
    "name": "ledger",
    "start": 0.0,
-   "end": 5.667,
-   "feel": "sparse",
+   "end": 6.067,
+   "feel": "steady",
    "chords": [
     [
      "A2",
@@ -17,116 +17,16 @@
    ],
    "root": "A1",
    "arp": [
-    "A3",
-    "C4",
-    "E4"
+    "A4",
+    "E4",
+    "C4"
    ],
-   "padAmp": 0.2
+   "padAmp": 0.15
   },
   {
    "name": "note",
-   "start": 5.667,
-   "end": 13.467,
-   "feel": "steady",
-   "chords": [
-    [
-     "F2",
-     "A2",
-     "C3"
-    ],
-    [
-     "C3",
-     "E3",
-     "G3"
-    ]
-   ],
-   "root": "F1",
-   "arp": [
-    "F3",
-    "A3",
-    "C4"
-   ],
-   "padAmp": 0.16
-  },
-  {
-   "name": "tree",
-   "start": 13.467,
-   "end": 19.4,
-   "feel": "steady",
-   "chords": [
-    [
-     "C3",
-     "E3",
-     "G3"
-    ],
-    [
-     "G2",
-     "B2",
-     "D3"
-    ]
-   ],
-   "root": "C2",
-   "arp": [
-    "C4",
-    "E4",
-    "G4"
-   ],
-   "padAmp": 0.16
-  },
-  {
-   "name": "joinsplit",
-   "start": 19.4,
-   "end": 27.867,
-   "feel": "driving",
-   "chords": [
-    [
-     "D3",
-     "F3",
-     "A3"
-    ],
-    [
-     "A2",
-     "C3",
-     "E3"
-    ]
-   ],
-   "root": "D2",
-   "arp": [
-    "D4",
-    "F4",
-    "A4"
-   ],
-   "padAmp": 0.16
-  },
-  {
-   "name": "nullifier",
-   "start": 27.867,
-   "end": 33.567,
-   "feel": "steady",
-   "chords": [
-    [
-     "A2",
-     "C3",
-     "E3"
-    ],
-    [
-     "E3",
-     "G3",
-     "B3"
-    ]
-   ],
-   "root": "A1",
-   "arp": [
-    "A3",
-    "C4",
-    "E4"
-   ],
-   "padAmp": 0.16
-  },
-  {
-   "name": "extdata",
-   "start": 33.567,
-   "end": 41.833,
+   "start": 6.4,
+   "end": 13.867,
    "feel": "driving",
    "chords": [
     [
@@ -146,12 +46,112 @@
     "A4",
     "C5"
    ],
-   "padAmp": 0.16
+   "padAmp": 0.15
+  },
+  {
+   "name": "tree",
+   "start": 14.233,
+   "end": 19.8,
+   "feel": "steady",
+   "chords": [
+    [
+     "C3",
+     "E3",
+     "G3"
+    ],
+    [
+     "G2",
+     "B2",
+     "D3"
+    ]
+   ],
+   "root": "C2",
+   "arp": [
+    "C4",
+    "E4",
+    "G4"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "joinsplit",
+   "start": 20.167,
+   "end": 28.333,
+   "feel": "driving",
+   "chords": [
+    [
+     "D3",
+     "F3",
+     "A3"
+    ],
+    [
+     "A2",
+     "C3",
+     "E3"
+    ]
+   ],
+   "root": "D2",
+   "arp": [
+    "D4",
+    "A4",
+    "F4"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "nullifier",
+   "start": 28.733,
+   "end": 34.167,
+   "feel": "driving",
+   "chords": [
+    [
+     "A2",
+     "C3",
+     "E3"
+    ],
+    [
+     "E3",
+     "G3",
+     "B3"
+    ]
+   ],
+   "root": "A1",
+   "arp": [
+    "A3",
+    "E4",
+    "C4"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "extdata",
+   "start": 34.733,
+   "end": 42.2,
+   "feel": "driving",
+   "chords": [
+    [
+     "F2",
+     "A2",
+     "C3"
+    ],
+    [
+     "C3",
+     "E3",
+     "G3"
+    ]
+   ],
+   "root": "F1",
+   "arp": [
+    "F4",
+    "C5",
+    "A4"
+   ],
+   "padAmp": 0.15
   },
   {
    "name": "boundary",
-   "start": 41.833,
-   "end": 44.733,
+   "start": 42.5,
+   "end": 45.1,
    "feel": "half",
    "chords": [
     [
@@ -165,12 +165,12 @@
     "C4",
     "G4"
    ],
-   "padAmp": 0.16
+   "padAmp": 0.15
   },
   {
    "name": "close",
-   "start": 44.733,
-   "end": 51.6,
+   "start": 45.4,
+   "end": 51.667,
    "feel": "sparse",
    "chords": [
     [
@@ -190,45 +190,93 @@
     "E4",
     "A4"
    ],
-   "padAmp": 0.2
+   "padAmp": 0.19
   }
  ],
  "accents": [
   {
-   "time": 9.333,
-   "kind": "latch"
-  },
-  {
-   "time": 17.2,
-   "kind": "click"
-  },
-  {
-   "time": 19.733,
+   "time": 0.0,
    "kind": "impact"
   },
   {
-   "time": 21.133,
+   "time": 1.733,
    "kind": "latch"
   },
   {
-   "time": 28.067,
+   "time": 4.067,
    "kind": "latch"
   },
   {
-   "time": 38.567,
-   "kind": "dry"
-  },
-  {
-   "time": 42.167,
-   "kind": "click"
-  },
-  {
-   "time": 45.0,
+   "time": 6.4,
    "kind": "impact"
   },
   {
-   "time": 47.933,
-   "kind": "click"
+   "time": 6.967,
+   "kind": "latch"
+  },
+  {
+   "time": 10.167,
+   "kind": "latch"
+  },
+  {
+   "time": 13.067,
+   "kind": "latch"
+  },
+  {
+   "time": 14.233,
+   "kind": "impact"
+  },
+  {
+   "time": 19.0,
+   "kind": "latch"
+  },
+  {
+   "time": 20.167,
+   "kind": "impact"
+  },
+  {
+   "time": 22.967,
+   "kind": "latch"
+  },
+  {
+   "time": 26.0,
+   "kind": "latch"
+  },
+  {
+   "time": 28.733,
+   "kind": "impact"
+  },
+  {
+   "time": 30.067,
+   "kind": "latch"
+  },
+  {
+   "time": 33.267,
+   "kind": "latch"
+  },
+  {
+   "time": 34.733,
+   "kind": "impact"
+  },
+  {
+   "time": 39.1,
+   "kind": "latch"
+  },
+  {
+   "time": 42.5,
+   "kind": "impact"
+  },
+  {
+   "time": 44.267,
+   "kind": "latch"
+  },
+  {
+   "time": 45.4,
+   "kind": "impact"
+  },
+  {
+   "time": 49.667,
+   "kind": "latch"
   }
  ]
 }

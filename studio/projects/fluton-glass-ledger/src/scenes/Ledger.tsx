@@ -1,33 +1,46 @@
 import React from 'react';
-import {C,W,SIDE,Label,Headline,hex,ex,clamp} from '../visual-system';
+import {P,W,H,SIDE,clamp,sp} from '../sys';
+import {MONO} from '../fonts';
+import {Words} from '../type';
+import {sentencesOf} from '../lines';
+import {ChapterProps} from '../Film';
 
 /**
- * 1 · Glass ledger (0–5.7s). A public chain is a glass book: every address, amount and
- * time is legible to anyone, forever. This chapter shows the exposure and nothing else.
+ * 01 · Every public chain is a glass ledger. — the narration is set at the top; underneath it a
+ * band of amounts scrolls without stopping and a serial column ticks, so no frame is dead.
  */
-export const Ledger:React.FC<{f:number;dur:number}>=({f})=>{
- const rows=6;
- const step=71;
- const first=420;
- const colAmt=1290, colAge=1800;
- return <svg width={W} height={1080}>
-  <Headline x={SIDE} y={300} title="Everything readable" sub="a public ledger · permanent · for everyone"
-    o={ex(f,0,20)}/>
-  <Label x={SIDE} y={first-40} o={clamp((f-18)/16)}>ADDRESS · AMOUNT · TIME</Label>
-  <g opacity={ex(f,86,24)}>
-   <Label x={W-SIDE} y={first-40} tone={C.red} anchor="end">NO PRIVACY BY DEFAULT</Label>
-  </g>
-  {Array.from({length:rows}).map((_,i)=>{
-   const o=clamp((f-14-i*6)/18);
-   const y=first+i*step;
-   return <g key={i} opacity={o}>
-    <text x={SIDE} y={y} fontSize="28" fontWeight="700" letterSpacing="0.5" fill={C.ink}>
-     {`0x${hex(`addr${i}`,40)}`.toLowerCase()}
-    </text>
-    <text x={colAmt} y={y} textAnchor="end" fontSize="28" fontWeight="700" fill={C.ink}>{`${(2.4+i*3.7).toFixed(2)} ETH`}</text>
-    <text x={colAge} y={y} textAnchor="end" fontSize="28" fontWeight="700" fill={C.dim}>{`${i+1}h ago`}</text>
-    <line x1={SIDE} y1={y+22} x2={W-SIDE} y2={y+22} stroke={C.grid} strokeWidth={1.5}/>
-   </g>;
-  })}
- </svg>;
+export const Ledger:React.FC<ChapterProps>=({frame,scene})=>{
+ const s=sentencesOf('ledger');
+ const ink=scene.foreground;
+ const band=`2.40  0x5f07ff  6.10  0x8e42ac  9.80  0x0ff34b  13.50  0x2ef7cb  17.20  0x41b0ee  `;
+ const bandW=band.length*23;
+ const off=(frame*6)%bandW;
+ return <>
+  <div style={{position:'absolute',left:SIDE,top:140,width:1180}}>
+   <Words sentence={s[0]} f={frame} size={92} color={ink} maxW={1180} exitAt={s[1].startFrame-8}/>
+  </div>
+  <div style={{position:'absolute',left:SIDE,top:352,width:1180}}>
+   <Words sentence={s[1]} f={frame} size={78} color={ink} hot={['balance,','counterparty,','timing.']}
+     hotColor={P.verm} maxW={1180}/>
+  </div>
+  <div style={{position:'absolute',right:SIDE,top:150,textAlign:'right',fontFamily:MONO,fontWeight:700,
+    fontSize:21,lineHeight:1.75,opacity:0.55}}>
+   {Array.from({length:11}).map((_,i)=>(
+    <div key={i}>{`${((frame*3+i*37)%99999999)}`.padStart(8,'0')}</div>
+   ))}
+  </div>
+  <div style={{position:'absolute',left:0,right:0,top:620,borderTop:`5px solid ${ink}`,
+    borderBottom:`5px solid ${ink}`,padding:'14px 0',overflow:'hidden',whiteSpace:'nowrap',
+    fontFamily:MONO,fontWeight:800,fontSize:46,letterSpacing:2}}>
+   <div style={{transform:`translateX(${-off}px)`}}>{band.repeat(6)}</div>
+  </div>
+  <div style={{position:'absolute',left:SIDE,top:760,display:'flex',gap:64}}>
+   {['2.40','6.10','9.80','13.50','17.20','20.90'].map((a,i)=>(
+    <div key={a} style={{opacity:clamp(sp(frame,84+i*7,10))}}>
+     <div style={{fontFamily:MONO,fontWeight:800,fontSize:58,letterSpacing:-1}}>{a}</div>
+     <div style={{fontFamily:MONO,fontSize:20,letterSpacing:2,opacity:0.55}}>{`0x${((frame*7+i*1301)%65535).toString(16)}`}</div>
+    </div>
+   ))}
+  </div>
+ </>;
 };

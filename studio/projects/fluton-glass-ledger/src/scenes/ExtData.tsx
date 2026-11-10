@@ -1,46 +1,50 @@
 import React from 'react';
-import {C,W,SIDE,Label,Headline,Row,hex,sp,ex,clamp} from '../visual-system';
+import {P,W,H,SIDE,clamp,sp} from '../sys';
+import {MONO} from '../fonts';
+import {Words} from '../type';
+import {sentencesOf,at} from '../lines';
+import {ChapterProps} from '../Film';
 
-/**
- * 6 · Bound in one hash (33.6–41.8s). Recipient, amount, fee and ciphertexts are public,
- * but they are hashed into one public input — retarget the note and the proof fails.
- */
-export const ExtData:React.FC<{f:number;dur:number}>=({f})=>{
- const fold=sp(f,24,42);
- const attack=ex(f,120,20);
- const refused=ex(f,150,18);
- const hx=SIDE, hw=700;
- const bx=W-SIDE-680, bw=680;
- const hash=hex('extdata-bundle',24);
- const fields:[string,string][]=[['RECIPIENT','0x7b…1d0'],['EXT AMOUNT','−4.00'],['FEE','0.02'],['CIPHERTEXTS','3 × encrypted note'],['ASSET','USDC']];
- return <svg width={W} height={1080}>
-  <Headline x={SIDE} y={300} title="Bound to one hash" sub="change anything and the proof no longer matches"
-    o={ex(f,0,18)}/>
-  <Label x={hx} y={430} o={clamp((f-10)/14)}>PUBLIC SIDE EFFECTS</Label>
-  {fields.map(([k,v],i)=>{
-   const target=attack>0.5&&i===0;
-   return <Row key={k} x={hx} y={470+i*64} w={hw} k={k} v={target?'0x99…ffe':v}
-     tone={target?(refused>0.3?C.red:C.blue):C.ink} o={clamp((ex(f,6+i*4,16)-fold*0.55)/0.45)}/>;
-  })}
-  {/* the fold */}
-  <g opacity={clamp((fold-0.15)/0.85)}>
-   <line x1={hx+hw+40} y1={492} x2={bx-40} y2={540} stroke={C.grid} strokeWidth={2}/>
-   <rect x={bx} y={462} width={bw} height={300} rx={6} fill="none"
-     stroke={attack>0.5?(refused>0.3?C.red:C.blue):C.blue} strokeWidth={2.5}/>
-   <text x={bx+26} y={508} fontSize={20} fontWeight="800" letterSpacing="6" fill={C.blue}>EXT DATA HASH</text>
-   <text x={bx+26} y={586} fontSize="36" fontWeight="800" letterSpacing="2" fill={C.ink}>{hash.slice(0,12)}</text>
-   <text x={bx+26} y={636} fontSize="36" fontWeight="800" letterSpacing="2" fill={C.ink}>{hash.slice(12,24)}</text>
-   <line x1={bx+26} y1={664} x2={bx+bw-26} y2={664} stroke={C.grid} strokeWidth={1.5}/>
-   <text x={bx+26} y={706} fontSize="22" fontWeight="700" letterSpacing="1" fill={C.dim}>one opaque public input to the proof</text>
-   <text x={bx+26} y={740} fontSize="22" fontWeight="700" letterSpacing="1" fill={C.dim}>everything else stays encrypted</text>
-  </g>
-  <g opacity={refused}>
-   <text x={bx} y={800} fontSize="26" fontWeight="800" letterSpacing="3" fill={C.red}>PROOF MISMATCH · REFUSED</text>
-  </g>
-  <g opacity={ex(f,170,20)}>
-   <text x={hx} y={792} fontSize="24" fontWeight="700" letterSpacing="1" fill={C.dim}>
-    whoever submits it can withhold it — not retarget it
-   </text>
-  </g>
- </svg>;
+/** 06 · Recipient, amount, fee and ciphertexts are bound into one hash. */
+export const ExtData:React.FC<ChapterProps>=({frame,scene})=>{
+ const s=sentencesOf('extdata');
+ const ink=scene.foreground;
+ const fRec=at('extdata','recipient,',0,1042);
+ const fAmt=at('extdata','amount,',0,1067);
+ const fFee=at('extdata','fee',0,1089);
+ const fCip=at('extdata','ciphertexts',0,1116);
+ const fHash=at('extdata','hash,',0,1173);
+ const fBad=at('extdata','retarget',0,1215);
+ const fields:[string,string,number][]=[
+  ['RECIPIENT','0x7b…1d0',fRec],['AMOUNT','−4.00',fAmt],['FEE','0.02',fFee],['CIPHERTEXT','3 notes',fCip]];
+ const bad=frame>=fBad;
+ return <>
+  <div style={{position:'absolute',left:SIDE,top:100,width:1500}}>
+   <Words sentence={s[0]} f={frame} size={55} color={ink} hot={['hash,','retarget']} hotColor={P.verm}
+     maxW={1500}/>
+  </div>
+  <div style={{position:'absolute',left:SIDE,top:400,display:'flex',gap:18}}>
+   {fields.map(([k,v,start],i)=>{
+    const o=clamp(sp(frame,start,8));
+    const hi=bad&&i===0;
+    return <div key={k} style={{width:220,opacity:o,transform:`translateY(${(1-o)*18}px)`}}>
+     <div style={{background:hi?P.verm:ink,color:P.blue,padding:'9px 12px',fontFamily:MONO,
+       fontWeight:800,fontSize:17,letterSpacing:1}}>{hi?'RETARGET':k}</div>
+     <div style={{fontFamily:MONO,fontWeight:800,fontSize:28,marginTop:10,
+       textDecoration:hi?'line-through':'none'}}>{hi?'0x99…ffe':v}</div>
+    </div>;
+   })}
+  </div>
+  <div style={{position:'absolute',left:SIDE,top:540,fontFamily:'FlutonDisplay',fontSize:96,
+    letterSpacing:-3}}>ONE HASH</div>
+  <div style={{position:'absolute',left:SIDE,top:668,fontFamily:MONO,fontWeight:800,fontSize:38,
+    letterSpacing:1,opacity:clamp(sp(frame,fHash-4,10))}}>
+   {`0x${frame>fHash?'6e08 1ce3 4101 c2fc':'0000 0000 0000 0000'}`}
+  </div>
+  <div style={{position:'absolute',left:SIDE,top:730,fontFamily:MONO,fontSize:22,letterSpacing:3,
+    opacity:0.7*clamp(sp(frame,fHash+6,10))}}>EVERYTHING ELSE STAYS ENCRYPTED</div>
+  {bad&&<div style={{position:'absolute',right:SIDE,top:120,transform:'rotate(-8deg)',
+    border:`6px solid ${P.verm}`,color:P.verm,padding:'6px 16px',fontFamily:'FlutonDisplay',fontSize:52,
+    letterSpacing:2,opacity:clamp(sp(frame,fBad,7))}}>REFUSED</div>}
+ </>;
 };

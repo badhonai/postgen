@@ -1,40 +1,41 @@
 import React from 'react';
-import {C,W,SIDE,Label,Headline,Row,ex,clamp,hex,sp} from '../visual-system';
+import {P,W,H,SIDE,clamp,sp} from '../sys';
+import {MONO} from '../fonts';
+import {Words} from '../type';
+import {sentencesOf} from '../lines';
+import {ChapterProps} from '../Film';
 
-/**
- * 2 · Notes, not balances (5.7–13.5s). A balance is struck out; four private fields fold
- * into one commitment. Nothing about the note survives in the clear.
- */
-export const NoteScene:React.FC<{f:number;dur:number}>=({f})=>{
- const strike=ex(f,16,24);
- const seal=sp(f,66,44);
- const fp=hex('note-13.37-owner-asset',24);
- const lx=SIDE, rx=W-SIDE-740, rw=740;
- return <svg width={W} height={1080}>
-  <Headline x={lx} y={300} title="Notes, not balances" sub="a note is one sealed commitment"
-    o={ex(f,0,18)}/>
-  {/* what an account model would hold */}
-  <g opacity={1-clamp((f-110)/24)*0.55}>
-   <Label x={lx} y={436}>ACCOUNT BALANCE</Label>
-   <text x={lx} y={604} fontSize="160" fontWeight="800" letterSpacing="-6" fill={C.ink}>13.37</text>
-   <line x1={lx} y1={540} x2={lx+430*strike} y2={540} stroke={C.red} strokeWidth={8}/>
-   <text x={lx} y={656} fontSize="26" fontWeight="700" letterSpacing="1" fill={C.dim}>not how Fluton holds value</text>
-  </g>
-  {/* the note */}
-  <g opacity={ex(f,24,20)}>
-   <Label x={rx} y={436} tone={C.green}>ONE NOTE</Label>
-   {[['AMOUNT','13.37 USDC'],['OWNER KEY','0x9f…c41'],['ASSET','USDC'],['BLINDING','r ← random field']].map(([k,v],i)=>(
-    <Row key={k} x={rx} y={488+i*78} w={rw} k={k} v={v} o={clamp(1-seal*1.8)}/>
-   ))}
-  </g>
-  {/* the fold: four fields become one commitment */}
-  <g opacity={seal}>
-   <rect x={rx-24} y={444} width={rw+48} height={330} rx={6} fill="none" stroke={C.green} strokeWidth={2.5}/>
-   <text x={rx} y={496} fontSize={20} fontWeight="800" letterSpacing="6" fill={C.green}>COMMITMENT</text>
-   <text x={rx} y={588} fontSize="46" fontWeight="800" letterSpacing="3" fill={C.ink}>{fp.slice(0,12)}</text>
-   <text x={rx} y={650} fontSize="46" fontWeight="800" letterSpacing="3" fill={C.ink}>{fp.slice(12,24)}</text>
-   <line x1={rx} y1={684} x2={rx+rw} y2={684} stroke={C.grid} strokeWidth={1.5}/>
-   <text x={rx} y={730} fontSize="26" fontWeight="700" letterSpacing="1" fill={C.dim}>amount · owner · asset — all hidden</text>
-  </g>
- </svg>;
+/** 02 · Fluton keeps a different book: it holds no balances, only notes. */
+export const NoteScene:React.FC<ChapterProps>=({frame,scene})=>{
+ const s=sentencesOf('note');
+ const ink=scene.foreground;
+ const rosette=(r:number,k:number,ph:number)=>{
+  const pts:string[]=[];
+  for(let i=0;i<=240;i++){
+   const t=(i/240)*Math.PI*2;
+   const rr=r*(1+0.14*Math.sin(k*t+ph));
+   pts.push(`${(330+rr*Math.cos(t+ph)).toFixed(1)},${(330+rr*Math.sin(t+ph)).toFixed(1)}`);
+  }
+  return <polyline points={pts.join(' ')} fill="none" stroke={P.verm} strokeWidth={3}/>;
+ };
+ return <>
+  <div style={{position:'absolute',left:SIDE,top:130,width:1180}}>
+   <Words sentence={s[0]} f={frame} size={86} color={ink} maxW={1180} exitAt={s[1].startFrame-8}/>
+  </div>
+  <div style={{position:'absolute',left:SIDE,top:300,width:1180}}>
+   <Words sentence={s[1]} f={frame} size={74} color={ink} hot={['balances,']} hotColor={P.verm}
+     hotStyle="strike" maxW={1180}/>
+  </div>
+  <svg width={660} height={660} style={{position:'absolute',right:-70,top:300}}>
+   {rosette(280,7,frame*0.008)}
+   {rosette(228,11,-frame*0.013)}
+   {rosette(170,5,frame*0.022)}
+  </svg>
+  <div style={{position:'absolute',left:SIDE,top:660,fontFamily:MONO,fontWeight:800,fontSize:130,
+    letterSpacing:-3,opacity:clamp(sp(frame,s[1].startFrame+24,14))}}>13.37</div>
+  <div style={{position:'absolute',left:SIDE+560,top:700,fontFamily:MONO,fontSize:23,letterSpacing:3,
+    opacity:0.55}}>{`SERIAL 0x${((frame*11)%16777215).toString(16).padStart(6,'0')}`}</div>
+  <div style={{position:'absolute',left:SIDE,top:812,fontFamily:MONO,fontSize:23,letterSpacing:3,
+    opacity:0.55}}>COMMITMENT · POSEIDON(AMOUNT, KEY, BLINDING, ASSET)</div>
+ </>;
 };

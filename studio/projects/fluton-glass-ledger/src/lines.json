@@ -1,0 +1,724 @@
+{
+ "leadSeconds": 0.6,
+ "fps": 30,
+ "durationInFrames": 1550,
+ "durationSeconds": 51.667,
+ "scenes": [
+  {
+   "id": "ledger",
+   "startFrame": 0,
+   "endAudioFrame": 171,
+   "sentences": [
+    {
+     "text": "Every public chain is a glass ledger.",
+     "startFrame": 1,
+     "endFrame": 66,
+     "words": [
+      {
+       "w": "Every",
+       "startFrame": 1,
+       "endFrame": 9
+      },
+      {
+       "w": "public",
+       "startFrame": 12,
+       "endFrame": 21
+      },
+      {
+       "w": "chain",
+       "startFrame": 23,
+       "endFrame": 31
+      },
+      {
+       "w": "is",
+       "startFrame": 32,
+       "endFrame": 35
+      },
+      {
+       "w": "a",
+       "startFrame": 36,
+       "endFrame": 37
+      },
+      {
+       "w": "glass",
+       "startFrame": 38,
+       "endFrame": 49
+      },
+      {
+       "w": "ledger.",
+       "startFrame": 52,
+       "endFrame": 66
+      }
+     ]
+    },
+    {
+     "text": "Your balance, your counterparty, your timing.",
+     "startFrame": 81,
+     "endFrame": 171,
+     "words": [
+      {
+       "w": "Your",
+       "startFrame": 81,
+       "endFrame": 86
+      },
+      {
+       "w": "balance,",
+       "startFrame": 88,
+       "endFrame": 106
+      },
+      {
+       "w": "your",
+       "startFrame": 117,
+       "endFrame": 121
+      },
+      {
+       "w": "counterparty,",
+       "startFrame": 122,
+       "endFrame": 145
+      },
+      {
+       "w": "your",
+       "startFrame": 152,
+       "endFrame": 155
+      },
+      {
+       "w": "timing.",
+       "startFrame": 157,
+       "endFrame": 171
+      }
+     ]
+    }
+   ],
+   "endFrame": 182
+  },
+  {
+   "id": "note",
+   "startFrame": 192,
+   "endAudioFrame": 406,
+   "sentences": [
+    {
+     "text": "All of it readable, forever.",
+     "startFrame": 192,
+     "endFrame": 246,
+     "words": [
+      {
+       "w": "All",
+       "startFrame": 192,
+       "endFrame": 200
+      },
+      {
+       "w": "of",
+       "startFrame": 201,
+       "endFrame": 203
+      },
+      {
+       "w": "it",
+       "startFrame": 204,
+       "endFrame": 207
+      },
+      {
+       "w": "readable,",
+       "startFrame": 209,
+       "endFrame": 225
+      },
+      {
+       "w": "forever.",
+       "startFrame": 227,
+       "endFrame": 246
+      }
+     ]
+    },
+    {
+     "text": "Fluton keeps a different book: it holds no balances, only notes.",
+     "startFrame": 267,
+     "endFrame": 406,
+     "words": [
+      {
+       "w": "Fluton",
+       "startFrame": 267,
+       "endFrame": 277
+      },
+      {
+       "w": "keeps",
+       "startFrame": 279,
+       "endFrame": 286
+      },
+      {
+       "w": "a",
+       "startFrame": 288,
+       "endFrame": 289
+      },
+      {
+       "w": "different",
+       "startFrame": 293,
+       "endFrame": 304
+      },
+      {
+       "w": "book:",
+       "startFrame": 305,
+       "endFrame": 316
+      },
+      {
+       "w": "it",
+       "startFrame": 334,
+       "endFrame": 338
+      },
+      {
+       "w": "holds",
+       "startFrame": 339,
+       "endFrame": 348
+      },
+      {
+       "w": "no",
+       "startFrame": 350,
+       "endFrame": 353
+      },
+      {
+       "w": "balances,",
+       "startFrame": 356,
+       "endFrame": 377
+      },
+      {
+       "w": "only",
+       "startFrame": 382,
+       "endFrame": 390
+      },
+      {
+       "w": "notes.",
+       "startFrame": 392,
+       "endFrame": 406
+      }
+     ]
+    }
+   ],
+   "endFrame": 416
+  },
+  {
+   "id": "tree",
+   "startFrame": 427,
+   "endAudioFrame": 584,
+   "sentences": [
+    {
+     "text": "Each note is one sealed commitment, a leaf in a single append-only tree.",
+     "startFrame": 427,
+     "endFrame": 584,
+     "words": [
+      {
+       "w": "Each",
+       "startFrame": 427,
+       "endFrame": 433
+      },
+      {
+       "w": "note",
+       "startFrame": 435,
+       "endFrame": 442
+      },
+      {
+       "w": "is",
+       "startFrame": 444,
+       "endFrame": 448
+      },
+      {
+       "w": "one",
+       "startFrame": 450,
+       "endFrame": 457
+      },
+      {
+       "w": "sealed",
+       "startFrame": 459,
+       "endFrame": 469
+      },
+      {
+       "w": "commitment,",
+       "startFrame": 471,
+       "endFrame": 489
+      },
+      {
+       "w": "a",
+       "startFrame": 507,
+       "endFrame": 510
+      },
+      {
+       "w": "leaf",
+       "startFrame": 513,
+       "endFrame": 521
+      },
+      {
+       "w": "in",
+       "startFrame": 524,
+       "endFrame": 527
+      },
+      {
+       "w": "a",
+       "startFrame": 528,
+       "endFrame": 529
+      },
+      {
+       "w": "single",
+       "startFrame": 532,
+       "endFrame": 543
+      },
+      {
+       "w": "append-only",
+       "startFrame": 544,
+       "endFrame": 568
+      },
+      {
+       "w": "tree.",
+       "startFrame": 570,
+       "endFrame": 584
+      }
+     ]
+    }
+   ],
+   "endFrame": 594
+  },
+  {
+   "id": "joinsplit",
+   "startFrame": 605,
+   "endAudioFrame": 838,
+   "sentences": [
+    {
+     "text": "Spend it and it becomes three, and value is conserved: what goes in, plus what crosses the boundary, equals what comes out.",
+     "startFrame": 605,
+     "endFrame": 838,
+     "words": [
+      {
+       "w": "Spend",
+       "startFrame": 605,
+       "endFrame": 615
+      },
+      {
+       "w": "it",
+       "startFrame": 617,
+       "endFrame": 621
+      },
+      {
+       "w": "and",
+       "startFrame": 624,
+       "endFrame": 629
+      },
+      {
+       "w": "it",
+       "startFrame": 630,
+       "endFrame": 632
+      },
+      {
+       "w": "becomes",
+       "startFrame": 633,
+       "endFrame": 643
+      },
+      {
+       "w": "three,",
+       "startFrame": 646,
+       "endFrame": 662
+      },
+      {
+       "w": "and",
+       "startFrame": 669,
+       "endFrame": 673
+      },
+      {
+       "w": "value",
+       "startFrame": 675,
+       "endFrame": 685
+      },
+      {
+       "w": "is",
+       "startFrame": 685,
+       "endFrame": 688
+      },
+      {
+       "w": "conserved:",
+       "startFrame": 689,
+       "endFrame": 710
+      },
+      {
+       "w": "what",
+       "startFrame": 723,
+       "endFrame": 728
+      },
+      {
+       "w": "goes",
+       "startFrame": 730,
+       "endFrame": 737
+      },
+      {
+       "w": "in,",
+       "startFrame": 739,
+       "endFrame": 745
+      },
+      {
+       "w": "plus",
+       "startFrame": 747,
+       "endFrame": 757
+      },
+      {
+       "w": "what",
+       "startFrame": 758,
+       "endFrame": 762
+      },
+      {
+       "w": "crosses",
+       "startFrame": 764,
+       "endFrame": 775
+      },
+      {
+       "w": "the",
+       "startFrame": 777,
+       "endFrame": 779
+      },
+      {
+       "w": "boundary,",
+       "startFrame": 780,
+       "endFrame": 797
+      },
+      {
+       "w": "equals",
+       "startFrame": 805,
+       "endFrame": 815
+      },
+      {
+       "w": "what",
+       "startFrame": 816,
+       "endFrame": 819
+      },
+      {
+       "w": "comes",
+       "startFrame": 821,
+       "endFrame": 826
+      },
+      {
+       "w": "out.",
+       "startFrame": 828,
+       "endFrame": 838
+      }
+     ]
+    }
+   ],
+   "endFrame": 850
+  },
+  {
+   "id": "nullifier",
+   "startFrame": 862,
+   "endAudioFrame": 1008,
+   "sentences": [
+    {
+     "text": "All the chain learns is a nullifier, proof that a note is spent, never which one.",
+     "startFrame": 862,
+     "endFrame": 1008,
+     "words": [
+      {
+       "w": "All",
+       "startFrame": 862,
+       "endFrame": 869
+      },
+      {
+       "w": "the",
+       "startFrame": 870,
+       "endFrame": 872
+      },
+      {
+       "w": "chain",
+       "startFrame": 874,
+       "endFrame": 882
+      },
+      {
+       "w": "learns",
+       "startFrame": 885,
+       "endFrame": 893
+      },
+      {
+       "w": "is",
+       "startFrame": 895,
+       "endFrame": 897
+      },
+      {
+       "w": "a",
+       "startFrame": 898,
+       "endFrame": 899
+      },
+      {
+       "w": "nullifier,",
+       "startFrame": 902,
+       "endFrame": 924
+      },
+      {
+       "w": "proof",
+       "startFrame": 932,
+       "endFrame": 940
+      },
+      {
+       "w": "that",
+       "startFrame": 942,
+       "endFrame": 945
+      },
+      {
+       "w": "a",
+       "startFrame": 946,
+       "endFrame": 947
+      },
+      {
+       "w": "note",
+       "startFrame": 951,
+       "endFrame": 957
+      },
+      {
+       "w": "is",
+       "startFrame": 958,
+       "endFrame": 961
+      },
+      {
+       "w": "spent,",
+       "startFrame": 962,
+       "endFrame": 976
+      },
+      {
+       "w": "never",
+       "startFrame": 981,
+       "endFrame": 988
+      },
+      {
+       "w": "which",
+       "startFrame": 990,
+       "endFrame": 995
+      },
+      {
+       "w": "one.",
+       "startFrame": 998,
+       "endFrame": 1008
+      }
+     ]
+    }
+   ],
+   "endFrame": 1025
+  },
+  {
+   "id": "extdata",
+   "startFrame": 1042,
+   "endAudioFrame": 1257,
+   "sentences": [
+    {
+     "text": "Recipient, amount, fee and ciphertexts are bound into one hash, so nobody can retarget your transaction.",
+     "startFrame": 1042,
+     "endFrame": 1257,
+     "words": [
+      {
+       "w": "Recipient,",
+       "startFrame": 1042,
+       "endFrame": 1066
+      },
+      {
+       "w": "amount,",
+       "startFrame": 1067,
+       "endFrame": 1086
+      },
+      {
+       "w": "fee",
+       "startFrame": 1089,
+       "endFrame": 1102
+      },
+      {
+       "w": "and",
+       "startFrame": 1106,
+       "endFrame": 1113
+      },
+      {
+       "w": "ciphertexts",
+       "startFrame": 1116,
+       "endFrame": 1138
+      },
+      {
+       "w": "are",
+       "startFrame": 1143,
+       "endFrame": 1149
+      },
+      {
+       "w": "bound",
+       "startFrame": 1150,
+       "endFrame": 1157
+      },
+      {
+       "w": "into",
+       "startFrame": 1158,
+       "endFrame": 1163
+      },
+      {
+       "w": "one",
+       "startFrame": 1166,
+       "endFrame": 1172
+      },
+      {
+       "w": "hash,",
+       "startFrame": 1173,
+       "endFrame": 1188
+      },
+      {
+       "w": "so",
+       "startFrame": 1194,
+       "endFrame": 1198
+      },
+      {
+       "w": "nobody",
+       "startFrame": 1201,
+       "endFrame": 1209
+      },
+      {
+       "w": "can",
+       "startFrame": 1210,
+       "endFrame": 1213
+      },
+      {
+       "w": "retarget",
+       "startFrame": 1215,
+       "endFrame": 1227
+      },
+      {
+       "w": "your",
+       "startFrame": 1228,
+       "endFrame": 1231
+      },
+      {
+       "w": "transaction.",
+       "startFrame": 1232,
+       "endFrame": 1257
+      }
+     ]
+    }
+   ],
+   "endFrame": 1266
+  },
+  {
+   "id": "boundary",
+   "startFrame": 1275,
+   "endAudioFrame": 1344,
+   "sentences": [
+    {
+     "text": "Only the net amount crossing the pool is public.",
+     "startFrame": 1275,
+     "endFrame": 1344,
+     "words": [
+      {
+       "w": "Only",
+       "startFrame": 1275,
+       "endFrame": 1283
+      },
+      {
+       "w": "the",
+       "startFrame": 1284,
+       "endFrame": 1286
+      },
+      {
+       "w": "net",
+       "startFrame": 1288,
+       "endFrame": 1292
+      },
+      {
+       "w": "amount",
+       "startFrame": 1293,
+       "endFrame": 1300
+      },
+      {
+       "w": "crossing",
+       "startFrame": 1302,
+       "endFrame": 1312
+      },
+      {
+       "w": "the",
+       "startFrame": 1313,
+       "endFrame": 1315
+      },
+      {
+       "w": "pool",
+       "startFrame": 1316,
+       "endFrame": 1322
+      },
+      {
+       "w": "is",
+       "startFrame": 1324,
+       "endFrame": 1327
+      },
+      {
+       "w": "public.",
+       "startFrame": 1328,
+       "endFrame": 1344
+      }
+     ]
+    }
+   ],
+   "endFrame": 1353
+  },
+  {
+   "id": "close",
+   "startFrame": 1362,
+   "endAudioFrame": 1505,
+   "sentences": [
+    {
+     "text": "Deposits and withdrawals show their size.",
+     "startFrame": 1362,
+     "endFrame": 1433,
+     "words": [
+      {
+       "w": "Deposits",
+       "startFrame": 1362,
+       "endFrame": 1379
+      },
+      {
+       "w": "and",
+       "startFrame": 1380,
+       "endFrame": 1383
+      },
+      {
+       "w": "withdrawals",
+       "startFrame": 1385,
+       "endFrame": 1400
+      },
+      {
+       "w": "show",
+       "startFrame": 1402,
+       "endFrame": 1407
+      },
+      {
+       "w": "their",
+       "startFrame": 1409,
+       "endFrame": 1413
+      },
+      {
+       "w": "size.",
+       "startFrame": 1415,
+       "endFrame": 1433
+      }
+     ]
+    },
+    {
+     "text": "Everything inside stays sealed.",
+     "startFrame": 1453,
+     "endFrame": 1505,
+     "words": [
+      {
+       "w": "Everything",
+       "startFrame": 1453,
+       "endFrame": 1466
+      },
+      {
+       "w": "inside",
+       "startFrame": 1467,
+       "endFrame": 1479
+      },
+      {
+       "w": "stays",
+       "startFrame": 1480,
+       "endFrame": 1488
+      },
+      {
+       "w": "sealed.",
+       "startFrame": 1490,
+       "endFrame": 1505
+      }
+     ]
+    }
+   ],
+   "endFrame": 1550
+  }
+ ]
+}
