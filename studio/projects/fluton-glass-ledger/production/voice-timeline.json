@@ -1,0 +1,99 @@
+{
+  "fps": 30,
+  "audioSeconds": 50.39,
+  "totalSeconds": 51.59,
+  "totalFrames": 1548,
+  "voice": "Liam - Energetic, Social Media Creator",
+  "segments": [
+    {
+      "text": "Every public chain is a glass ledger. Your balance, your counterparty, your timing.",
+      "start": 0,
+      "end": 5.712
+    },
+    {
+      "text": "All of it readable, forever. Fluton keeps a different book: it holds no balances, only notes.",
+      "start": 5.712,
+      "end": 13.526
+    },
+    {
+      "text": "Each note is one sealed commitment, a leaf in a single append-only tree.",
+      "start": 13.526,
+      "end": 19.47
+    },
+    {
+      "text": "Spend it and it becomes three, and value is conserved: what goes in, plus what crosses the boundary, equals what comes out.",
+      "start": 19.47,
+      "end": 27.934
+    },
+    {
+      "text": "All the chain learns is a nullifier, proof that a note is spent, never which one.",
+      "start": 27.934,
+      "end": 33.611
+    },
+    {
+      "text": "Recipient, amount, fee and ciphertexts are bound into one hash, so nobody can retarget your transaction.",
+      "start": 33.611,
+      "end": 41.889
+    },
+    {
+      "text": "Only the net amount crossing the pool is public.",
+      "start": 41.889,
+      "end": 44.803
+    },
+    {
+      "text": "Deposits and withdrawals show their size. Everything inside stays sealed.",
+      "start": 44.803,
+      "end": 50.341
+    }
+  ],
+  "scenes": [
+    {
+      "id": "ledger",
+      "startFrame": 0,
+      "endFrameExclusive": 170,
+      "caption": "Every public chain is a glass ledger."
+    },
+    {
+      "id": "note",
+      "startFrame": 170,
+      "endFrameExclusive": 404,
+      "caption": "Fluton keeps a different book: notes, not balances."
+    },
+    {
+      "id": "tree",
+      "startFrame": 404,
+      "endFrameExclusive": 582,
+      "caption": "Each note is one sealed commitment — a leaf in one tree."
+    },
+    {
+      "id": "joinsplit",
+      "startFrame": 582,
+      "endFrameExclusive": 836,
+      "caption": "Spend one note and it becomes three. Value is conserved."
+    },
+    {
+      "id": "nullifier",
+      "startFrame": 836,
+      "endFrameExclusive": 1007,
+      "caption": "The chain learns a nullifier — spent, never which."
+    },
+    {
+      "id": "extdata",
+      "startFrame": 1007,
+      "endFrameExclusive": 1255,
+      "caption": "Recipient, amount, fee and ciphertexts are bound in one hash."
+    },
+    {
+      "id": "boundary",
+      "startFrame": 1255,
+      "endFrameExclusive": 1342,
+      "caption": "Only the net amount crossing the pool is public."
+    },
+    {
+      "id": "close",
+      "startFrame": 1342,
+      "endFrameExclusive": 1548,
+      "caption": "Everything inside stays sealed."
+    }
+  ]
+}

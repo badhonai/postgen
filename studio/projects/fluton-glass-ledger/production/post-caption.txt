@@ -1,0 +1,5 @@
+A public chain is a glass ledger. Everyone reads your balance, your counterparty, your timing — forever.
+
+Fluton keeps a different book: no balances, only notes. Each note is one sealed commitment — a leaf in one append-only tree. Spend it and it becomes three, with value conserved. The chain learns a nullifier — spent, never which. Recipient, amount, fee and ciphertexts are bound into one hash, so the proof matches or it's refused. Only the net amount crossing the pool is public. Everything inside stays sealed.
+
+Testnet only. Not financial advice.

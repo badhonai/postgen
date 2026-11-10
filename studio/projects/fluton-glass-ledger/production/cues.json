@@ -1,0 +1,234 @@
+{
+ "fps": 30,
+ "durationSeconds": 51.59,
+ "bpm": 92,
+ "sections": [
+  {
+   "name": "ledger",
+   "start": 0.0,
+   "end": 5.667,
+   "feel": "sparse",
+   "chords": [
+    [
+     "A2",
+     "C3",
+     "E3"
+    ]
+   ],
+   "root": "A1",
+   "arp": [
+    "A3",
+    "C4",
+    "E4"
+   ],
+   "padAmp": 0.2
+  },
+  {
+   "name": "note",
+   "start": 5.667,
+   "end": 13.467,
+   "feel": "steady",
+   "chords": [
+    [
+     "F2",
+     "A2",
+     "C3"
+    ],
+    [
+     "C3",
+     "E3",
+     "G3"
+    ]
+   ],
+   "root": "F1",
+   "arp": [
+    "F3",
+    "A3",
+    "C4"
+   ],
+   "padAmp": 0.16
+  },
+  {
+   "name": "tree",
+   "start": 13.467,
+   "end": 19.4,
+   "feel": "steady",
+   "chords": [
+    [
+     "C3",
+     "E3",
+     "G3"
+    ],
+    [
+     "G2",
+     "B2",
+     "D3"
+    ]
+   ],
+   "root": "C2",
+   "arp": [
+    "C4",
+    "E4",
+    "G4"
+   ],
+   "padAmp": 0.16
+  },
+  {
+   "name": "joinsplit",
+   "start": 19.4,
+   "end": 27.867,
+   "feel": "driving",
+   "chords": [
+    [
+     "D3",
+     "F3",
+     "A3"
+    ],
+    [
+     "A2",
+     "C3",
+     "E3"
+    ]
+   ],
+   "root": "D2",
+   "arp": [
+    "D4",
+    "F4",
+    "A4"
+   ],
+   "padAmp": 0.16
+  },
+  {
+   "name": "nullifier",
+   "start": 27.867,
+   "end": 33.567,
+   "feel": "steady",
+   "chords": [
+    [
+     "A2",
+     "C3",
+     "E3"
+    ],
+    [
+     "E3",
+     "G3",
+     "B3"
+    ]
+   ],
+   "root": "A1",
+   "arp": [
+    "A3",
+    "C4",
+    "E4"
+   ],
+   "padAmp": 0.16
+  },
+  {
+   "name": "extdata",
+   "start": 33.567,
+   "end": 41.833,
+   "feel": "driving",
+   "chords": [
+    [
+     "F2",
+     "A2",
+     "C3"
+    ],
+    [
+     "C3",
+     "E3",
+     "G3"
+    ]
+   ],
+   "root": "F1",
+   "arp": [
+    "F4",
+    "A4",
+    "C5"
+   ],
+   "padAmp": 0.16
+  },
+  {
+   "name": "boundary",
+   "start": 41.833,
+   "end": 44.733,
+   "feel": "half",
+   "chords": [
+    [
+     "C3",
+     "G3",
+     "C4"
+    ]
+   ],
+   "root": "C2",
+   "arp": [
+    "C4",
+    "G4"
+   ],
+   "padAmp": 0.16
+  },
+  {
+   "name": "close",
+   "start": 44.733,
+   "end": 51.6,
+   "feel": "sparse",
+   "chords": [
+    [
+     "A2",
+     "E3",
+     "A3"
+    ],
+    [
+     "F2",
+     "A2",
+     "C3"
+    ]
+   ],
+   "root": "A1",
+   "arp": [
+    "A3",
+    "E4",
+    "A4"
+   ],
+   "padAmp": 0.2
+  }
+ ],
+ "accents": [
+  {
+   "time": 9.333,
+   "kind": "latch"
+  },
+  {
+   "time": 17.2,
+   "kind": "click"
+  },
+  {
+   "time": 19.733,
+   "kind": "impact"
+  },
+  {
+   "time": 21.133,
+   "kind": "latch"
+  },
+  {
+   "time": 28.067,
+   "kind": "latch"
+  },
+  {
+   "time": 38.567,
+   "kind": "dry"
+  },
+  {
+   "time": 42.167,
+   "kind": "click"
+  },
+  {
+   "time": 45.0,
+   "kind": "impact"
+  },
+  {
+   "time": 47.933,
+   "kind": "click"
+  }
+ ]
+}

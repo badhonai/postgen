@@ -1,0 +1,128 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "captionBand": 190,
+  "palette": {
+    "bg": "#09090B",
+    "grid": "#27272A",
+    "ink": "#F8FAFC",
+    "dim": "#A1A1AA",
+    "green": "#05DF72",
+    "blue": "#2B63D9",
+    "red": "#EF4444",
+    "line": "#3F3F46"
+  },
+  "safeAreas": {
+    "side": 120,
+    "captionTop": 912,
+    "captionLineHeight": 46,
+    "finalNoticeTop": 980
+  },
+  "finalNotice": "TESTNET ONLY · NO REAL FUNDS",
+  "scenes": [
+    {
+      "id": "ledger",
+      "startFrame": 0,
+      "endFrameExclusive": 170,
+      "keyStateFrame": 105,
+      "background": "#09090B",
+      "foreground": "#F8FAFC",
+      "captionLines": [
+        "Every public chain is a glass ledger."
+      ],
+      "captionText": "Every public chain is a glass ledger."
+    },
+    {
+      "id": "note",
+      "startFrame": 170,
+      "endFrameExclusive": 404,
+      "keyStateFrame": 315,
+      "background": "#09090B",
+      "foreground": "#F8FAFC",
+      "captionLines": [
+        "Fluton keeps a different book: notes, not balances."
+      ],
+      "captionText": "Fluton keeps a different book: notes, not balances."
+    },
+    {
+      "id": "tree",
+      "startFrame": 404,
+      "endFrameExclusive": 582,
+      "keyStateFrame": 514,
+      "background": "#09090B",
+      "foreground": "#F8FAFC",
+      "captionLines": [
+        "Each note is one sealed commitment — a leaf in one tree."
+      ],
+      "captionText": "Each note is one sealed commitment — a leaf in one tree."
+    },
+    {
+      "id": "joinsplit",
+      "startFrame": 582,
+      "endFrameExclusive": 836,
+      "keyStateFrame": 739,
+      "background": "#09090B",
+      "foreground": "#F8FAFC",
+      "captionLines": [
+        "Spend one note and it becomes three. Value is conserved."
+      ],
+      "captionText": "Spend one note and it becomes three. Value is conserved."
+    },
+    {
+      "id": "nullifier",
+      "startFrame": 836,
+      "endFrameExclusive": 1007,
+      "keyStateFrame": 942,
+      "background": "#09090B",
+      "foreground": "#F8FAFC",
+      "captionLines": [
+        "The chain learns a nullifier — spent, never which."
+      ],
+      "captionText": "The chain learns a nullifier — spent, never which."
+    },
+    {
+      "id": "extdata",
+      "startFrame": 1007,
+      "endFrameExclusive": 1255,
+      "keyStateFrame": 1160,
+      "background": "#09090B",
+      "foreground": "#F8FAFC",
+      "captionLines": [
+        "Recipient, amount, fee and ciphertexts are bound in one hash."
+      ],
+      "captionText": "Recipient, amount, fee and ciphertexts are bound in one hash."
+    },
+    {
+      "id": "boundary",
+      "startFrame": 1255,
+      "endFrameExclusive": 1342,
+      "keyStateFrame": 1308,
+      "background": "#09090B",
+      "foreground": "#F8FAFC",
+      "captionLines": [
+        "Only the net amount crossing the pool is public."
+      ],
+      "captionText": "Only the net amount crossing the pool is public."
+    },
+    {
+      "id": "close",
+      "startFrame": 1342,
+      "endFrameExclusive": 1548,
+      "keyStateFrame": 1469,
+      "background": "#09090B",
+      "foreground": "#F8FAFC",
+      "captionLines": [
+        "Everything inside stays sealed."
+      ],
+      "captionText": "Everything inside stays sealed."
+    }
+  ],
+  "durationSeconds": 51.59,
+  "durationInFrames": 1548,
+  "captionMode": "recording-aligned: one spoken sentence per scene, timed from the provider alignment",
+  "voice": {
+    "name": "Liam - Energetic, Social Media Creator",
+    "id": "TX3LPaxmHKxFdv7VOQHJ",
+    "audioSeconds": 50.39
+  }
+}
