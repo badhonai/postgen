@@ -66,7 +66,7 @@ export const updateJob = (jobId, patch) =>
   })
 
 /** Uploads one file into the job folder (`path` keeps the project-relative layout). */
-export async function uploadJobFile(jobId, { path: filePath, data, kind = 'handoff', type }) {
+export async function uploadJobFile(jobId, { path: filePath, data, kind = 'handoff', type, token }) {
   const form = new FormData()
   const name = filePath.split('/').pop() || filePath
   form.set('file', new Blob([data], { type: type || 'application/octet-stream' }), name)
@@ -74,7 +74,7 @@ export async function uploadJobFile(jobId, { path: filePath, data, kind = 'hando
   form.set('kind', kind)
   const response = await fetch(`${BASE}/api/v1/studio/jobs/${encodeURIComponent(jobId)}/files`, {
     method: 'POST',
-    headers: { authorization: `Bearer ${apiKey()}`, 'user-agent': UA },
+    headers: { authorization: `Bearer ${token || apiKey()}`, 'user-agent': UA },
     body: form,
   })
   const text = await response.text()

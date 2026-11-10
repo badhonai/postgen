@@ -23,7 +23,8 @@
     "pack": "node tools/handoff.mjs pack",
     "import": "node tools/handoff.mjs import",
     "ship": "node tools/handoff.mjs ship",
-    "claim": "node tools/handoff.mjs claim"
+    "claim": "node tools/handoff.mjs claim",
+    "verify": "node tools/studio/verify.mjs"
   },
   "repository": {
     "type": "git",

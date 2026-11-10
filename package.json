@@ -24,7 +24,8 @@
     "studio:ship": "npm --prefix studio run ship",
     "studio:claim": "npm --prefix studio run claim",
     "studio:pack": "npm --prefix studio run pack",
-    "studio:import": "npm --prefix studio run import"
+    "studio:import": "npm --prefix studio run import",
+    "studio:verify": "npm --prefix studio run verify"
   },
   "dependencies": {
     "@fontsource/fredoka": "^5.3.0",

@@ -162,6 +162,12 @@ const spec = {
         responses: { '200': { description: 'Assets' } },
       },
     },
+    '/studio/prompt': {
+      get: {
+        summary: 'The canonical video-flow instructions for a new agent chat (no secrets)',
+        responses: { '200': { description: 'Prompt text' } },
+      },
+    },
     '/studio/jobs': {
       get: {
         summary: 'List studio job folders (one per film) with file counts and storage used',
