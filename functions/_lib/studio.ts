@@ -254,11 +254,14 @@ export async function putJobFile(
     .select('id', { count: 'exact', head: true })
     .eq('job_id', job.id)
 
+  // Same path may exist as both handoff and return — key on (path, kind) so a
+  // returned scene never overwrites the baseline the orchestrator sent out.
   const { data: current } = await db(env)
     .from('studio_job_files')
     .select('id, r2_key, size_bytes')
     .eq('job_id', job.id)
     .eq('path', path)
+    .eq('kind', kind)
     .maybeSingle()
 
   const { data: totals } = await db(env)
@@ -277,7 +280,7 @@ export async function putJobFile(
     throw new AgentError(413, { error: `too many files in this job (max ${MAX_JOB_FILES})` })
   }
 
-  const key = `studio/${job.user_id}/${job.id}/${path}`
+  const key = `studio/${job.user_id}/${job.id}/${kind}/${path}`
   await env.MEDIA.put(key, await input.file.arrayBuffer(), {
     httpMetadata: { contentType: input.file.type || 'application/octet-stream' },
   })
