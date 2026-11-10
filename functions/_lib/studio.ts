@@ -39,6 +39,19 @@ export type StudioFileRow = {
 }
 
 const JOB_STATUSES = ['open', 'returned', 'rendered', 'archived'] as const
+
+/**
+ * What a specialist may write back. Everything else (spec, timing, composition,
+ * dependencies, assets) is owned by the orchestrator, so the upload is refused
+ * here — not just at import time — to keep a token from parking forbidden files.
+ */
+const RETURN_ALLOWED = [
+  /^src\/Film\.tsx$/,
+  /^src\/visual-system\.ts$/,
+  /^src\/scenes\/[A-Za-z0-9._-]+\.tsx$/,
+  /^src\/components\/[A-Za-z0-9._-]+\.tsx$/,
+  /^VISUAL-RETURN\.md$/,
+]
 const FILE_KINDS = ['handoff', 'return', 'render', 'note'] as const
 
 /** Per-file and per-job budgets: a job folder is working storage, not a video host. */
@@ -225,6 +238,13 @@ export async function putJobFile(
   const kind = (FILE_KINDS as readonly string[]).includes(String(input.kind))
     ? (input.kind as StudioFileRow['kind'])
     : 'handoff'
+  if (kind === 'return' && !RETURN_ALLOWED.some((re) => re.test(path))) {
+    throw new AgentError(400, {
+      error:
+        `${path} is not part of the visual return. Allowed: src/Film.tsx, src/visual-system.ts, ` +
+        'src/scenes/*.tsx, src/components/*.tsx, VISUAL-RETURN.md',
+    })
+  }
   if (input.file.size > MAX_JOB_FILE) {
     throw new AgentError(413, { error: `file too large (max ${MAX_JOB_FILE / 1024 / 1024} MB)` })
   }
