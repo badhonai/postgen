@@ -597,13 +597,28 @@ export async function updateDraft(
   // append_to_thread (which only sends tweets) silently turned every
   // article/artwork/quote into a plain post.
   const type = assertPostType(patch.type ?? (existing as { post_type?: string }).post_type ?? 'post')
-  const tweets = patch.tweets
+  const tweets = patch.tweets !== undefined
     ? type === 'artwork'
       ? artworkTweets(patch.tweets)
       : assertTweets(patch.tweets)
     : (existing.tweets as string[])
   const meta = patch.meta ?? ((existing.meta ?? {}) as Record<string, unknown>)
-  const media = assertMedia(patch.media)
+  // A patch that omits `media` must keep the post's existing attachments — otherwise
+  // every text-only PATCH (caption edit, type fix) silently detached the video/image.
+  const media =
+    patch.media === undefined
+      ? ((existing.media ?? []) as Array<{
+          tweet_position: number
+          position: number
+          asset: { id: string } | null
+        }>)
+          .filter((m) => m.asset?.id)
+          .map((m) => ({
+            asset_id: String(m.asset?.id),
+            tweet_position: m.tweet_position,
+            position: m.position,
+          }))
+      : assertMedia(patch.media)
   await assertOwnedAssets(env, auth.userId, media)
 
   const { data: projectRow } = await db(env)
@@ -630,7 +645,7 @@ export async function updateDraft(
     p_content_text: contentText,
     p_content_hash: contentHash,
     p_tweets: tweets,
-    p_tag_names: patch.tagNames ?? [],
+    p_tag_names: patch.tagNames ?? ((existing.tag_names ?? []) as string[]),
     p_media: media,
     p_created_via: via,
     p_post_type: type,

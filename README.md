@@ -376,6 +376,7 @@ GET    /api/v1/posts                       ?project_id&status&category&type&tag&
 GET    /api/v1/posts/:id                   post + tweets + media
 POST   /api/v1/posts/:id/tweets            append one tweet
 GET    /api/v1/assets                      my media (signed URLs on read)
+POST   /api/v1/assets/delete               delete an unattached asset (409 while a post uses it)
 GET    /api/v1/prompts                     my prompt library
 POST   /api/v1/prompts                     create a prompt
 GET    /api/v1/prompts/:id                 one prompt

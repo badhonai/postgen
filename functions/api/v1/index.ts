@@ -150,6 +150,12 @@ const spec = {
         responses: { '201': { description: 'Asset created' } },
       },
     },
+    '/assets/delete': {
+      post: {
+        summary: 'Delete an asset (409 while it is still attached to a post)',
+        responses: { '200': { description: 'Deleted' } },
+      },
+    },
     '/assets': {
       get: {
         summary: 'List my media (optionally ?project_id=…&kind=logo_transparent_name) with short-lived signed URLs',
