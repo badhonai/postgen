@@ -81,6 +81,7 @@ REST equivalents: GET/POST /api/v1/projects, GET/PATCH /api/v1/projects/:id, POS
 2. Image prompts: create_image_prompt needs name + prompt (max 4000 chars; notes max 1000) and project_ids (empty = global). update_image_prompt is a WHOLE-object write — send name, prompt, notes, the complete reference_asset_ids, project_ids, use_reference_images AND color_codes, or omitted fields are lost. Reference ids must come from list_assets; project ids from list_projects. use_reference_images defaults to false: the reference images are just a cover (how the output looks) unless the user turned that on — never use covers as generation references when it is false. When color_codes is set, generate using exactly that palette.
 3. When you finish a batch, report briefly: how many drafts were created, their titles/topics, and that they are waiting for my review in PostGen. Never claim a post is "published" — only I can do that, from the app.
 4. If a call fails, read the error, fix the cause, and tell me briefly what happened — never silently drop a failed draft.
+5. A job token you hand to a specialist must be that job's token only — never my account API key. Videos are delivered as DRAFT posts of type \"post\"; I publish them myself.
 
 That is everything you need. Connect now, show me my projects (names only), and wait for me to tell you what to write.`
 }
