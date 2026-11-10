@@ -1,0 +1,71 @@
+{
+ "note": "Chapter order, which spoken sentences belong to each chapter, and which ground (paper|ink|verm|blue) each chapter is printed on. Sentence indexes are 0-based and used in ascending order.",
+ "scenes": [
+  {
+   "id": "twoviews",
+   "sentences": [
+    0,
+    1
+   ],
+   "ground": "ink"
+  },
+  {
+   "id": "yourside",
+   "sentences": [
+    2
+   ],
+   "ground": "paper"
+  },
+  {
+   "id": "chainside",
+   "sentences": [
+    3,
+    4
+   ],
+   "ground": "ink"
+  },
+  {
+   "id": "redaction",
+   "sentences": [
+    5
+   ],
+   "ground": "paper"
+  },
+  {
+   "id": "proof",
+   "sentences": [
+    6
+   ],
+   "ground": "verm"
+  },
+  {
+   "id": "fhe",
+   "sentences": [
+    7
+   ],
+   "ground": "blue"
+  },
+  {
+   "id": "balance",
+   "sentences": [
+    8,
+    9
+   ],
+   "ground": "paper"
+  },
+  {
+   "id": "public",
+   "sentences": [
+    10
+   ],
+   "ground": "ink"
+  },
+  {
+   "id": "close",
+   "sentences": [
+    11
+   ],
+   "ground": "paper"
+  }
+ ]
+}

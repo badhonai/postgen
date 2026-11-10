@@ -17,7 +17,7 @@ export const Words:React.FC<{
   align?:'left'|'center'; drift?:number; spacing?:number; blockText?:string; dim?:number;
 }> = ({sentence,f,size,color,hot=[],hotColor,hotStyle='color',maxW=1728,lineHeight=0.92,
       weight=400,family=DISPLAY,exitAt,align='left',drift=0.4,spacing=-size*0.02,
-      blockText='#0B0B0C',dim=0.26}) => {
+      blockText='#0B0B0C',dim=0.34}) => {
   const out = exitAt===undefined?1:clamp(1-(f-exitAt)/6);
   return <div style={{display:'flex',flexWrap:'wrap',alignItems:'baseline',justifyContent:align==='center'?'center':'flex-start',
     columnGap:size*0.24,rowGap:size*0.04,maxWidth:maxW,fontFamily:family,fontWeight:weight,

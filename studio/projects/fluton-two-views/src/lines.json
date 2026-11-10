@@ -1,0 +1,644 @@
+{
+ "leadSeconds": 0.6,
+ "fps": 30,
+ "durationInFrames": 1780,
+ "durationSeconds": 59.333,
+ "scenes": [
+  {
+   "id": "twoviews",
+   "startFrame": 0,
+   "ground": "ink",
+   "sentences": [
+    {
+     "text": "You sign one payment.",
+     "startFrame": 0,
+     "endFrame": 66,
+     "words": [
+      {
+       "w": "You",
+       "startFrame": 0,
+       "endFrame": 11
+      },
+      {
+       "w": "sign",
+       "startFrame": 11,
+       "endFrame": 26
+      },
+      {
+       "w": "one",
+       "startFrame": 27,
+       "endFrame": 37
+      },
+      {
+       "w": "payment.",
+       "startFrame": 38,
+       "endFrame": 66
+      }
+     ]
+    },
+    {
+     "text": "Two different people watch it land.",
+     "startFrame": 77,
+     "endFrame": 187,
+     "words": [
+      {
+       "w": "Two",
+       "startFrame": 77,
+       "endFrame": 87
+      },
+      {
+       "w": "different",
+       "startFrame": 88,
+       "endFrame": 120
+      },
+      {
+       "w": "people",
+       "startFrame": 121,
+       "endFrame": 142
+      },
+      {
+       "w": "watch",
+       "startFrame": 143,
+       "endFrame": 161
+      },
+      {
+       "w": "it",
+       "startFrame": 162,
+       "endFrame": 169
+      },
+      {
+       "w": "land.",
+       "startFrame": 169,
+       "endFrame": 187
+      }
+     ]
+    }
+   ],
+   "endFrame": 188
+  },
+  {
+   "id": "yourside",
+   "startFrame": 188,
+   "ground": "paper",
+   "sentences": [
+    {
+     "text": "You see the amount, the receiver, and the fee you paid.",
+     "startFrame": 198,
+     "endFrame": 374,
+     "words": [
+      {
+       "w": "You",
+       "startFrame": 198,
+       "endFrame": 208
+      },
+      {
+       "w": "see",
+       "startFrame": 209,
+       "endFrame": 220
+      },
+      {
+       "w": "the",
+       "startFrame": 221,
+       "endFrame": 231
+      },
+      {
+       "w": "amount,",
+       "startFrame": 232,
+       "endFrame": 257
+      },
+      {
+       "w": "the",
+       "startFrame": 262,
+       "endFrame": 273
+      },
+      {
+       "w": "receiver,",
+       "startFrame": 274,
+       "endFrame": 305
+      },
+      {
+       "w": "and",
+       "startFrame": 311,
+       "endFrame": 321
+      },
+      {
+       "w": "the",
+       "startFrame": 322,
+       "endFrame": 333
+      },
+      {
+       "w": "fee",
+       "startFrame": 334,
+       "endFrame": 344
+      },
+      {
+       "w": "you",
+       "startFrame": 345,
+       "endFrame": 356
+      },
+      {
+       "w": "paid.",
+       "startFrame": 357,
+       "endFrame": 374
+      }
+     ]
+    }
+   ],
+   "endFrame": 374
+  },
+  {
+   "id": "chainside",
+   "startFrame": 375,
+   "ground": "ink",
+   "sentences": [
+    {
+     "text": "The chain sees a hash, a nullifier, and the gas.",
+     "startFrame": 385,
+     "endFrame": 540,
+     "words": [
+      {
+       "w": "The",
+       "startFrame": 385,
+       "endFrame": 396
+      },
+      {
+       "w": "chain",
+       "startFrame": 396,
+       "endFrame": 414
+      },
+      {
+       "w": "sees",
+       "startFrame": 415,
+       "endFrame": 429
+      },
+      {
+       "w": "a",
+       "startFrame": 430,
+       "endFrame": 434
+      },
+      {
+       "w": "hash,",
+       "startFrame": 434,
+       "endFrame": 452
+      },
+      {
+       "w": "a",
+       "startFrame": 457,
+       "endFrame": 461
+      },
+      {
+       "w": "nullifier,",
+       "startFrame": 462,
+       "endFrame": 497
+      },
+      {
+       "w": "and",
+       "startFrame": 503,
+       "endFrame": 513
+      },
+      {
+       "w": "the",
+       "startFrame": 514,
+       "endFrame": 525
+      },
+      {
+       "w": "gas.",
+       "startFrame": 526,
+       "endFrame": 540
+      }
+     ]
+    },
+    {
+     "text": "Nothing else comes with it.",
+     "startFrame": 550,
+     "endFrame": 635,
+     "words": [
+      {
+       "w": "Nothing",
+       "startFrame": 550,
+       "endFrame": 575
+      },
+      {
+       "w": "else",
+       "startFrame": 576,
+       "endFrame": 590
+      },
+      {
+       "w": "comes",
+       "startFrame": 591,
+       "endFrame": 608
+      },
+      {
+       "w": "with",
+       "startFrame": 609,
+       "endFrame": 623
+      },
+      {
+       "w": "it.",
+       "startFrame": 624,
+       "endFrame": 635
+      }
+     ]
+    }
+   ],
+   "endFrame": 635
+  },
+  {
+   "id": "redaction",
+   "startFrame": 635,
+   "ground": "paper",
+   "sentences": [
+    {
+     "text": "It never learns what moved, or who received it.",
+     "startFrame": 645,
+     "endFrame": 795,
+     "words": [
+      {
+       "w": "It",
+       "startFrame": 645,
+       "endFrame": 653
+      },
+      {
+       "w": "never",
+       "startFrame": 653,
+       "endFrame": 671
+      },
+      {
+       "w": "learns",
+       "startFrame": 672,
+       "endFrame": 693
+      },
+      {
+       "w": "what",
+       "startFrame": 694,
+       "endFrame": 708
+      },
+      {
+       "w": "moved,",
+       "startFrame": 709,
+       "endFrame": 730
+      },
+      {
+       "w": "or",
+       "startFrame": 736,
+       "endFrame": 743
+      },
+      {
+       "w": "who",
+       "startFrame": 744,
+       "endFrame": 754
+      },
+      {
+       "w": "received",
+       "startFrame": 755,
+       "endFrame": 783
+      },
+      {
+       "w": "it.",
+       "startFrame": 784,
+       "endFrame": 795
+      }
+     ]
+    }
+   ],
+   "endFrame": 795
+  },
+  {
+   "id": "proof",
+   "startFrame": 795,
+   "ground": "verm",
+   "sentences": [
+    {
+     "text": "So how does it know the payment is real?",
+     "startFrame": 805,
+     "endFrame": 925,
+     "words": [
+      {
+       "w": "So",
+       "startFrame": 805,
+       "endFrame": 812
+      },
+      {
+       "w": "how",
+       "startFrame": 813,
+       "endFrame": 824
+      },
+      {
+       "w": "does",
+       "startFrame": 825,
+       "endFrame": 839
+      },
+      {
+       "w": "it",
+       "startFrame": 840,
+       "endFrame": 847
+      },
+      {
+       "w": "know",
+       "startFrame": 848,
+       "endFrame": 862
+      },
+      {
+       "w": "the",
+       "startFrame": 863,
+       "endFrame": 873
+      },
+      {
+       "w": "payment",
+       "startFrame": 874,
+       "endFrame": 899
+      },
+      {
+       "w": "is",
+       "startFrame": 900,
+       "endFrame": 907
+      },
+      {
+       "w": "real?",
+       "startFrame": 908,
+       "endFrame": 925
+      }
+     ]
+    }
+   ],
+   "endFrame": 926
+  },
+  {
+   "id": "fhe",
+   "startFrame": 926,
+   "ground": "blue",
+   "sentences": [
+    {
+     "text": "Fluton checks the numbers while they stay encrypted.",
+     "startFrame": 936,
+     "endFrame": 1101,
+     "words": [
+      {
+       "w": "Fluton",
+       "startFrame": 936,
+       "endFrame": 957
+      },
+      {
+       "w": "checks",
+       "startFrame": 958,
+       "endFrame": 979
+      },
+      {
+       "w": "the",
+       "startFrame": 980,
+       "endFrame": 991
+      },
+      {
+       "w": "numbers",
+       "startFrame": 992,
+       "endFrame": 1016
+      },
+      {
+       "w": "while",
+       "startFrame": 1017,
+       "endFrame": 1035
+      },
+      {
+       "w": "they",
+       "startFrame": 1036,
+       "endFrame": 1050
+      },
+      {
+       "w": "stay",
+       "startFrame": 1051,
+       "endFrame": 1065
+      },
+      {
+       "w": "encrypted.",
+       "startFrame": 1066,
+       "endFrame": 1101
+      }
+     ]
+    }
+   ],
+   "endFrame": 1102
+  },
+  {
+   "id": "balance",
+   "startFrame": 1102,
+   "ground": "paper",
+   "sentences": [
+    {
+     "text": "Value still balances: everything that goes in comes out.",
+     "startFrame": 1112,
+     "endFrame": 1293,
+     "words": [
+      {
+       "w": "Value",
+       "startFrame": 1112,
+       "endFrame": 1129
+      },
+      {
+       "w": "still",
+       "startFrame": 1130,
+       "endFrame": 1148
+      },
+      {
+       "w": "balances:",
+       "startFrame": 1149,
+       "endFrame": 1180
+      },
+      {
+       "w": "everything",
+       "startFrame": 1186,
+       "endFrame": 1221
+      },
+      {
+       "w": "that",
+       "startFrame": 1222,
+       "endFrame": 1236
+      },
+      {
+       "w": "goes",
+       "startFrame": 1237,
+       "endFrame": 1251
+      },
+      {
+       "w": "in",
+       "startFrame": 1252,
+       "endFrame": 1259
+      },
+      {
+       "w": "comes",
+       "startFrame": 1260,
+       "endFrame": 1278
+      },
+      {
+       "w": "out.",
+       "startFrame": 1279,
+       "endFrame": 1293
+      }
+     ]
+    },
+    {
+     "text": "Not one cent is created, and nothing is revealed.",
+     "startFrame": 1303,
+     "endFrame": 1460,
+     "words": [
+      {
+       "w": "Not",
+       "startFrame": 1303,
+       "endFrame": 1314
+      },
+      {
+       "w": "one",
+       "startFrame": 1315,
+       "endFrame": 1325
+      },
+      {
+       "w": "cent",
+       "startFrame": 1326,
+       "endFrame": 1340
+      },
+      {
+       "w": "is",
+       "startFrame": 1341,
+       "endFrame": 1348
+      },
+      {
+       "w": "created,",
+       "startFrame": 1349,
+       "endFrame": 1377
+      },
+      {
+       "w": "and",
+       "startFrame": 1383,
+       "endFrame": 1393
+      },
+      {
+       "w": "nothing",
+       "startFrame": 1394,
+       "endFrame": 1419
+      },
+      {
+       "w": "is",
+       "startFrame": 1420,
+       "endFrame": 1427
+      },
+      {
+       "w": "revealed.",
+       "startFrame": 1428,
+       "endFrame": 1460
+      }
+     ]
+    }
+   ],
+   "endFrame": 1460
+  },
+  {
+   "id": "public",
+   "startFrame": 1460,
+   "ground": "ink",
+   "sentences": [
+    {
+     "text": "What stays public is the size of the crossing.",
+     "startFrame": 1470,
+     "endFrame": 1611,
+     "words": [
+      {
+       "w": "What",
+       "startFrame": 1470,
+       "endFrame": 1484
+      },
+      {
+       "w": "stays",
+       "startFrame": 1485,
+       "endFrame": 1503
+      },
+      {
+       "w": "public",
+       "startFrame": 1504,
+       "endFrame": 1525
+      },
+      {
+       "w": "is",
+       "startFrame": 1526,
+       "endFrame": 1533
+      },
+      {
+       "w": "the",
+       "startFrame": 1534,
+       "endFrame": 1544
+      },
+      {
+       "w": "size",
+       "startFrame": 1545,
+       "endFrame": 1559
+      },
+      {
+       "w": "of",
+       "startFrame": 1560,
+       "endFrame": 1567
+      },
+      {
+       "w": "the",
+       "startFrame": 1568,
+       "endFrame": 1579
+      },
+      {
+       "w": "crossing.",
+       "startFrame": 1580,
+       "endFrame": 1611
+      }
+     ]
+    }
+   ],
+   "endFrame": 1612
+  },
+  {
+   "id": "close",
+   "startFrame": 1612,
+   "ground": "paper",
+   "sentences": [
+    {
+     "text": "Privacy is not the absence of proof.",
+     "startFrame": 1622,
+     "endFrame": 1733,
+     "words": [
+      {
+       "w": "Privacy",
+       "startFrame": 1622,
+       "endFrame": 1647
+      },
+      {
+       "w": "is",
+       "startFrame": 1648,
+       "endFrame": 1655
+      },
+      {
+       "w": "not",
+       "startFrame": 1655,
+       "endFrame": 1666
+      },
+      {
+       "w": "the",
+       "startFrame": 1667,
+       "endFrame": 1678
+      },
+      {
+       "w": "absence",
+       "startFrame": 1678,
+       "endFrame": 1703
+      },
+      {
+       "w": "of",
+       "startFrame": 1704,
+       "endFrame": 1711
+      },
+      {
+       "w": "proof.",
+       "startFrame": 1712,
+       "endFrame": 1733
+      }
+     ]
+    }
+   ],
+   "endFrame": 1780
+  }
+ ]
+}

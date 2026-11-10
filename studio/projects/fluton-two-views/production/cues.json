@@ -1,0 +1,342 @@
+{
+ "fps": 30,
+ "durationSeconds": 59.333,
+ "bpm": 120,
+ "sections": [
+  {
+   "name": "twoviews",
+   "start": 0.0,
+   "end": 6.267,
+   "feel": "driving",
+   "chords": [
+    [
+     "D3",
+     "F3",
+     "A3"
+    ],
+    [
+     "A2",
+     "C3",
+     "E3"
+    ]
+   ],
+   "root": "D2",
+   "arp": [
+    "D4",
+    "A4",
+    "F4"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "yourside",
+   "start": 6.267,
+   "end": 12.467,
+   "feel": "driving",
+   "chords": [
+    [
+     "D3",
+     "F3",
+     "A3"
+    ],
+    [
+     "A2",
+     "C3",
+     "E3"
+    ]
+   ],
+   "root": "D2",
+   "arp": [
+    "D4",
+    "A4",
+    "F4"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "chainside",
+   "start": 12.5,
+   "end": 21.167,
+   "feel": "driving",
+   "chords": [
+    [
+     "D3",
+     "F3",
+     "A3"
+    ],
+    [
+     "A2",
+     "C3",
+     "E3"
+    ]
+   ],
+   "root": "D2",
+   "arp": [
+    "D4",
+    "A4",
+    "F4"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "redaction",
+   "start": 21.167,
+   "end": 26.5,
+   "feel": "steady",
+   "chords": [
+    [
+     "F2",
+     "A2",
+     "C3"
+    ],
+    [
+     "C3",
+     "E3",
+     "G3"
+    ]
+   ],
+   "root": "F1",
+   "arp": [
+    "F4",
+    "A4",
+    "C5"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "proof",
+   "start": 26.5,
+   "end": 30.867,
+   "feel": "steady",
+   "chords": [
+    [
+     "F2",
+     "A2",
+     "C3"
+    ],
+    [
+     "C3",
+     "E3",
+     "G3"
+    ]
+   ],
+   "root": "F1",
+   "arp": [
+    "F4",
+    "A4",
+    "C5"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "fhe",
+   "start": 30.867,
+   "end": 36.733,
+   "feel": "steady",
+   "chords": [
+    [
+     "F2",
+     "A2",
+     "C3"
+    ],
+    [
+     "C3",
+     "E3",
+     "G3"
+    ]
+   ],
+   "root": "F1",
+   "arp": [
+    "F4",
+    "A4",
+    "C5"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "balance",
+   "start": 36.733,
+   "end": 48.667,
+   "feel": "steady",
+   "chords": [
+    [
+     "F2",
+     "A2",
+     "C3"
+    ],
+    [
+     "C3",
+     "E3",
+     "G3"
+    ]
+   ],
+   "root": "F1",
+   "arp": [
+    "F4",
+    "A4",
+    "C5"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "public",
+   "start": 48.667,
+   "end": 53.733,
+   "feel": "steady",
+   "chords": [
+    [
+     "F2",
+     "A2",
+     "C3"
+    ],
+    [
+     "C3",
+     "E3",
+     "G3"
+    ]
+   ],
+   "root": "F1",
+   "arp": [
+    "F4",
+    "A4",
+    "C5"
+   ],
+   "padAmp": 0.15
+  },
+  {
+   "name": "close",
+   "start": 53.733,
+   "end": 59.333,
+   "feel": "steady",
+   "chords": [
+    [
+     "F2",
+     "A2",
+     "C3"
+    ],
+    [
+     "C3",
+     "E3",
+     "G3"
+    ]
+   ],
+   "root": "F1",
+   "arp": [
+    "F4",
+    "A4",
+    "C5"
+   ],
+   "padAmp": 0.15
+  }
+ ],
+ "accents": [
+  {
+   "time": 0.0,
+   "kind": "impact"
+  },
+  {
+   "time": 1.267,
+   "kind": "latch"
+  },
+  {
+   "time": 2.567,
+   "kind": "click"
+  },
+  {
+   "time": 2.567,
+   "kind": "latch"
+  },
+  {
+   "time": 6.267,
+   "kind": "impact"
+  },
+  {
+   "time": 12.5,
+   "kind": "impact"
+  },
+  {
+   "time": 14.467,
+   "kind": "latch"
+  },
+  {
+   "time": 15.4,
+   "kind": "latch"
+  },
+  {
+   "time": 17.533,
+   "kind": "latch"
+  },
+  {
+   "time": 18.333,
+   "kind": "click"
+  },
+  {
+   "time": 18.333,
+   "kind": "latch"
+  },
+  {
+   "time": 21.167,
+   "kind": "impact"
+  },
+  {
+   "time": 21.767,
+   "kind": "latch"
+  },
+  {
+   "time": 26.5,
+   "kind": "impact"
+  },
+  {
+   "time": 30.267,
+   "kind": "latch"
+  },
+  {
+   "time": 30.867,
+   "kind": "impact"
+  },
+  {
+   "time": 35.533,
+   "kind": "latch"
+  },
+  {
+   "time": 36.733,
+   "kind": "impact"
+  },
+  {
+   "time": 38.3,
+   "kind": "latch"
+  },
+  {
+   "time": 43.433,
+   "kind": "click"
+  },
+  {
+   "time": 44.967,
+   "kind": "latch"
+  },
+  {
+   "time": 46.467,
+   "kind": "latch"
+  },
+  {
+   "time": 47.6,
+   "kind": "latch"
+  },
+  {
+   "time": 48.667,
+   "kind": "impact"
+  },
+  {
+   "time": 52.667,
+   "kind": "latch"
+  },
+  {
+   "time": 53.733,
+   "kind": "impact"
+  },
+  {
+   "time": 57.067,
+   "kind": "latch"
+  }
+ ]
+}

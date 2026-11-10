@@ -1,0 +1,5 @@
+You sign one payment. Two people see it land differently.
+
+You see the amount, the receiver, the fee. The chain sees a hash, a nullifier, and the gas — never what moved or who received it. Fluton checks the numbers while they stay encrypted, so value still balances without anything being revealed. What stays public is the size of the crossing.
+
+Privacy is not the absence of proof. Testnet only. Not financial advice.

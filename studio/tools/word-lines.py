@@ -39,6 +39,36 @@ def words_from_alignment(al):
     return out
 
 
+def estimate_alignment(script, wps):
+    """Synthesize a character alignment from the script at a constant speaking rate."""
+    words = script.split()
+    chars, starts, ends = [], [], []
+    t = 0.0
+    pause = 0.0
+    for w in words:
+        if pause:
+            t += pause
+            pause = 0.0
+        per_char = 1.0 / (wps * 3.4)   # ~3.4 characters per spoken word at this rate
+        for ch in w:
+            chars.append(ch)
+            starts.append(round(t, 4))
+            t += per_char
+            ends.append(round(t, 4))
+        chars.append(' ')
+        starts.append(round(t, 4))
+        ends.append(round(t, 4))
+        if w.endswith(('.', '!', '?')):
+            pause = 0.35
+        elif w.endswith((',', ':', ';')):
+            pause = 0.18
+        else:
+            pause = 0.03
+    return {'characters': chars,
+            'character_start_times_seconds': starts,
+            'character_end_times_seconds': ends}
+
+
 def sentences(words):
     sents, cur = [], []
     for w in words:
@@ -56,13 +86,26 @@ def main():
     ap.add_argument('slug')
     ap.add_argument('--lead', type=float, default=0.6)
     ap.add_argument('--fps', type=int, default=30)
+    ap.add_argument('--estimate', type=float, default=0,
+                    help='no voice yet: synthesize timings from voiceover.txt at this words/second')
     a = ap.parse_args()
 
     root = Path(__file__).resolve().parent.parent
     pdir = root / 'projects' / a.slug
     prod = pdir / 'production'
-    al = json.loads((prod / 'narration.alignment.json').read_text())['alignment']
     plan = json.loads((prod / 'scenes.json').read_text())
+    al_path = prod / 'narration.alignment.json'
+    if al_path.exists() and not a.estimate:
+        al = json.loads(al_path.read_text())['alignment']
+    elif a.estimate:
+        # Animatic mode: build a character-level alignment from the script at a fixed speaking
+        # rate, so the picture, the score and the review stills can be built and judged while the
+        # paid voice is still pending. Same shape as the provider's, same code path below.
+        al = estimate_alignment((prod / 'voiceover.txt').read_text(), a.estimate)
+        print(f'no alignment yet — estimated at {a.estimate} words/second (ANIMATIC timing)')
+    else:
+        raise SystemExit('Missing production/narration.alignment.json. '
+                         'Generate the voice, or pass --estimate=<words per second> for an animatic.')
     spec = json.loads((pdir / 'src' / 'film-data.json').read_text())
 
     sents = sentences(words_from_alignment(al))

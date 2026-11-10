@@ -36,7 +36,8 @@ const node = (script, args) => run(process.execPath, [path.join(ROOT, 'tools', s
 const help = () => console.log(`Usage: node tools/film.mjs <action> <slug> [--opt=value]
 
   new     scaffold a film from templates/film
-  lines   word-level timings (needs production/narration.alignment.json + production/scenes.json)
+  lines   word-level timings (production/narration.alignment.json + production/scenes.json)
+          add --estimate=2.2 before the voice exists, to build an animatic on estimated timings
   audio   build production/narration-lead.wav with the same lead used for the picture
   stills  render review stills (--frames=0,60,120 --scale=0.25)
   score   synthesize the score from production/cues.json
@@ -74,7 +75,8 @@ then \`node tools/film.mjs lines ${slug}\`.`);
       break;
     }
     case 'lines':
-      py('word-lines.py', [slug, ...(opt.lead ? [`--lead=${opt.lead}`] : [])]);
+      py('word-lines.py', [slug, ...(opt.lead ? [`--lead=${opt.lead}`] : []),
+        ...(opt.estimate ? [`--estimate=${opt.estimate}`] : [])]);
       break;
     case 'audio': {
       const lead = Number(opt.lead ?? 0.6);

@@ -1,0 +1,99 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "palette": {
+    "paper": "#EDEDE7",
+    "ink": "#0B0B0C",
+    "verm": "#FF3B1F",
+    "blue": "#1B4CFF"
+  },
+  "safeAreas": {
+    "side": 96
+  },
+  "finalNotice": "TESTNET ONLY \u00b7 NO REAL FUNDS",
+  "scenes": [
+    {
+      "id": "twoviews",
+      "startFrame": 0,
+      "endFrameExclusive": 188,
+      "ground": "ink",
+      "background": "#0B0B0C",
+      "foreground": "#EDEDE7",
+      "captionText": "You sign one payment. Two different people watch it land."
+    },
+    {
+      "id": "yourside",
+      "startFrame": 188,
+      "endFrameExclusive": 374,
+      "ground": "paper",
+      "background": "#EDEDE7",
+      "foreground": "#0B0B0C",
+      "captionText": "You see the amount, the receiver, and the fee you paid."
+    },
+    {
+      "id": "chainside",
+      "startFrame": 375,
+      "endFrameExclusive": 635,
+      "ground": "ink",
+      "background": "#0B0B0C",
+      "foreground": "#EDEDE7",
+      "captionText": "The chain sees a hash, a nullifier, and the gas. Nothing else comes with it."
+    },
+    {
+      "id": "redaction",
+      "startFrame": 635,
+      "endFrameExclusive": 795,
+      "ground": "paper",
+      "background": "#EDEDE7",
+      "foreground": "#0B0B0C",
+      "captionText": "It never learns what moved, or who received it."
+    },
+    {
+      "id": "proof",
+      "startFrame": 795,
+      "endFrameExclusive": 926,
+      "ground": "verm",
+      "background": "#FF3B1F",
+      "foreground": "#EDEDE7",
+      "captionText": "So how does it know the payment is real?"
+    },
+    {
+      "id": "fhe",
+      "startFrame": 926,
+      "endFrameExclusive": 1102,
+      "ground": "blue",
+      "background": "#1B4CFF",
+      "foreground": "#EDEDE7",
+      "captionText": "Fluton checks the numbers while they stay encrypted."
+    },
+    {
+      "id": "balance",
+      "startFrame": 1102,
+      "endFrameExclusive": 1460,
+      "ground": "paper",
+      "background": "#EDEDE7",
+      "foreground": "#0B0B0C",
+      "captionText": "Value still balances: everything that goes in comes out. Not one cent is created, and nothing is revealed."
+    },
+    {
+      "id": "public",
+      "startFrame": 1460,
+      "endFrameExclusive": 1612,
+      "ground": "ink",
+      "background": "#0B0B0C",
+      "foreground": "#EDEDE7",
+      "captionText": "What stays public is the size of the crossing."
+    },
+    {
+      "id": "close",
+      "startFrame": 1612,
+      "endFrameExclusive": 1780,
+      "ground": "paper",
+      "background": "#EDEDE7",
+      "foreground": "#0B0B0C",
+      "captionText": "Privacy is not the absence of proof."
+    }
+  ],
+  "durationInFrames": 1780,
+  "durationSeconds": 59.333
+}
