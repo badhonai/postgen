@@ -254,6 +254,49 @@ export async function validateVoice(
   return { ok: true, name: body?.name ?? null, category, tier, warning }
 }
 
+export type VoiceSummary = {
+  voice_id: string
+  name: string
+  category: string | null
+  labels: Record<string, string> | null
+  usable_on_api: boolean
+}
+
+/** List the account's voices. Metadata only — no synthesis, no charge. */
+export async function listVoices(
+  env: Env,
+  userId: string,
+  apiKey: string,
+): Promise<{ voices: VoiceSummary[]; tier: string | null } | { error: ProviderError }> {
+  const response = await providerFetch('/v1/voices', apiKey)
+  if (!response.ok) return { error: await providerError(response) }
+
+  let tier: string | null = null
+  try {
+    const sub = await providerFetch('/v1/user/subscription', apiKey)
+    if (sub.ok) tier = String(((await sub.json()) as { tier?: string }).tier ?? '') || null
+  } catch {
+    /* advisory */
+  }
+
+  const body = (await response.json()) as {
+    voices?: Array<{ voice_id: string; name?: string; category?: string; labels?: Record<string, string> }>
+  }
+  const voices = (body.voices ?? []).map((v) => {
+    const category = v.category ?? null
+    return {
+      voice_id: v.voice_id,
+      name: v.name ?? v.voice_id,
+      category,
+      labels: v.labels ?? null,
+      usable_on_api: !(tier === 'free' && category ? category !== 'premade' && category !== 'cloned' : false),
+    }
+  })
+  void userId
+  void env
+  return { voices, tier }
+}
+
 export type VoiceoverOutcome = { status: number; body: Record<string, unknown> }
 
 export type VoiceoverResult = {
