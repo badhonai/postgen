@@ -19,7 +19,9 @@
     "build:check": "node tools/motion.mjs bundle starter",
     "test": "node --test tests/*.test.mjs",
     "voice": "node tools/postgen/voice.mjs",
-    "cleanup": "node tools/postgen/cleanup.mjs"
+    "cleanup": "node tools/postgen/cleanup.mjs",
+    "pack": "node tools/handoff.mjs pack",
+    "import": "node tools/handoff.mjs import"
   },
   "repository": {
     "type": "git",

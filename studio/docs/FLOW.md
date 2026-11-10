@@ -14,7 +14,7 @@ system of record for narration and delivery.
 3 VOICE         PostGen generate_voiceover (Liam by default) → mp3 + character alignment  ← paid, capped
 4 HANDOFF       orchestrator builds the project + ZIP-return contract for Claude
 5 VISUALS       Claude imagines the film to the actual audio, returns a ZIP of scenes only
-6 REVIEW        orchestrator imports ZIP, renders, inspects frames, fixes or sends narrow notes
+6 REVIEW        npm run import -- <slug> <zip> --apply --check; render, inspect, fix or send notes
 7 FINAL         score + mix + master; QA on the encoded final
 8 DELIVER       upload MP4 to PostGen → DRAFT post with caption; you approve/publish
 ```
@@ -62,6 +62,11 @@ Create the project skeleton and freeze everything Claude must not touch:
 - the **audio** itself: Claude listens to `production/narration.mp3` (or a copy in `public/`)
 
 Claude receives the ZIP-return contract in [DELEGATION.md](DELEGATION.md): scenes only.
+Build the bundle, never by hand:
+
+```bash
+npm run pack -- <slug>        # renders/<slug>/<slug>-handoff.zip (deterministic, secret-scanned)
+```
 
 ## 5 · Visuals (Claude)
 Claude listens to the real performance, imagines the film live against it, and implements

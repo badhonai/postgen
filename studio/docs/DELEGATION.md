@@ -26,8 +26,31 @@ No `package.json`, no lockfile, no `public/`, no audio, no renders, no `node_mod
 copy. `VISUAL-RETURN.md` lists: scenes completed, actual contact/landing frames (for sound accents),
 checks actually run, limitations, and any locked file it believes is blocking (proposed change only).
 
+## The two commands (do this instead of hand-zipping)
+
+```bash
+npm run pack -- <slug>                      # → renders/<slug>/<slug>-handoff.zip
+npm run import -- <slug> <returned.zip>      # validate + stage, writes nothing
+npm run import -- <slug> <returned.zip> --apply --check   # write + bundle
+```
+
+`pack` allowlists the archive (spec, brief/storyboard, `src/**` baseline, brand PNGs,
+`production/voiceover.txt`, `voice-timeline.json`, `narration.alignment.json` and the
+**recorded** `narration.mp3`), refuses to run when the narration is missing, scans every
+text file for credential shapes, and pins entry timestamps so the same inputs produce the
+same bytes — the archive is reviewable by sha256. It also writes `HANDOFF.json` (frozen
+files with hashes), `CLAUDE-PROMPT.md` (the contract) and a `VISUAL-RETURN.md` skeleton.
+
+`import` reads the returned ZIP with a minimal reader that rejects absolute paths, `..`,
+backslashes, symlinks, duplicates and decompression bombs, then refuses the whole archive
+if it contains anything outside the editable list — naming each frozen file and why it is
+frozen. Accepted files are staged in `.cache/<slug>/import/`; `--apply` copies them into
+the project, `--check` then bundles with Remotion. It also warns when a frozen file
+changed since the pack (the specialist built on a stale base).
+
 ## Orchestrator import rules
-1. Unzip into the existing project on a branch; refuse any path outside the list above.
+1. Unzip into the existing project on a branch; refuse any path outside the list above
+   (`npm run import` does this mechanically — do not unzip by hand).
 2. `npm run typecheck` + bundle; reject dependency/asset/timeline edits.
 3. Render stills at every cut and contact; inspect them; fix cheap defects in-house.
 4. Send Claude only narrow notes: frame range, what's wrong, evidence, allowed files.
