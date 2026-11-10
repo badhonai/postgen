@@ -1,0 +1,5 @@
+# Optional: local procedural scores, font outlines, image review sheets.
+numpy==2.3.5
+Pillow==13.0.0
+fonttools==4.68.0
+brotli==1.2.1

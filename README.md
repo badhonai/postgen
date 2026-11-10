@@ -64,6 +64,11 @@ postgen/
 │  │  ├─ 2026101300000{4..7}_*.sql  (post saver, post_media, created_via, profile)
 │  │  └─ 20261014000003_image_prompts.sql  (the prompt library)
 │  └─ seed.sql             # preview-branch / local seed only
+├─ studio/                 # motion-graphics studio (Remotion) — see “Studio” below
+│  ├─ docs/FLOW.md         # voice-first pipeline: voice → Claude ZIP → render → post
+│  ├─ tools/               # motion.mjs, align_voice.py, mix_audio.py, master-audio.py
+│  │  └─ postgen/          # client · voice · post · cleanup (agent API)
+│  └─ projects/<slug>/     # per-film source, brief, production/ notes
 ├─ scripts/e2e.mjs         # live smoke test (auth → CRUD → dedupe → media → agent API → MCP)
 ├─ .github/workflows/      # keepalive.yml — keeps Supabase free tier awake
 │                          # db-push.yml  — opt-in migration fallback
@@ -291,6 +296,40 @@ ElevenLabs **free plans cannot synthesize library/professional voices through th
 (and your own cloned) voices work. Settings shows your plan, the voice type, and only offers switchable
 voices with `usable_on_api: true`. `PUT /api/voice/settings { voice_id }` switches voice using the stored
 key (validated, **no credits spent**).
+
+## Studio — motion graphics 🎬
+
+The motion-graphics studio **lives in this repo** (`studio/`). The standalone
+`badhonai/motion-graphics` repo is retired: everything durable — the pipeline docs, the
+tools, the per-project sources and the production notes — is versioned here, next to the
+app that publishes the result. Cloudflare Pages only builds `src/` and `functions/`, so
+nothing in `studio/` ships to the browser.
+
+**The flow is voice-first** ([`studio/docs/FLOW.md`](studio/docs/FLOW.md)):
+
+```
+intake → research → VOICE (PostGen, Liam default) → handoff to Claude (scenes ZIP)
+     → import + render (Remotion) → score/mix/master → upload asset → DRAFT post
+```
+
+The picture is bent to the recorded voice (caption/scene timing comes from the
+ElevenLabs character alignment), never the reverse. The finished deliverable is a
+**post with a caption** — no zips, no intermediates kept.
+
+```bash
+npm run studio:install          # once: studio/ has its own Remotion deps
+cp studio/.env.example …        # POSTGEN_API_KEY stays in the environment only
+npm run studio:doctor
+npm run studio:list
+POSTGEN_API_KEY=pgk_… npm run studio:render -- fluton-private-actions
+POSTGEN_API_KEY=pgk_… npm run studio:cleanup -- --project <uuid> --keep <master>.mp4
+```
+
+What's tracked vs. ignored: sources, docs, `cue` plans, the spoken script and
+`production/narration.mp3` (a paid artifact — the timing source of truth) are committed;
+`*.wav` mixes, `renders/`, `projects/*/public/*` and the local production archive are not.
+
+---
 
 ## Performance ⚡
 

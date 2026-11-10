@@ -1,0 +1,258 @@
+{
+  "researchedOn": "2026-11-09",
+  "scope": "Pinned pointers and metadata, not downloaded repositories or media.",
+  "sources": [
+    {
+      "repository": "remotion-dev/skills",
+      "commit": "1af7e69a2a613437d46095924057970a6a7df40d",
+      "url": "https://github.com/remotion-dev/skills/tree/1af7e69a2a613437d46095924057970a6a7df40d",
+      "licenseStatusAtResearch": "No explicit license file found; private cache only",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "skills/remotion-best-practices/SKILL.md",
+          "url": "https://raw.githubusercontent.com/remotion-dev/skills/1af7e69a2a613437d46095924057970a6a7df40d/skills/remotion-best-practices/SKILL.md",
+          "sha256": "fe799aec97385b4bdffca66fd083b20b067a54da83a4c361c8e0e4f685f214ee"
+        },
+        {
+          "path": "skills/remotion-create/SKILL.md",
+          "url": "https://raw.githubusercontent.com/remotion-dev/skills/1af7e69a2a613437d46095924057970a6a7df40d/skills/remotion-create/SKILL.md",
+          "sha256": "a8ff961b4810ba906bef4a5316096cce63cd758e2a09fdc3eba4e384ff3c16ae"
+        },
+        {
+          "path": "skills/remotion-docs/SKILL.md",
+          "url": "https://raw.githubusercontent.com/remotion-dev/skills/1af7e69a2a613437d46095924057970a6a7df40d/skills/remotion-docs/SKILL.md",
+          "sha256": "1494451bbc739fb6ccd30d4b01ddf6bafef311c3134a70046f9812e8bd9a66e9"
+        },
+        {
+          "path": "skills/remotion-license/SKILL.md",
+          "url": "https://raw.githubusercontent.com/remotion-dev/skills/1af7e69a2a613437d46095924057970a6a7df40d/skills/remotion-license/SKILL.md",
+          "sha256": "1219dffccbbdf38a3b5e11d6b49529fb38c668ff829249e3f811947df628aa63"
+        },
+        {
+          "path": "skills/remotion-markup/SKILL.md",
+          "url": "https://raw.githubusercontent.com/remotion-dev/skills/1af7e69a2a613437d46095924057970a6a7df40d/skills/remotion-markup/SKILL.md",
+          "sha256": "0173346133bacf0cfa9399389c61757994f3f6b63a87eb2e3637ee4dd3dbe05a"
+        },
+        {
+          "path": "skills/remotion-render/SKILL.md",
+          "url": "https://raw.githubusercontent.com/remotion-dev/skills/1af7e69a2a613437d46095924057970a6a7df40d/skills/remotion-render/SKILL.md",
+          "sha256": "bf7a58459ef0689112868dd1b34bc7e56f68d722b9e60409368c88b1735771f8"
+        }
+      ]
+    },
+    {
+      "repository": "LottieFiles/motion-design-skill",
+      "commit": "f9a8a041b85185ee4881b3471d3415e939aac772",
+      "url": "https://github.com/LottieFiles/motion-design-skill/tree/f9a8a041b85185ee4881b3471d3415e939aac772",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "skills/motion-design/SKILL.md",
+          "url": "https://raw.githubusercontent.com/LottieFiles/motion-design-skill/f9a8a041b85185ee4881b3471d3415e939aac772/skills/motion-design/SKILL.md",
+          "sha256": "8729ecbc7e5736c1295baaa8ba0384bb4b1aac9cf91b83fcdc64d9548a57bb19"
+        }
+      ]
+    },
+    {
+      "repository": "Liamrjohnston/remotion-motion-graphics-skill",
+      "commit": "b860c7921f2220b9e2a84e815ba0ae7b10858f08",
+      "url": "https://github.com/Liamrjohnston/remotion-motion-graphics-skill/tree/b860c7921f2220b9e2a84e815ba0ae7b10858f08",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "skills/article-highlights/SKILL.md",
+          "url": "https://raw.githubusercontent.com/Liamrjohnston/remotion-motion-graphics-skill/b860c7921f2220b9e2a84e815ba0ae7b10858f08/skills/article-highlights/SKILL.md",
+          "sha256": "5fbac00b48283e20d58063687d5b7b9ddf8f2a6d5c49164e1957e4a3db20f579"
+        },
+        {
+          "path": "skills/cinematic-camera/SKILL.md",
+          "url": "https://raw.githubusercontent.com/Liamrjohnston/remotion-motion-graphics-skill/b860c7921f2220b9e2a84e815ba0ae7b10858f08/skills/cinematic-camera/SKILL.md",
+          "sha256": "cc970c456a4d77ca0e623585eff55055588fe2cfc96e9949e242a70fa1180c9c"
+        },
+        {
+          "path": "skills/motion-graphics/SKILL.md",
+          "url": "https://raw.githubusercontent.com/Liamrjohnston/remotion-motion-graphics-skill/b860c7921f2220b9e2a84e815ba0ae7b10858f08/skills/motion-graphics/SKILL.md",
+          "sha256": "d5e8f91176a6d8825f2ee435367503e9b56ed840d58fefb9685a689f5e421c24"
+        },
+        {
+          "path": "skills/terminal-inserts/SKILL.md",
+          "url": "https://raw.githubusercontent.com/Liamrjohnston/remotion-motion-graphics-skill/b860c7921f2220b9e2a84e815ba0ae7b10858f08/skills/terminal-inserts/SKILL.md",
+          "sha256": "55b24ce680543eac0c8874477e0459bd7e5f483314f923cfd5020ec125a7bd6a"
+        }
+      ]
+    },
+    {
+      "repository": "hughminhphan/motion-kit",
+      "commit": "6173e5c408f81f1989435843af3f0788b74bda96",
+      "url": "https://github.com/hughminhphan/motion-kit/tree/6173e5c408f81f1989435843af3f0788b74bda96",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "skills/motion-designer/SKILL.md",
+          "url": "https://raw.githubusercontent.com/hughminhphan/motion-kit/6173e5c408f81f1989435843af3f0788b74bda96/skills/motion-designer/SKILL.md",
+          "sha256": "fc2a7bb317a73c49e397949f7b1d22c374070180d65715b9b781c38d62964e8c"
+        }
+      ]
+    },
+    {
+      "repository": "whaleyxbt/claude-motion",
+      "commit": "6f80380b91858dad66524a5b34e027dad656d538",
+      "url": "https://github.com/whaleyxbt/claude-motion/tree/6f80380b91858dad66524a5b34e027dad656d538",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": ".claude/skills/motion-design/SKILL.md",
+          "url": "https://raw.githubusercontent.com/whaleyxbt/claude-motion/6f80380b91858dad66524a5b34e027dad656d538/.claude/skills/motion-design/SKILL.md",
+          "sha256": "241b4949d4dfc5a489b98399892a1b7e80abbe1e977ddbec612403d45997fd57"
+        },
+        {
+          "path": ".claude/skills/review-loop/SKILL.md",
+          "url": "https://raw.githubusercontent.com/whaleyxbt/claude-motion/6f80380b91858dad66524a5b34e027dad656d538/.claude/skills/review-loop/SKILL.md",
+          "sha256": "2b313265d9d977f4ca53561f0ce7510c4d653674e0e017dc2afc597259e79173"
+        },
+        {
+          "path": ".claude/skills/sound-design/SKILL.md",
+          "url": "https://raw.githubusercontent.com/whaleyxbt/claude-motion/6f80380b91858dad66524a5b34e027dad656d538/.claude/skills/sound-design/SKILL.md",
+          "sha256": "6f0da860ad05d0c067c65ecbab2ed2f01fc8ddcaed56c29c220ae91eeebdf176"
+        },
+        {
+          "path": ".claude/skills/web-sims/SKILL.md",
+          "url": "https://raw.githubusercontent.com/whaleyxbt/claude-motion/6f80380b91858dad66524a5b34e027dad656d538/.claude/skills/web-sims/SKILL.md",
+          "sha256": "a4b3b555b7da9bb145802ace61535b0b3155e464c7254bf25248a1d1a923284e"
+        }
+      ]
+    },
+    {
+      "repository": "howseen-ai/claude-motion-design",
+      "commit": "3d90d349ef3fdde9b7e89de4df4a2159c9e8697f",
+      "url": "https://github.com/howseen-ai/claude-motion-design/tree/3d90d349ef3fdde9b7e89de4df4a2159c9e8697f",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "skill/motion-design/SKILL.md",
+          "url": "https://raw.githubusercontent.com/howseen-ai/claude-motion-design/3d90d349ef3fdde9b7e89de4df4a2159c9e8697f/skill/motion-design/SKILL.md",
+          "sha256": "f53208a8fc2bd72bb4d2f90dbf5811b2246e641e0f81800bf058c801c9534c94"
+        }
+      ]
+    },
+    {
+      "repository": "DeanSPN/motion-reel",
+      "commit": "9b68639fa019646019aa2d74ad926a83c997d82c",
+      "url": "https://github.com/DeanSPN/motion-reel/tree/9b68639fa019646019aa2d74ad926a83c997d82c",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "plugins/motion-reel/skills/motion-reel/SKILL.md",
+          "url": "https://raw.githubusercontent.com/DeanSPN/motion-reel/9b68639fa019646019aa2d74ad926a83c997d82c/plugins/motion-reel/skills/motion-reel/SKILL.md",
+          "sha256": "6e0258be79559abd4d3b740b128b27c8c5bcdf89256df29720504ac0bbad3318"
+        }
+      ]
+    },
+    {
+      "repository": "Mort1d/motion-graphics-skills",
+      "commit": "7f0c3714dc81bea52644a5287c6350345009e579",
+      "url": "https://github.com/Mort1d/motion-graphics-skills/tree/7f0c3714dc81bea52644a5287c6350345009e579",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "skills/motion-graphics/SKILL.md",
+          "url": "https://raw.githubusercontent.com/Mort1d/motion-graphics-skills/7f0c3714dc81bea52644a5287c6350345009e579/skills/motion-graphics/SKILL.md",
+          "sha256": "050553603fced694c32bb0bbb38e4203dfa8b7428c17bddb4c9204bad191ce1a"
+        }
+      ]
+    },
+    {
+      "repository": "Sunwood-ai-labs/hyperframes-motion-reel-skill",
+      "commit": "be78681a88a70f1f66c82275299fe569a9a9fcaa",
+      "url": "https://github.com/Sunwood-ai-labs/hyperframes-motion-reel-skill/tree/be78681a88a70f1f66c82275299fe569a9a9fcaa",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "SKILL.md",
+          "url": "https://raw.githubusercontent.com/Sunwood-ai-labs/hyperframes-motion-reel-skill/be78681a88a70f1f66c82275299fe569a9a9fcaa/SKILL.md",
+          "sha256": "a3cd7e81a008c4b8ff9a866e764c389488a9fd998c23bf79861150b036bdc547"
+        }
+      ]
+    },
+    {
+      "repository": "buildwithhanif/claude-animation-skill",
+      "commit": "4ddb8c80fdec96dc9f55d4b9bdee60bde6f0134b",
+      "url": "https://github.com/buildwithhanif/claude-animation-skill/tree/4ddb8c80fdec96dc9f55d4b9bdee60bde6f0134b",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "plugins/claude-animation/skills/claude-animation/SKILL.md",
+          "url": "https://raw.githubusercontent.com/buildwithhanif/claude-animation-skill/4ddb8c80fdec96dc9f55d4b9bdee60bde6f0134b/plugins/claude-animation/skills/claude-animation/SKILL.md",
+          "sha256": "de28bc720b3b54342f1f287d13e227e93107a25546b7042bf818aab648a966b5"
+        }
+      ]
+    },
+    {
+      "repository": "greensock/gsap-skills",
+      "commit": "aed9cfd3277740755f6bfc1155c7aa645403b760",
+      "url": "https://github.com/greensock/gsap-skills/tree/aed9cfd3277740755f6bfc1155c7aa645403b760",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": [
+        {
+          "path": "skills/gsap-core/SKILL.md",
+          "url": "https://raw.githubusercontent.com/greensock/gsap-skills/aed9cfd3277740755f6bfc1155c7aa645403b760/skills/gsap-core/SKILL.md",
+          "sha256": "3887b47e050ab5afbe2a9a820f23d39fa02ab785e06a343be44c6f91d84d12b3"
+        },
+        {
+          "path": "skills/gsap-frameworks/SKILL.md",
+          "url": "https://raw.githubusercontent.com/greensock/gsap-skills/aed9cfd3277740755f6bfc1155c7aa645403b760/skills/gsap-frameworks/SKILL.md",
+          "sha256": "842d9d3659ec3ddc8abbdc524708f8facf81f468ac25d0577f48c759c4fa31e6"
+        },
+        {
+          "path": "skills/gsap-performance/SKILL.md",
+          "url": "https://raw.githubusercontent.com/greensock/gsap-skills/aed9cfd3277740755f6bfc1155c7aa645403b760/skills/gsap-performance/SKILL.md",
+          "sha256": "cb5408d6fba707aabcbfe3320317a14c1f8fca6070074e5261047930f50d441e"
+        },
+        {
+          "path": "skills/gsap-plugins/SKILL.md",
+          "url": "https://raw.githubusercontent.com/greensock/gsap-skills/aed9cfd3277740755f6bfc1155c7aa645403b760/skills/gsap-plugins/SKILL.md",
+          "sha256": "5838b856c74c07fbc9fa99b6dfd1eee34ea554c3e530c30e0d58014b707d70a4"
+        },
+        {
+          "path": "skills/gsap-react/SKILL.md",
+          "url": "https://raw.githubusercontent.com/greensock/gsap-skills/aed9cfd3277740755f6bfc1155c7aa645403b760/skills/gsap-react/SKILL.md",
+          "sha256": "88e2a5312b45e8cc7b3c496637ff5bc9af2ae9c925b555c8b235b34cbc989d74"
+        },
+        {
+          "path": "skills/gsap-scrolltrigger/SKILL.md",
+          "url": "https://raw.githubusercontent.com/greensock/gsap-skills/aed9cfd3277740755f6bfc1155c7aa645403b760/skills/gsap-scrolltrigger/SKILL.md",
+          "sha256": "9351b6666a4749c0740406ea363aaccb99a087ff45cc5e8b99a0f367facf3ef4"
+        },
+        {
+          "path": "skills/gsap-timeline/SKILL.md",
+          "url": "https://raw.githubusercontent.com/greensock/gsap-skills/aed9cfd3277740755f6bfc1155c7aa645403b760/skills/gsap-timeline/SKILL.md",
+          "sha256": "1a8b0f39cc4be3ed3d834b89672e4ae2f151b901dc3450bebf10bbc45379fe02"
+        },
+        {
+          "path": "skills/gsap-utils/SKILL.md",
+          "url": "https://raw.githubusercontent.com/greensock/gsap-skills/aed9cfd3277740755f6bfc1155c7aa645403b760/skills/gsap-utils/SKILL.md",
+          "sha256": "1927bcc4ea95b38203404ad5ea1d060b15c4a886c65ae53e885ff1793aabe0ba"
+        }
+      ]
+    },
+    {
+      "repository": "motionvideohq/awesome-opus-5-5-motion-design",
+      "commit": "cc0608dd61762cb7f00afa7c158374d72117ff1e",
+      "url": "https://github.com/motionvideohq/awesome-opus-5-5-motion-design/tree/cc0608dd61762cb7f00afa7c158374d72117ff1e",
+      "licenseStatusAtResearch": "MIT (root LICENSE inspected)",
+      "sourceBundled": false,
+      "entrypoints": []
+    }
+  ]
+}

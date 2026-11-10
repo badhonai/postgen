@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.woff2 -text
+# Preserve the supplied upstream font-license bytes, including its original spacing.
+public/fonts/OFL.txt -whitespace

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "starter",
+  "compositionId": "Main",
+  "entry": "src/index.tsx",
+  "width": 1920,
+  "height": 1080,
+  "fps": 60,
+  "durationInFrames": 900,
+  "audio": "none",
+  "status": "scaffold-not-a-finished-film"
+}

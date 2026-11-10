@@ -1,0 +1,30 @@
+[
+  {
+    "asset": "public/showcase/control-chaos.wav",
+    "sourceZip": "exports/control-chaos-project.zip",
+    "member": "public/showcase/control-chaos.wav",
+    "sha256": "858746545950b8a025c5f0d58a918fb1af3103ba285f4f2ce68eb7c5f2dc0102",
+    "bytes": 2880044
+  },
+  {
+    "asset": "public/become/become-score.wav",
+    "sourceZip": "exports/make-break-become-source.zip",
+    "member": "public/become/become-score.wav",
+    "sha256": "d4c821eda6bc4a9fd37dd890dc9cdcde418431906cf1363d503be4ca4736c415",
+    "bytes": 2880044
+  },
+  {
+    "asset": "public/fluton-intent/fluton-intent-score.wav",
+    "sourceZip": "exports/fluton-intent-source.zip",
+    "member": "public/fluton-intent/fluton-intent-score.wav",
+    "sha256": "1db3a688be9da9964a86f101636956ff571fb0c4d37351621f74af14cbd88a1a",
+    "bytes": 2880044
+  },
+  {
+    "asset": "public/fluton-black/fluton-black-score.wav",
+    "sourceZip": "exports/fluton-black-source.zip",
+    "member": "public/fluton-black/fluton-black-score.wav",
+    "sha256": "da5f656d6ffcf7418a235685ef8d9c568450b9f1ffa979d6bac9d93379d35d5c",
+    "bytes": 7200044
+  }
+]

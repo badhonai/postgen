@@ -1,0 +1,88 @@
+{
+  "fps": 60,
+  "audioSeconds": 34.038,
+  "totalSeconds": 35.038,
+  "totalFrames": 2102,
+  "voice": "Liam - Energetic, Social Media Creator",
+  "segments": [
+    {
+      "text": "Every action on a public chain leaves a trace.",
+      "start": 0,
+      "end": 2.426
+    },
+    {
+      "text": "Fluton is a confidential execution layer.",
+      "start": 2.426,
+      "end": 5.364
+    },
+    {
+      "text": "Fully homomorphic encryption lets contracts compute on encrypted values.",
+      "start": 5.364,
+      "end": 10.553
+    },
+    {
+      "text": "Zero-knowledge proofs check that an action is valid, without revealing your notes.",
+      "start": 10.553,
+      "end": 15.511
+    },
+    {
+      "text": "Inside the pool, value moves as private notes.",
+      "start": 15.511,
+      "end": 19.238
+    },
+    {
+      "text": "What stays public is explicit: deposits and withdrawals still show the amount, the token and the address.",
+      "start": 19.238,
+      "end": 26.97
+    },
+    {
+      "text": "Public rails. Private actions. Fluton. Testnet only.",
+      "start": 26.97,
+      "end": 33.994
+    }
+  ],
+  "scenes": [
+    {
+      "id": "exposure",
+      "startFrame": 0,
+      "endFrameExclusive": 142,
+      "caption": "Every action on a public chain leaves a trace."
+    },
+    {
+      "id": "intent",
+      "startFrame": 142,
+      "endFrameExclusive": 318,
+      "caption": "Fluton is a confidential execution layer."
+    },
+    {
+      "id": "fhe",
+      "startFrame": 318,
+      "endFrameExclusive": 630,
+      "caption": "Fully homomorphic encryption lets contracts compute on encrypted values."
+    },
+    {
+      "id": "zk",
+      "startFrame": 630,
+      "endFrameExclusive": 927,
+      "caption": "Zero-knowledge proofs check that an action is valid, without revealing your notes."
+    },
+    {
+      "id": "notes",
+      "startFrame": 927,
+      "endFrameExclusive": 1151,
+      "caption": "Inside the pool, value moves as private notes."
+    },
+    {
+      "id": "boundaries",
+      "startFrame": 1151,
+      "endFrameExclusive": 1615,
+      "caption": "Deposits and withdrawals still show the amount, token and address."
+    },
+    {
+      "id": "brand",
+      "startFrame": 1615,
+      "endFrameExclusive": 2102,
+      "caption": null
+    }
+  ]
+}

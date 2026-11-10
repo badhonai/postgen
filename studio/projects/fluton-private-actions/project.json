@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "fluton-private-actions",
+  "compositionId": "FlutonPrivateActions",
+  "entry": "src/index.tsx",
+  "width": 1920,
+  "height": 1080,
+  "fps": 60,
+  "durationInFrames": 2102,
+  "audio": "production/narration.mp3 (34.038s) + original score",
+  "status": "rendered-with-narration",
+  "workflowMode": "visual-handoff"
+}

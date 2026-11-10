@@ -1,0 +1,513 @@
+[
+  {
+    "asset": "tmp/showreel-3d.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showreel-loop-approach.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-sheet-16.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-transition-sheet.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/beat-sheet-0.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-pool.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/beat-sheet-32.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/beat-sheet-48.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-loop-approach.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-sheet-0.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-engine.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-3d.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-sdk.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-wordmark.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-sheet-32.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-final-sheet.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-v2-sheet-48.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showreel-final-sheet.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/beat-sheet-16.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/ref_frames/fluton-motion-20s_sheet.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/ref_frames/VID_20261109_181357_585_sheet.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/ref_frames/video.77d74909_sheet.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/ref_frames/video_77d74909_beats.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/ref_frames/VID_20261109_180740_204_sheet.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/VID_20261109_180740_204-06.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/VID_20261109_181357_585-01.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/VID_20261109_180740_204-03.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/video.77d74909-02.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/VID_20261109_180740_204-01.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/video.77d74909-01.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/VID_20261109_180740_204-04.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/VID_20261109_180740_204-02.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/VID_20261109_181357_585-02.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/review-v2/VID_20261109_180740_204-05.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showcase/encoded-contact.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showcase/contact-16.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showcase/loop-b.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showcase/loop-a.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showcase/contact-0.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showcase/seek-a.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showcase/different.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/showcase/seek-b.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/seek-back.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/encoded-review-1.jpg",
+    "sourceZip": "exports/fluton-black-source.zip",
+    "member": "tmp/fluton-black/encoded-review-1.jpg",
+    "sha256": "419f5907e976462cf114a7858d83c905f9bae7b383f897844913df1dfd4aafe0"
+  },
+  {
+    "asset": "tmp/fluton-black/handoff-fixes.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/handoff.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/encoded-review-4.jpg",
+    "sourceZip": "exports/fluton-black-source.zip",
+    "member": "tmp/fluton-black/encoded-review-4.jpg",
+    "sha256": "868f07355efb8a1f42cdc4f54c76141ce43e172676d036873a8108c754ffd91e"
+  },
+  {
+    "asset": "tmp/fluton-black/revised.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/seek-fresh.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/transition-3.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/transition-5.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/seek-diff.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/encoded-review-3.jpg",
+    "sourceZip": "exports/fluton-black-source.zip",
+    "member": "tmp/fluton-black/encoded-review-3.jpg",
+    "sha256": "f9800e285496d7d844ba5b9f24e0326bc1bbe14fe679f79ce929618b5ec5046f"
+  },
+  {
+    "asset": "tmp/fluton-black/transition-1.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/seek-a.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/transition-4.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/states-4.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/states-2.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/seek-b.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/transition-2.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/states-3.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/encoded-review-5.jpg",
+    "sourceZip": "exports/fluton-black-source.zip",
+    "member": "tmp/fluton-black/encoded-review-5.jpg",
+    "sha256": "6d4667926270e7105561060b0045369f7355a46876f9060045f8c424d349ef85"
+  },
+  {
+    "asset": "tmp/fluton-black/states-1.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-black/encoded-review-2.jpg",
+    "sourceZip": "exports/fluton-black-source.zip",
+    "member": "tmp/fluton-black/encoded-review-2.jpg",
+    "sha256": "072154a170ae04896aac1cb151d3a0fc4c64613f74904d96c1f71e5d4244b285"
+  },
+  {
+    "asset": "tmp/fluton-black/seek-future.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/seek-back.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/encoded-review-1.jpg",
+    "sourceZip": "exports/fluton-intent-source.zip",
+    "member": "tmp/fluton-intent/encoded-review-1.jpg",
+    "sha256": "5151c8bd97be95e819b80011270ccae958aebaed7368e0ae25bc2ec1716c4109"
+  },
+  {
+    "asset": "tmp/fluton-intent/handoff.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/encoded-review-4.jpg",
+    "sourceZip": "exports/fluton-intent-source.zip",
+    "member": "tmp/fluton-intent/encoded-review-4.jpg",
+    "sha256": "2b5f47f9f71cbf560099c7be4d32cbf7862ab75287dedcf3955847d3ede1f914"
+  },
+  {
+    "asset": "tmp/fluton-intent/revised-states.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/seek-fresh.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/transition-3.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/transition-5.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/source-states-3.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/encoded-review-3.jpg",
+    "sourceZip": "exports/fluton-intent-source.zip",
+    "member": "tmp/fluton-intent/encoded-review-3.jpg",
+    "sha256": "5de2dff4506bcd5c58810375ec9749072a279b870414d66c8568c82a6e511bbd"
+  },
+  {
+    "asset": "tmp/fluton-intent/transition-1.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/seek-a.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/transition-4.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/source-states-2.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/seek-b.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/transition-2.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/source-states-4.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/source-states-1.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/fluton-intent/encoded-review-2.jpg",
+    "sourceZip": "exports/fluton-intent-source.zip",
+    "member": "tmp/fluton-intent/encoded-review-2.jpg",
+    "sha256": "b630cf7ca3217ac90323147083b68d0c14a65e46bfc9cc91add8f0f9b00e115f"
+  },
+  {
+    "asset": "tmp/fluton-intent/seek-future.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/become/seek-back.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/become/seek-b-diff.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/become/handoff.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/become/seek-fresh.png",
+    "sourceZip": "exports/make-break-become-source.zip",
+    "member": "tmp/become/seek-fresh.png",
+    "sha256": "e9ba72e8bbd63ebb7e4eaf021e4fff3e3740ce0283b4e1f53404d2eeebcd4e32"
+  },
+  {
+    "asset": "tmp/become/encoded-boundaries-0.jpg",
+    "sourceZip": "exports/make-break-become-source.zip",
+    "member": "tmp/become/encoded-boundaries-0.jpg",
+    "sha256": "4aa872907083c787ea86070666b13634a1d5cea069c057fb1ed5734ff252a863"
+  },
+  {
+    "asset": "tmp/become/seek-a.png",
+    "sourceZip": "exports/make-break-become-source.zip",
+    "member": "tmp/become/seek-a.png",
+    "sha256": "e9ba72e8bbd63ebb7e4eaf021e4fff3e3740ce0283b4e1f53404d2eeebcd4e32"
+  },
+  {
+    "asset": "tmp/become/states-0.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/become/encoded-overview-0.jpg",
+    "sourceZip": "exports/make-break-become-source.zip",
+    "member": "tmp/become/encoded-overview-0.jpg",
+    "sha256": "626adf3fcea0e4dc4b7906683141cae109f7e8b6cf62f27c5d4aaa34b5742999"
+  },
+  {
+    "asset": "tmp/become/seek-fresh-diff.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/become/encoded-overview-1.jpg",
+    "sourceZip": "exports/make-break-become-source.zip",
+    "member": "tmp/become/encoded-overview-1.jpg",
+    "sha256": "0ef9fb1aa2a85c801dfa700b1e07738f9b26ef32371d58cff6eea09b916c2efc"
+  },
+  {
+    "asset": "tmp/become/seek-b.png",
+    "sourceZip": "exports/make-break-become-source.zip",
+    "member": "tmp/become/seek-b.png",
+    "sha256": "e9ba72e8bbd63ebb7e4eaf021e4fff3e3740ce0283b4e1f53404d2eeebcd4e32"
+  },
+  {
+    "asset": "tmp/become/states-1.jpg",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/become/seek-future.png",
+    "sourceZip": null,
+    "recovery": "Derived intermediate; regenerate from preserved source/MP4/reference. Runtime copy in .cache/legacy-review."
+  },
+  {
+    "asset": "tmp/become/encoded-boundaries-1.jpg",
+    "sourceZip": "exports/make-break-become-source.zip",
+    "member": "tmp/become/encoded-boundaries-1.jpg",
+    "sha256": "951dab338cf57e234b2902a2049d0692709f0cefefda554792c9bbc2282c1f26"
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "shared": [
+    {
+      "path": "fonts/Inter-600.woff2",
+      "license": "SIL OFL 1.1",
+      "notice": "public/fonts/OFL.txt",
+      "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62"
+    }
+  ],
+  "local": [],
+  "note": "Only these two small original brand PNGs are bundled for GitHub-based visual implementation. Narration, scores, reference footage and exports stay local.",
+  "bundled": [
+    {
+      "source": "brand/fluton-wordmark-white.png",
+      "publicPath": "brand/fluton-wordmark-white.png",
+      "sha256": "a60864eb654b3010ecb261f9d0ce56829622403f1de8f6b659db76302ea670f6",
+      "bytes": 21902,
+      "permission": "User-supplied mark for this Fluton production. Brand rights remain with its owner; no general trademark license."
+    },
+    {
+      "source": "brand/fluton-mark-white.png",
+      "publicPath": "brand/fluton-mark-white.png",
+      "sha256": "42fcead1dadb23e01e01f24d82e18070e9778ff021c07397a621909189187c26",
+      "bytes": 9289,
+      "permission": "User-supplied mark for this Fluton production. Brand rights remain with its owner; no general trademark license."
+    }
+  ]
+}

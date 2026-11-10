@@ -1,0 +1,30 @@
+{
+  "name": "motion-graphics",
+  "version": "1.0.0",
+  "description": "A workspace for creating original, high-quality motion graphics with AI coding agents.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/badhonai/motion-graphics.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/badhonai/motion-graphics/issues"
+  },
+  "homepage": "https://github.com/badhonai/motion-graphics#readme",
+  "dependencies": {
+    "@remotion/cli": "4.0.542",
+    "framer-motion": "12.23.24",
+    "hyperframes": "0.9.26",
+    "motion-dom": "12.23.23",
+    "motion-utils": "12.23.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.542"
+  }
+}

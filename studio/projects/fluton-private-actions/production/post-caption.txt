@@ -1,0 +1,7 @@
+Public rails. Private actions.
+
+Your intent doesn't have to be public. Fluton is a confidential execution layer: fully homomorphic encryption lets contracts compute on encrypted values, zero-knowledge proofs check that an action is valid without revealing your notes, and inside the pool value moves as private notes.
+
+What stays public is explicit — deposits and withdrawals still show the amount, the token and the address. What happens inside doesn't.
+
+Testnet only. Not financial advice.

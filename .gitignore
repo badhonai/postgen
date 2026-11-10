@@ -32,3 +32,20 @@ dist-ssr
 
 # supabase cli artifacts
 supabase/.temp
+
+# ── studio (motion graphics) ───────────────────────────────────────
+# Render output, generated audio and the local production archive stay out of git.
+studio/renders/
+studio/tmp/
+studio/.cache/
+studio/node_modules/
+studio/*.mp4
+studio/*.mov
+studio/*.webm
+# score/mix are rebuilt from cues.json by tools/score.py + tools/mix_audio.py
+studio/projects/*/production/*.wav
+studio/projects/*/public/*
+!studio/projects/*/public/.gitkeep
+studio/projects/*/private/
+# narration.mp3 IS committed: it is a paid ElevenLabs artifact and the
+# timing source of truth for the picture (do not regenerate casually).

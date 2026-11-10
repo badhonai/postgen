@@ -1,0 +1,191 @@
+{
+  "durationSeconds": 35.04,
+  "bpm": 120,
+  "note": "Sections follow the narration-aligned scene windows in production/voice-timeline.json.",
+  "sections": [
+    {
+      "start": 0,
+      "end": 2.37,
+      "feel": "sparse",
+      "root": "A1",
+      "chords": [
+        [
+          "A2",
+          "C3",
+          "E3"
+        ]
+      ],
+      "padAmp": 0.16
+    },
+    {
+      "start": 2.37,
+      "end": 5.3,
+      "feel": "steady",
+      "root": "F2",
+      "chords": [
+        [
+          "F2",
+          "A2",
+          "C3"
+        ]
+      ],
+      "padAmp": 0.16,
+      "arp": [
+        "A3",
+        "C4",
+        "E4",
+        "C4"
+      ]
+    },
+    {
+      "start": 5.3,
+      "end": 10.5,
+      "feel": "driving",
+      "root": "A1",
+      "chords": [
+        [
+          "A2",
+          "C3",
+          "E3"
+        ]
+      ],
+      "padAmp": 0.16,
+      "arp": [
+        "A3",
+        "E4",
+        "A4",
+        "E4"
+      ]
+    },
+    {
+      "start": 10.5,
+      "end": 15.45,
+      "feel": "half",
+      "root": "D2",
+      "chords": [
+        [
+          "D3",
+          "F3",
+          "A3"
+        ]
+      ],
+      "padAmp": 0.16
+    },
+    {
+      "start": 15.45,
+      "end": 19.18,
+      "feel": "steady",
+      "root": "F2",
+      "chords": [
+        [
+          "F2",
+          "A2",
+          "C3"
+        ]
+      ],
+      "padAmp": 0.16,
+      "arp": [
+        "A3",
+        "C4",
+        "E4",
+        "C4"
+      ]
+    },
+    {
+      "start": 19.18,
+      "end": 26.92,
+      "feel": "half",
+      "root": "G2",
+      "chords": [
+        [
+          "G2",
+          "C3",
+          "E3"
+        ]
+      ],
+      "padAmp": 0.16
+    },
+    {
+      "start": 26.92,
+      "end": 35.04,
+      "feel": "steady",
+      "root": "A1",
+      "chords": [
+        [
+          "A2",
+          "C3",
+          "E3"
+        ]
+      ],
+      "padAmp": 0.16,
+      "arp": [
+        "A3",
+        "E4",
+        "A4",
+        "E4"
+      ]
+    }
+  ],
+  "accents": [
+    {
+      "time": 2.37,
+      "kind": "impact"
+    },
+    {
+      "time": 5.3,
+      "kind": "impact"
+    },
+    {
+      "time": 10.5,
+      "kind": "impact"
+    },
+    {
+      "time": 15.45,
+      "kind": "impact"
+    },
+    {
+      "time": 19.18,
+      "kind": "impact"
+    },
+    {
+      "time": 26.92,
+      "kind": "impact"
+    },
+    {
+      "time": 0.75,
+      "kind": "click"
+    },
+    {
+      "time": 1.5,
+      "kind": "click"
+    },
+    {
+      "time": 7.4,
+      "kind": "dry"
+    },
+    {
+      "time": 8.9,
+      "kind": "dry"
+    },
+    {
+      "time": 11.6,
+      "kind": "latch"
+    },
+    {
+      "time": 13.0,
+      "kind": "click"
+    },
+    {
+      "time": 18.3,
+      "kind": "dry"
+    },
+    {
+      "time": 24.0,
+      "kind": "click"
+    },
+    {
+      "time": 28.0,
+      "kind": "latch"
+    }
+  ]
+}

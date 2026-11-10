@@ -1,0 +1,37 @@
+name: Studio source checks
+on:
+  push:
+    paths: ['studio/**', '.github/workflows/studio-check.yml']
+  pull_request:
+    paths: ['studio/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm --prefix studio ci
+      - run: npm --prefix studio test
+      - run: npm --prefix studio run typecheck
+      - run: npm --prefix studio run check
+      - run: npm --prefix studio run build:check
+  render-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm --prefix studio ci
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64
+      - run: npx remotion browser ensure
+      - run: npm run render -- starter --frames=0-11 --scale=0.25
+      - run: npm run qa -- starter --frames=0-11

@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {ROOT,validId} from './lib.mjs';
+const id = validId(process.argv[2]);
+if (id === 'starter') throw new Error('starter is reserved for the fixture.');
+const dest = path.join(ROOT,'projects',id);
+if (fs.existsSync(dest)) throw new Error('Project already exists; nothing was overwritten.');
+fs.cpSync(path.join(ROOT,'templates/starter'),dest,{recursive:true});
+const spec = JSON.parse(fs.readFileSync(path.join(dest,'project.json'),'utf8')); spec.id = id;
+fs.writeFileSync(path.join(dest,'project.json'), JSON.stringify(spec,null,2)+'\n');
+console.log(`Created projects/${id}. Fill the brief and design three distinct concepts before replacing the scaffold.\nPreview: npm run studio -- ${id}`);
