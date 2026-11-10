@@ -14,6 +14,13 @@ import { useGlobalInstructions, useSetGlobalInstructions } from '../features/pro
 import { buildAgentSetupText, buildMcpConfig } from '../features/agents/agentSetup'
 import { ACCENTS, applyAccent, applyTheme, getAccent, getTheme, type AccentId, type ThemeMode } from '../lib/theme'
 import TabBar from '../components/TabBar'
+import {
+  HOPE_VOICE_ID,
+  useRemoveVoice,
+  useSaveVoice,
+  useTestVoice,
+  useVoiceStatus,
+} from '../features/voice/api'
 
 const SWATCH: Record<AccentId, string> = {
   emerald: '#34d399',
@@ -155,7 +162,12 @@ export default function SettingsPage() {
     applyTheme(next)
     setTheme(next)
   }
-  const [open, setOpen] = useState<'agent' | 'keys' | 'mcp' | 'rest' | null>(null)
+  const [open, setOpen] = useState<'agent' | 'keys' | 'mcp' | 'rest' | 'voice' | null>(null)
+  const [voiceKey, setVoiceKey] = useState('')
+  const voiceStatus = useVoiceStatus()
+  const saveVoice = useSaveVoice()
+  const testVoice = useTestVoice()
+  const removeVoice = useRemoveVoice()
 
   // ── account switching ──
   const [accounts, setAccounts] = useState<StoredAccount[]>(() => loadAccounts())
@@ -190,7 +202,7 @@ export default function SettingsPage() {
   }
 
   const origin = window.location.origin
-  const toggle = (id: 'agent' | 'keys' | 'mcp' | 'rest') => setOpen((o) => (o === id ? null : id))
+  const toggle = (id: 'agent' | 'keys' | 'mcp' | 'rest' | 'voice') => setOpen((o) => (o === id ? null : id))
 
   async function copyText(text: string): Promise<boolean> {
     try {
@@ -530,6 +542,115 @@ export default function SettingsPage() {
               <p className="px-4 pb-3 text-[11px] font-bold text-rose-700">{reorderError}</p>
             ) : reorderProjects.isSuccess ? (
               <p className="px-4 pb-3 text-[11px] font-bold text-ink-soft">Order saved ✓</p>
+            ) : null}
+          </div>
+        </section>
+
+        {/* ── Voiceover provider ── */}
+        <section className="mt-7">
+          <div className="pg-glass divide-y divide-white/50 overflow-hidden rounded-[22px]">
+            <GroupTitle>Voiceover</GroupTitle>
+            <Row
+              label="ElevenLabs voice"
+              value={
+                voiceStatus.data?.configured
+                  ? `${voiceStatus.data.voice_name ?? 'configured'} · ${voiceStatus.data.remaining_today}/${voiceStatus.data.daily_limit} left today`
+                  : 'Not configured'
+              }
+              chevron
+              onClick={() => toggle('voice')}
+              icon={
+                <RowIcon tint="bg-sky/70">
+                  <svg {...ROW_ICON}>
+                    <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" />
+                  </svg>
+                </RowIcon>
+              }
+            />
+            {open === 'voice' ? (
+              <div className="space-y-3 px-4 pt-1 pb-4">
+                <p className="text-xs leading-relaxed font-semibold text-ink-soft">
+                  Your ElevenLabs key is sent once over HTTPS, verified, then stored{' '}
+                  <strong className="text-ink">encrypted on the server</strong>. It is never
+                  readable from the browser, never returned to an agent, and never shown again —
+                  you will only see whether it is configured. Agents use it through{' '}
+                  <code className="text-[11px]">generate_voiceover</code>, capped at{' '}
+                  {voiceStatus.data?.daily_limit ?? 20}/day and{' '}
+                  {voiceStatus.data?.per_script_limit ?? 2} attempts per identical script.
+                </p>
+                <form
+                  className="space-y-2"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    saveVoice.mutate({ apiKey: voiceKey.trim(), voiceId: HOPE_VOICE_ID })
+                  }}
+                >
+                  <Input
+                    type="password"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder={voiceStatus.data?.configured ? 'Enter a new key to replace the saved one' : 'sk_… (ElevenLabs API key)'}
+                    value={voiceKey}
+                    onChange={(e) => setVoiceKey(e.target.value)}
+                  />
+                  <p className="text-[11px] font-semibold text-ink-soft">
+                    Voice: Hope · upbeat and clear (<code className="text-[11px]">{HOPE_VOICE_ID}</code>)
+                  </p>
+                  <Button className="w-full" type="submit" disabled={!voiceKey.trim() || saveVoice.isPending}>
+                    {saveVoice.isPending ? 'Verifying with ElevenLabs…' : 'Save key securely'}
+                  </Button>
+                </form>
+                {saveVoice.error ? (
+                  <ErrorBox
+                    message={saveVoice.error instanceof Error ? saveVoice.error.message : 'Could not save'}
+                  />
+                ) : null}
+                {saveVoice.isSuccess ? (
+                  <p className="text-[11px] font-bold text-ink">Saved ✓ — the key will not be shown again.</p>
+                ) : null}
+                {voiceStatus.data?.configured ? (
+                  <>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        className="flex-1"
+                        disabled={testVoice.isPending}
+                        onClick={() => testVoice.mutate()}
+                      >
+                        {testVoice.isPending ? 'Checking…' : 'Test connection'}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex-1"
+                        disabled={removeVoice.isPending}
+                        onClick={() => {
+                          if (window.confirm('Remove the saved ElevenLabs key? Voiceover generation stops until you add one again.')) {
+                            removeVoice.mutate()
+                          }
+                        }}
+                      >
+                        {removeVoice.isPending ? 'Removing…' : 'Remove key'}
+                      </Button>
+                    </div>
+                    <p className="text-[11px] font-semibold text-ink-soft">
+                      Provider: {voiceStatus.data.provider} · voice {voiceStatus.data.voice_id}
+                      {voiceStatus.data.updated_at
+                        ? ` · updated ${new Date(voiceStatus.data.updated_at).toLocaleDateString()}`
+                        : ''}
+                    </p>
+                    {testVoice.isSuccess ? (
+                      <p className="text-[11px] font-bold text-ink">
+                        Connected ✓ — voice “{testVoice.data.voice_name ?? 'unknown'}” (no credits used).
+                      </p>
+                    ) : null}
+                    {testVoice.error ? (
+                      <ErrorBox
+                        message={testVoice.error instanceof Error ? testVoice.error.message : 'Test failed'}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
             ) : null}
           </div>
         </section>

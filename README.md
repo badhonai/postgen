@@ -258,6 +258,34 @@ Media lives in **R2** (free tier) and is never public. Flow:
   or serves it directly for a valid user JWT that owns the key.
 - `POST /api/media/delete` — `{ "key" }` → removes R2 object + DB row (owner only).
 
+## Voiceover (BYO ElevenLabs key) 🔐
+
+Settings → **Voiceover** stores **your own** ElevenLabs key so agents can generate narration.
+
+- The key is posted once to `/api/voice/settings` (Supabase JWT), **verified** against ElevenLabs, then
+  encrypted with **AES-256-GCM** under a per-user key derived via **HKDF-SHA256** from a server-only
+  secret (`VOICE_KEY_SECRET`, falling back to the service-role key). Only ciphertext reaches Postgres.
+- It is **never** returned to the browser or to agents; the UI only shows configured / voice / daily usage.
+  "Test connection" reads voice metadata (no synthesis, **no credits**); "Remove key" deletes it.
+- No migration ever stores the key, and no `VITE_` variable ever carries it.
+- Table `voice_settings` has RLS **select-only** for its owner and no insert/update policy — only the
+  service role writes. `voice_status` is a view that omits the cipher column.
+
+Agents generate narration with `generate_voiceover` (MCP) or `POST /api/v1/voice/generate` (REST):
+
+```json
+{ "project_id": "…", "text": "Final approved script…" }
+```
+
+Returns `asset_id` (+ `has_alignment`, `alignment` character timings for captions) and `caps`.
+
+**Spend caps:** 20 successful generations per UTC day per account, and **2 attempts per identical
+script** per 24h (the script is hashed; edits count as a new script). Over-cap calls return 429/409 with
+the reason. Every success and failure is logged in `voice_generations` and `agent_activity`.
+
+Default voice in the UI: **Hope – upbeat and clear** (`dmWfLQZJq7wNPv9WmtiM`); any voice id your key can
+access works by editing the constant in `src/features/voice/api.ts`.
+
 ## Performance ⚡
 
 Built to stay smooth as projects/posts/media grow:

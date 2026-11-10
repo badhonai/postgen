@@ -70,9 +70,10 @@ Work on that ONE project only, in this order:
 4. Style: follow tone & voice, content pillars and sample posts; use ONLY official links from the project context.
 5. SAVE ORDER: save all the text drafts FIRST (create_draft), then generate/upload images and attach them with update_draft. If image generation fails halfway, the finished drafts must already be saved.
 
-== MCP TOOLS (12) ==
-list_projects · get_project · list_posts · create_draft · update_draft · append_to_thread · find_similar · list_assets (project_id, kind filters) · list_image_prompts (project_id filter) · create_image_prompt · update_image_prompt · delete_image_prompt
+== MCP TOOLS (13) ==
+list_projects · get_project · list_posts · create_draft · update_draft · append_to_thread · find_similar · list_assets (project_id, kind filters) · list_image_prompts (project_id filter) · create_image_prompt · update_image_prompt · delete_image_prompt · generate_voiceover
 Resources: project://<id>/context · project://<id>/knowledge · project://<id>/assets · prompts://image
+Voiceover: POST /api/v1/voice/generate { project_id, text } — spends MY provider credits, so it is capped (20/day, 2 attempts per identical script). Write the final approved script first; a 409 means that script is used up, a 429 means the day is. Returns asset_id + character timings for captions; attach the asset_id to a draft with media.
 REST equivalents: GET/POST /api/v1/projects, GET/PATCH /api/v1/projects/:id, POST /api/v1/knowledge, GET/POST /api/v1/posts, GET/PATCH /api/v1/posts/:id, POST /api/v1/posts/:id/append, GET /api/v1/assets, POST /api/v1/assets/upload, GET/POST /api/v1/prompts, PATCH/DELETE /api/v1/prompts/:id. The OpenAPI spec at ${origin}/api/v1 is the source of truth — read it before your first REST write.
 
 == HARD RULES — never break these ==

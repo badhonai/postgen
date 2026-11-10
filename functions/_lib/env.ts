@@ -31,6 +31,11 @@ export type Env = {
    * Server-side only — set in Cloudflare Pages secrets, never VITE_-prefixed.
    */
   SORSA_API_KEY?: string
+  /**
+   * Optional dedicated secret for encrypting per-user voice provider keys.
+   * Falls back to SUPABASE_SERVICE_ROLE_KEY (both are server-only).
+   */
+  VOICE_KEY_SECRET?: string
 }
 
 export function jsonError(message: string, status = 400): Response {

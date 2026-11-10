@@ -1,5 +1,6 @@
 import * as agent from '../_lib/agentdb'
 import { requireApiKey } from '../_lib/apikey'
+import * as voice from '../_lib/voice'
 import { jsonError, type Env } from '../_lib/env'
 
 /**
@@ -64,7 +65,9 @@ const TOOLS = [
         tag_names: { type: 'array', items: { type: 'string' } },
         media: {
           type: 'array',
-          description: 'Images to attach: [{ asset_id, tweet_position }]. tweet_position is 1-based (default 1).',
+          description:
+            'Media to attach: [{ asset_id, tweet_position }] — images, video (mp4/webm/mov, ≤50 MB) ' +
+            'or audio. tweet_position is 1-based (default 1). Upload first via POST /api/v1/assets/upload.',
           items: {
             type: 'object',
             properties: {
@@ -181,6 +184,29 @@ const TOOLS = [
         project_id: { type: 'string', description: 'Restrict to one project (optional).' },
         kind: { type: 'string', description: 'Restrict to one asset kind, e.g. logo_transparent_name (optional).' },
       },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'generate_voiceover',
+    description:
+      'Generate a voiceover MP3 with the account’s configured voice (owner adds the provider key in ' +
+      'Settings → Voiceover; the key is never visible to you). Returns asset_id + character timings ' +
+      '(has_alignment/alignment) for caption timing. Spends the owner’s provider credits, so it is ' +
+      'capped: 20/day per account and 2 attempts per identical script per 24h — 409/429 explain which ' +
+      'cap stopped you. Write the FINAL approved script before calling; do not retry with the same text. ' +
+      'Then attach asset_id to a draft with create_draft/update_draft.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: { type: 'string' },
+        text: { type: 'string', description: 'Narration script, plain words only (max 5000 chars).' },
+        voice_id: {
+          type: 'string',
+          description: 'Optional; must match the voice configured in Settings (defaults to it).',
+        },
+      },
+      required: ['project_id', 'text'],
       additionalProperties: false,
     },
   },
@@ -354,6 +380,25 @@ async function callTool(
           origin,
         }),
       })
+    case 'generate_voiceover': {
+      const outcome = await voice.runVoiceover(env, auth, {
+        projectId: String(args.project_id ?? ''),
+        text: String(args.text ?? ''),
+        voiceId: typeof args.voice_id === 'string' ? args.voice_id : undefined,
+      })
+      if (outcome.status === 201) {
+        await agent.logActivity(
+          env,
+          auth,
+          via,
+          'generate_voiceover',
+          { table: 'assets', id: String(outcome.body.asset_id ?? '') },
+          { characters: outcome.body.characters, voice_id: outcome.body.voice_id },
+        )
+        return toolText({ voiceover: outcome.body })
+      }
+      return toolText({ error: outcome.body }, true)
+    }
     case 'list_image_prompts':
       return toolText({ image_prompts: await agent.listImagePrompts(env, auth.userId, origin, { projectId: args.project_id as string | undefined }) })
     case 'create_image_prompt':
